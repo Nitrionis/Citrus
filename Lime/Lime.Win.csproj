@@ -300,6 +300,7 @@
     <Compile Include="Source\Widgets\Animation\AnimationClip.cs" />
     <Compile Include="Source\Widgets\Animation\AnimationTrack.cs" />
     <Compile Include="Source\Widgets\Animation\BezierEasing.cs" />
+    <Compile Include="Source\Widgets\ColorCheckBox.cs" />
     <Compile Include="Source\Widgets\Materials\DissolveComponent.cs" />
     <Compile Include="Source\Widgets\Materials\DissolveMaterial.cs" />
     <Compile Include="Source\Widgets\Materials\AlphaIntensityComponent.cs" />
