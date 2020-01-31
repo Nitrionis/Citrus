@@ -294,7 +294,7 @@ namespace Lime.Graphics.Platform.Vulkan
 			}
 		}
 
-		public void Begin(Swapchain swapchain)
+		public void Begin(Swapchain swapchain, bool isMainWindow = true)
 		{
 			if (this.swapchain != null) {
 				throw new InvalidOperationException();
