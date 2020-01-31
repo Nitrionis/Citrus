@@ -3,6 +3,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Lime;
 using Tangerine.Core;
+using ProfilingInfo = Lime.Graphics.Platform.ProfilingInfo;
 
 namespace Tangerine.UI.SceneView
 {
@@ -61,7 +62,11 @@ namespace Tangerine.UI.SceneView
 			Renderer.World = CalcGizmoTransform(node.GlobalTransform, 100);
 			Renderer.CullMode = CullMode.Front;
 			WidgetMaterial.Diffuse.Apply(0);
+#if !PROFILER_GPU
 			gizmo.DrawIndexed(0, gizmo.Indices.Length);
+#else
+			gizmo.DrawIndexed(0, gizmo.Indices.Length, 0, ProfilingInfo.Acquire(WidgetMaterial.Diffuse));
+#endif
 		}
 
 		Matrix44 CalcGizmoTransform(Matrix44 modelGlobalTransform, float gizmoRadiusInPixels)

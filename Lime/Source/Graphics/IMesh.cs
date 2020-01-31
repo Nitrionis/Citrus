@@ -1,13 +1,19 @@
-﻿using System;
+using System;
 using Yuzu;
+using ProfilingInfo = Lime.Graphics.Platform.ProfilingInfo;
 
 namespace Lime
 {
 	public interface IMesh
 	{
 		IMesh ShallowClone();
+#if !PROFILER_GPU
 		void Draw(int startVertex, int vertexCount);
 		void DrawIndexed(int startIndex, int indexCount, int baseVertex = 0);
+#else
+		void Draw(int startVertex, int vertexCount, ProfilingInfo profilingInfo);
+		void DrawIndexed(int startIndex, int indexCount, int baseVertex, ProfilingInfo profilingInfo);
+#endif
 	}
 
 	public enum MeshDirtyFlags

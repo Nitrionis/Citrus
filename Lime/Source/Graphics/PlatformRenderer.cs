@@ -457,6 +457,7 @@ namespace Lime
 			Context.SetPrimitiveTopology(topology);
 		}
 
+#if !PROFILER_GPU
 		public static void Draw(PrimitiveTopology topology, int startVertex, int vertexCount)
 		{
 			PreDraw(topology);
@@ -464,12 +465,27 @@ namespace Lime
 			DrawCount++;
 		}
 
-		public static void DrawIndexed(PrimitiveTopology topology, int startIndex, int indexCount, int baseVertex = 0)
+		public static void DrawIndexed(PrimitiveTopology topology, int startIndex, int indexCount, int baseVertex)
 		{
 			PreDraw(topology);
 			Context.DrawIndexed(startIndex, indexCount, baseVertex);
 			DrawCount++;
 		}
+#else
+		public static void Draw(PrimitiveTopology topology, int startVertex, int vertexCount, ProfilingInfo profilingInfo)
+		{
+			PreDraw(topology);
+			Context.Draw(startVertex, vertexCount, profilingInfo);
+			DrawCount++;
+		}
+
+		public static void DrawIndexed(PrimitiveTopology topology, int startIndex, int indexCount, int baseVertex, ProfilingInfo profilingInfo)
+		{
+			PreDraw(topology);
+			Context.DrawIndexed(startIndex, indexCount, baseVertex, profilingInfo);
+			DrawCount++;
+		}
+#endif
 
 		public static byte[] GetPipelineCacheData()
 		{
