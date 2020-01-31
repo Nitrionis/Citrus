@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Yuzu;
+using ProfilingInfo = Lime.Graphics.Platform.ProfilingInfo;
 
 namespace Lime
 {
@@ -363,6 +364,9 @@ namespace Lime
 
 			public override void Render()
 			{
+#if PROFILER_GPU
+				var profilingInfo = ProfilingInfo.Acquire();
+#endif
 				Renderer.PushState(
 					RenderState.World |
 					RenderState.CullMode |
@@ -388,9 +392,17 @@ namespace Lime
 							skin.SkinningMode = SkinningMode;
 							skin.SetBones(boneTransforms, submesh.BoneCount);
 						}
+#if PROFILER_GPU
+						profilingInfo.Material = material;
+#endif
 						for (var i = 0; i < material.PassCount; i++) {
 							material.Apply(i);
+#if !PROFILER_GPU
 							mesh.DrawIndexed(0, mesh.Indices.Length);
+#else
+							profilingInfo.CurrentRenderPassIndex = i;
+							mesh.DrawIndexed(0, mesh.Indices.Length, 0, profilingInfo);
+#endif
 						}
 						Renderer.PolyCount3d += mesh.Indices.Length / 3;
 					}
@@ -414,9 +426,17 @@ namespace Lime
 							skin.SkinningMode = SkinningMode;
 							skin.SetBones(dualQuaternionPartA, dualQuaternionPartB, submesh.BoneCount);
 						}
+#if PROFILER_GPU
+						profilingInfo.Material = material;
+#endif
 						for (var i = 0; i < material.PassCount; i++) {
 							material.Apply(i);
+#if !PROFILER_GPU
 							mesh.DrawIndexed(0, mesh.Indices.Length);
+#else
+							profilingInfo.CurrentRenderPassIndex = i;
+							mesh.DrawIndexed(0, mesh.Indices.Length, 0, profilingInfo);
+#endif
 						}
 						Renderer.PolyCount3d += mesh.Indices.Length / 3;
 					}
