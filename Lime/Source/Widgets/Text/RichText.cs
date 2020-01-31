@@ -395,7 +395,13 @@ namespace Lime
 			{
 				Renderer.Transform1 = LocalToWorldTransform;
 				foreach (var ro in Objects) {
+#if PROFILER_GPU
+					ro.SetGlobalProfilerData();
+#endif
 					ro.Render();
+#if PROFILER_GPU
+					ro.ResetGlobalProfilerData();
+#endif
 				}
 			}
 

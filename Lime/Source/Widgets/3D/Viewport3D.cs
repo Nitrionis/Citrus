@@ -207,6 +207,9 @@ namespace Lime
 					foreach (var item in layer) {
 						var renderObject = item.Presenter.GetRenderObject(item.Node);
 						if (renderObject != null) {
+#if PROFILER_GPU
+							ro.SetProfilerData(item.Node, item.Node.Manager);
+#endif
 							ro.Objects.Add(renderObject);
 						}
 					}
@@ -262,12 +265,24 @@ namespace Lime
 						Renderer.DepthState = DepthState.DepthReadWrite;
 						opaqueObjects.Sort(RenderOrderComparers.FrontToBack);
 						foreach (var obj in opaqueObjects) {
+#if PROFILER_GPU
+							obj.SetGlobalProfilerData();
+#endif
 							obj.Render();
+#if PROFILER_GPU
+							obj.ResetGlobalProfilerData();
+#endif
 						}
 						Renderer.DepthState = DepthState.DepthRead;
 						transparentObjects.Sort(RenderOrderComparers.BackToFront);
 						foreach (var obj in transparentObjects) {
+#if PROFILER_GPU
+							obj.SetGlobalProfilerData();
+#endif
 							obj.Render();
+#if PROFILER_GPU
+							obj.ResetGlobalProfilerData();
+#endif
 						}
 					} finally {
 						opaqueObjects.Clear();

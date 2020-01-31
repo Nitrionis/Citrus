@@ -22,7 +22,13 @@ namespace Lime.SignedDistanceField
 		public override void Render()
 		{
 			foreach (var ro in Objects) {
+#if PROFILER_GPU
+				ro.SetGlobalProfilerData();
+#endif
 				ro.Render();
+#if PROFILER_GPU
+				ro.ResetGlobalProfilerData();
+#endif
 			}
 		}
 

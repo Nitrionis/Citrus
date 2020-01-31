@@ -117,8 +117,14 @@ namespace Lime
 
 			public override void Render()
 			{
+#if PROFILER_GPU
+				SetGlobalProfilerData();
+#endif
 				Decoder?.UpdateTexture();
 				base.Render();
+#if PROFILER_GPU
+				ResetGlobalProfilerData();
+#endif
 			}
 
 			protected override void OnRelease()
