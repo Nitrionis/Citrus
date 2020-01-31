@@ -70,6 +70,9 @@ namespace Lime
 					var item = layer[j];
 					var ro = item.Presenter.GetRenderObject(item.Node);
 					if (ro != null) {
+#if PROFILER_GPU
+						ro.SetProfilerData(item.Node, item.Node.Manager);
+#endif
 						list.Add(ro);
 					}
 				}
