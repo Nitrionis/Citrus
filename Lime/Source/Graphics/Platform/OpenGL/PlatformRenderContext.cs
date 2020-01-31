@@ -93,7 +93,7 @@ namespace Lime.Graphics.Platform.OpenGL
 
 		public void Dispose() { }
 
-		public void Begin(int glFramebuffer)
+		public void Begin(int glFramebuffer, bool isMainWindow = true)
 		{
 #if PROFILER_GPU
 			profiler.FrameRenderStarted(isMainWindow);

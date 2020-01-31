@@ -346,10 +346,10 @@ namespace Lime.Platform
 			}
 		}
 
-		public void MakeCurrent()
+		public void MakeCurrent(bool isMainWindow)
 		{
 			openGLContext.View = this;
-			platformRenderContext.Begin(0);
+			platformRenderContext.Begin(0, isMainWindow);
 		}
 
 		private void OnRender()

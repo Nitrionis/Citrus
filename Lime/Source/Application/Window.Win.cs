@@ -288,10 +288,10 @@ namespace Lime
 				graphicsContext.Update(windowInfo);
 			}
 
-			public override void Begin()
+			public override void Begin(bool isMainWindow)
 			{
 				graphicsContext.MakeCurrent(windowInfo);
-				platformRenderContext.Begin(0);
+				platformRenderContext.Begin(0, isMainWindow);
 			}
 
 			public override void SwapBuffers()
@@ -341,9 +341,9 @@ namespace Lime
 				}
 			}
 
-			public override void Begin()
+			public override void Begin(bool isMainWindow)
 			{
-				platformRenderContext.Begin(swapchain);
+				platformRenderContext.Begin(swapchain, isMainWindow);
 			}
 
 			public override void SwapBuffers()
@@ -396,7 +396,7 @@ namespace Lime
 				base.SetBoundsCore(x, y, width, height, specified);
 			}
 
-			public abstract void Begin();
+			public abstract void Begin(bool isMainWindow);
 			public abstract void SwapBuffers();
 			public abstract void UnbindContext();
 		}
@@ -794,7 +794,7 @@ namespace Lime
 				if (renderThreadToken.IsCancellationRequested) {
 					return;
 				}
-				renderControl.Begin();
+				renderControl.Begin(Application.MainWindow == this);
 				RaiseRendering();
 				renderControl.SwapBuffers();
 				renderControl.UnbindContext();
@@ -815,7 +815,7 @@ namespace Lime
 				case RenderingState.Updated:
 					PixelScale = CalcPixelScale(e.Graphics.DpiX);
 					if (!AsyncRendering && renderControl.IsHandleCreated && form.Visible && !renderControl.IsDisposed && renderControl.CanRender) {
-						renderControl.Begin();
+						renderControl.Begin(Application.MainWindow == this);
 						RaiseRendering();
 						renderControl.SwapBuffers();
 					}

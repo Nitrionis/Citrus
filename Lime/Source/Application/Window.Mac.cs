@@ -476,7 +476,7 @@ namespace Lime
 					needUpdateGLContext = false;
 					View.UpdateGLContext();
 				}
-				View.MakeCurrent();
+				View.MakeCurrent(Application.MainWindow == this);
 				RaiseRendering();
 				View.SwapBuffers();
 				invalidated = false;
