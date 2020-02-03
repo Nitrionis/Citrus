@@ -1,0 +1,26 @@
+using System.Collections.Generic;
+
+namespace Lime.Graphics.Platform
+{
+	public class RenderBatchProfiler
+	{
+		public static int FullSavedByBatching { get; protected set; }
+		public static int SceneSavedByBatching { get; protected set; }
+
+		public static void Reset()
+		{
+			FullSavedByBatching = 0;
+			SceneSavedByBatching = 0;
+		}
+
+		protected bool isPartOfScene;
+		protected List<object> drawCallsOwners = new List<object>();
+
+		public void ProcessNode(object node, object manager)
+		{
+			drawCallsOwners.Add(node);
+			bool isPartOfScene = ReferenceEquals(ProfilingInfo.SceneNodeManager, manager);
+			this.isPartOfScene |= isPartOfScene;
+		}
+	}
+}
