@@ -66,6 +66,13 @@ namespace Lime.Graphics.Platform
 
 		private ProfilingInfo() { }
 
+		public static ProfilingInfo Acquire(object material = null, int passIndex = 0)
+		{
+			var owners = RenderObjectOwnersInfo.CurrentNode;
+			bool isPartOfScene = ReferenceEquals(RenderObjectOwnersInfo.CurrentManager, SceneNodeManager);
+			return Acquire(owners, isPartOfScene, material, passIndex);
+		}
+
 		public static ProfilingInfo Acquire(object owners, bool isPartOfScene, object material, int passIndex)
 		{
 			var profilingInfo = freeInstances.Count > 0 ? freeInstances.Pop() : new ProfilingInfo();

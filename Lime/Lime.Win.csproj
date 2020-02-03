@@ -311,6 +311,7 @@
     <Compile Include="Source\Graphics\Platform\PlatformProfiler.cs" />
     <Compile Include="Source\Graphics\Platform\ProfilerHistory.cs" />
     <Compile Include="Source\Graphics\Platform\RenderBatchProfiler.cs" />
+    <Compile Include="Source\Graphics\Platform\RenderObjectOwnersInfo.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\BackingBuffer.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\DescriptorAllocator.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\FormatConverter.cs" />

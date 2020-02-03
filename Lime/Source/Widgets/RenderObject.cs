@@ -1,9 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
+using RenderObjectOwnersInfo = Lime.Graphics.Platform.RenderObjectOwnersInfo;
 
 namespace Lime
 {
+#if !PROFILER_GPU
 	public abstract class RenderObject
+#else
+	public abstract class RenderObject : RenderObjectOwnersInfo
+#endif
 	{
 		internal bool Free = true;
 
@@ -46,7 +51,13 @@ namespace Lime
 		public void Render()
 		{
 			foreach (var ro in objects) {
+#if PROFILER_GPU
+				ro.SetGlobalProfilerData();
+#endif
 				ro.Render();
+#if PROFILER_GPU
+				ro.ResetGlobalProfilerData();
+#endif
 			}
 		}
 
