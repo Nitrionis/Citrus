@@ -29,6 +29,7 @@ namespace Lime.Graphics.Platform.Vulkan
 		private ulong lastCompletedFenceValue;
 		private Swapchain swapchain;
 		private Scheduler scheduler;
+		private PlatformProfiler profiler;
 		private SharpVulkan.RenderPass activeRenderPass;
 		private SharpVulkan.Format activeColorFormat;
 		private SharpVulkan.Format activeDepthStencilFormat;
@@ -117,6 +118,9 @@ namespace Lime.Graphics.Platform.Vulkan
 			placeholderTexture = new PlatformTexture2D(this, Format.R8G8B8A8_UNorm, 1, 1, false, TextureParams.Default);
 			placeholderTexture.SetData(0, new[] { Color4.Black });
 			ResetState();
+#if PROFILER_GPU
+			profiler = new PlatformProfiler(ref device, ref physicalDeviceLimits, ref physicalDevice.QueueFamilyProperties[queueFamilyIndex]);
+#endif
 		}
 
 		public void Dispose()
@@ -297,6 +301,10 @@ namespace Lime.Graphics.Platform.Vulkan
 			}
 			this.swapchain = swapchain;
 			EnsureCommandBuffer();
+#if PROFILER_GPU
+			profiler.FrameRenderStarted(isMainWindow);
+			profiler.FirstTimestamp(commandBuffer);
+#endif
 			var memoryBarrier = new SharpVulkan.ImageMemoryBarrier {
 				StructureType = SharpVulkan.StructureType.ImageMemoryBarrier,
 				Image = swapchain.Backbuffer,
@@ -330,9 +338,15 @@ namespace Lime.Graphics.Platform.Vulkan
 			commandBuffer.PipelineBarrier(
 				SharpVulkan.PipelineStageFlags.ColorAttachmentOutput, SharpVulkan.PipelineStageFlags.BottomOfPipe,
 				SharpVulkan.DependencyFlags.None, 0, null, 0, null, 1, &memoryBarrier);
+#if PROFILER_GPU
+			profiler.LastTimestamp();
+#endif
 			Flush();
 			swapchain.Present();
 			swapchain = null;
+#if PROFILER_GPU
+			profiler.FrameRenderFinished();
+#endif
 		}
 
 		public void SetViewport(Viewport vp)
@@ -408,6 +422,7 @@ namespace Lime.Graphics.Platform.Vulkan
 			indexFormat = format;
 		}
 
+#if !PROFILER_GPU
 		public void Draw(int startVertex, int vertexCount)
 		{
 			PreDraw();
@@ -419,6 +434,23 @@ namespace Lime.Graphics.Platform.Vulkan
 			PreDraw();
 			commandBuffer.DrawIndexed((uint)indexCount, 1, (uint)startIndex, baseVertex, 0);
 		}
+#else
+		public void Draw(int startVertex, int vertexCount, ProfilingInfo profilingInfo)
+		{
+			profiler.DrawCallStart(profilingInfo, vertexCount, primitiveTopology);
+			PreDraw();
+			commandBuffer.Draw((uint)vertexCount, 1, (uint)startVertex, 0);
+			profiler.DrawCallEnd();
+		}
+
+		public void DrawIndexed(int startIndex, int indexCount, int baseVertex, ProfilingInfo profilingInfo)
+		{
+			profiler.DrawCallStart(profilingInfo, indexCount, primitiveTopology);
+			PreDraw();
+			commandBuffer.DrawIndexed((uint)indexCount, 1, (uint)startIndex, baseVertex, 0);
+			profiler.DrawCallEnd();
+		}
+#endif
 
 		private void PreDraw()
 		{
@@ -943,7 +975,11 @@ namespace Lime.Graphics.Platform.Vulkan
 				SetCullMode(CullMode.None);
 				SetVertexInputLayout(clearVertexInputLayout);
 				SetVertexBuffer(0, clearVertexBuffer, 0);
+#if !PROFILER_GPU
 				Draw(0, clearVertices.Length);
+#else
+				Draw(0, clearVertices.Length, ProfilingInfo.Acquire());
+#endif
 			} finally {
 				SetViewport(oldViewport);
 				SetBlendState(oldBlendState);

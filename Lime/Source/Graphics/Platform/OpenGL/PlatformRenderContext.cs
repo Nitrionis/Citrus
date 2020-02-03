@@ -32,6 +32,7 @@ namespace Lime.Graphics.Platform.OpenGL
 		private int indexOffset;
 		private IndexFormat indexFormat;
 		private PlatformRenderTexture2D renderTarget;
+		private PlatformProfiler profiler;
 
 		private bool blendStateDirty;
 		private bool depthStateDirty;
@@ -85,12 +86,18 @@ namespace Lime.Graphics.Platform.OpenGL
 			textures = new PlatformTexture2D[MaxTextureSlots];
 			vertexBuffers = new PlatformBuffer[MaxVertexBufferSlots];
 			vertexOffsets = new int[MaxVertexBufferSlots];
+#if PROFILER_GPU
+			profiler = new PlatformProfiler();
+#endif
 		}
 
 		public void Dispose() { }
 
 		public void Begin(int glFramebuffer)
 		{
+#if PROFILER_GPU
+			profiler.FrameRenderStarted(isMainWindow);
+#endif
 			glDefaultFramebuffer = glFramebuffer;
 			renderTargetDirty = true;
 			shaderProgramDirty = true;
@@ -125,6 +132,9 @@ namespace Lime.Graphics.Platform.OpenGL
 
 		public void End()
 		{
+#if PROFILER_GPU
+			profiler.FrameRenderFinished();
+#endif
 			for (var i = 0; i < MaxVertexAttributes; i++) {
 				var mask = 1L << i;
 				if ((enabledVertexAttribMask & mask) != 0) {
@@ -363,6 +373,7 @@ namespace Lime.Graphics.Platform.OpenGL
 			}
 		}
 
+#if !PROFILER_GPU
 		public void Draw(int startVertex, int vertexCount)
 		{
 			PreDraw(0);
@@ -379,6 +390,26 @@ namespace Lime.Graphics.Platform.OpenGL
 				(DrawElementsType)GLHelper.GetGLDrawElementsType(indexFormat), new IntPtr(effectiveOffset));
 			GLHelper.CheckGLErrors();
 		}
+#else
+		public void Draw(int startVertex, int vertexCount, ProfilingInfo profilingInfo)
+		{
+			profiler.DrawCall(profilingInfo, vertexCount, primitiveTopology);
+			PreDraw(0);
+			GL.DrawArrays((PrimitiveType)GLHelper.GetGLPrimitiveType(primitiveTopology), startVertex, vertexCount);
+			GLHelper.CheckGLErrors();
+		}
+
+		public void DrawIndexed(int startIndex, int indexCount, int baseVertex, ProfilingInfo profilingInfo)
+		{
+			profiler.DrawCall(profilingInfo, indexCount, primitiveTopology);
+			PreDraw(baseVertex);
+			var effectiveOffset = indexOffset + startIndex * indexFormat.GetSize();
+			GL.DrawElements(
+				(PrimitiveType)GLHelper.GetGLPrimitiveType(primitiveTopology), indexCount,
+				(DrawElementsType)GLHelper.GetGLDrawElementsType(indexFormat), new IntPtr(effectiveOffset));
+			GLHelper.CheckGLErrors();
+		}
+#endif
 
 		public void Flush()
 		{
