@@ -5,6 +5,14 @@ namespace Lime
 {
 	public abstract class RenderObject
 	{
+#if PROFILER_GPU
+		public static object CurrentNode { get; private set; }
+		public static object CurrentManager { get; private set; }
+
+		private object node;
+		private object manager;
+#endif
+
 		internal bool Free = true;
 
 		public abstract void Render();
@@ -20,6 +28,35 @@ namespace Lime
 		}
 
 		protected virtual void OnRelease() { }
+
+#if PROFILER_GPU
+		/// <summary>
+		/// Must be called AFTER each <see cref="IPresenter.GetRenderObject(Node)"/>.
+		/// </summary>
+		public void SetProfilerData(object node, object manager)
+		{
+			this.node = node;
+			this.manager = manager;
+		}
+
+		/// <summary>
+		/// Must be called BEFORE each <see cref="Render"/>.
+		/// </summary>
+		public void SetGlobalProfilerData()
+		{
+			CurrentNode = node;
+			CurrentManager = manager;
+		}
+
+		/// <summary>
+		/// Must be called AFTER each <see cref="Render"/>.
+		/// </summary>
+		public void ResetGlobalProfilerData()
+		{
+			CurrentNode = null;
+			CurrentManager = null;
+		}
+#endif
 	}
 
 	public class RenderObjectList : IReadOnlyList<RenderObject>, IEnumerable<RenderObject>
@@ -46,7 +83,13 @@ namespace Lime
 		public void Render()
 		{
 			foreach (var ro in objects) {
+#if PROFILER_GPU
+				ro.SetGlobalProfilerData();
+#endif
 				ro.Render();
+#if PROFILER_GPU
+				ro.ResetGlobalProfilerData();
+#endif
 			}
 		}
 
