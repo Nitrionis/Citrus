@@ -301,6 +301,7 @@
     <Compile Include="Source\Graphics\Platform\OpenGL\ES20Functions.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\GLHelper.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\PlatformBuffer.cs" />
+    <Compile Include="Source\Graphics\Platform\OpenGL\PlatformProfiler.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\PlatformRenderContext.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\PlatformRenderTexture2D.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\PlatformShader.cs" />
@@ -316,6 +317,7 @@
     <Compile Include="Source\Graphics\Platform\Vulkan\MemoryAllocator.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\PipelineCache.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\PlatformBuffer.cs" />
+    <Compile Include="Source\Graphics\Platform\Vulkan\PlatformProfiler.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\PlatformRenderContext.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\PlatformRenderTexture2D.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\PlatformShader.cs" />
