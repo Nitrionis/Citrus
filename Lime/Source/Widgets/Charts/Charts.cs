@@ -23,7 +23,7 @@ namespace Lime.Widgets.Charts
 		/// <summary>
 		/// Represents a user defined line.
 		/// </summary>
-		private struct Line
+		protected struct Line
 		{
 			public const int VerticesCount = 6;
 
@@ -42,7 +42,7 @@ namespace Lime.Widgets.Charts
 			}
 		}
 
-		private readonly Line[] userLines;
+		protected readonly Line[] userLines;
 
 		/// <summary>
 		/// Contains data of one chart.
