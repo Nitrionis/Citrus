@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Lime.Graphics.Platform
 {
-	internal abstract class PlatformProfiler : ProfilerHistory
+	public abstract class PlatformProfiler : ProfilerHistory
 	{
 		public static PlatformProfiler Instance { get; private set; }
 

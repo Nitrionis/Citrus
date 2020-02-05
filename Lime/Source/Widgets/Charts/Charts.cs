@@ -97,10 +97,10 @@ namespace Lime.Widgets.Charts
 			public int ControlPointsCount;
 			public int UserLinesCount = 0;
 			public int ChartHeight = 100;
-			public Vector4[] Colors;
+			public Color4[] Colors;
 			public Action<Slice> OnSliceSelected;
 
-			public Parameters(int controlPointsCount, Vector4[] colors)
+			public Parameters(int controlPointsCount, Color4[] colors)
 			{
 				ControlPointsCount = controlPointsCount;
 				Colors = colors;
@@ -122,7 +122,9 @@ namespace Lime.Widgets.Charts
 			HitTestMethod = HitTestMethod.BoundingRect;
 			Clicked += SendSlice;
 			OnSliceSelected = parameters.OnSliceSelected;
-			MinMaxSize = new Vector2((controlPointsCount - 1) * controlPointsSpacing, chartsMaxHeight);
+			var size = new Vector2((controlPointsCount - 1) * controlPointsSpacing, chartsMaxHeight);
+			Size = size;
+			MinMaxSize = size;
 
 			charts = new Chart[parameters.ChartsCount];
 			vertices = new Vector3[chartsVerticesOffset + charts.Length * chartVerticesCount];
@@ -136,6 +138,10 @@ namespace Lime.Widgets.Charts
 					int x = (k / 2) * controlPointsSpacing;
 					vertices[j] = new Vector3(x, 0, chart.ColorIndex);
 				}
+			}
+			colors = new Vector4[parameters.Colors.Length];
+			for (int i = 0; i < colors.Length; i++) {
+				colors[i] = parameters.Colors[i].ToVector4();
 			}
 			material = new ChartMaterial() { Colors = colors };
 			mesh = new Mesh<Vector3> {
@@ -169,7 +175,7 @@ namespace Lime.Widgets.Charts
 			}
 			int submeshIndex = 0;
 			foreach (var submesh in charts) {
-				Array.Copy(submesh.Points, 0, submesh.Points, 1, submesh.Points.Length - 1);
+				Array.Copy(submesh.Points, 1, submesh.Points, 0, submesh.Points.Length - 1);
 				submesh.Points[controlPointsCount - 1] = points[submeshIndex++];
 			}
 		}

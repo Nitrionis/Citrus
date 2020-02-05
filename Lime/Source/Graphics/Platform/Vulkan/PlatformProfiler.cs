@@ -183,9 +183,10 @@ namespace Lime.Graphics.Platform.Vulkan
 		///	which in itself is permissible, but the obtained time interval was calculated
 		///	in days and months, which is impossible. This is probably a GPU bug. Nvidia GTX 1660 Ti.
 		/// </remarks>
-		private uint CalculateDeltaTime(ulong ts1, ulong ts2) => (uint)Math.Min(uint.MaxValue, (ts2 >= ts1 ?
-				ts2 & timestampValidBitsMask - ts1 & timestampValidBitsMask :
-				ts2 & timestampValidBitsMask + (timestampValidBitsMask - ts1 & timestampValidBitsMask)
-			) * timestampPeriod / 1000.0);
+		//private uint CalculateDeltaTime(ulong ts1, ulong ts2) => (uint)Math.Min(uint.MaxValue, (ts2 >= ts1 ?
+		//		ts2 & timestampValidBitsMask - ts1 & timestampValidBitsMask :
+		//		ts2 & timestampValidBitsMask + (timestampValidBitsMask - ts1 & timestampValidBitsMask)
+		//	) * timestampPeriod / 1000.0);
+		private uint CalculateDeltaTime(ulong ts1, ulong ts2) => 0;
 	}
 }
