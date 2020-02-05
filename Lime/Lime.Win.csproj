@@ -448,6 +448,7 @@
     <Compile Include="Source\Widgets\BoneArray.cs" />
     <Compile Include="Source\Widgets\Button.cs" />
     <Compile Include="Source\Widgets\Charts\ChartsContainer.cs" />
+    <Compile Include="Source\Widgets\Charts\Legend.cs" />
     <Compile Include="Source\Widgets\CheckBox.cs" />
     <Compile Include="Source\Widgets\ColorCheckBox.cs" />
     <Compile Include="Source\Widgets\DistortionMesh.cs" />
