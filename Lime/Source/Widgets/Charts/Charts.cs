@@ -14,7 +14,7 @@ namespace Lime.Widgets.Charts
 		protected readonly Vector4[] colors;
 		protected readonly int controlPointsSpacing;
 		protected readonly int controlPointsCount;
-		protected readonly int submeshVerticesCount;
+		protected readonly int chartVerticesCount;
 		protected readonly int chartsMaxHeight;
 		protected readonly int chartsVerticesOffset;
 
@@ -112,7 +112,7 @@ namespace Lime.Widgets.Charts
 			chartsMaxHeight = parameters.ChartHeight;
 			controlPointsCount = parameters.ControlPointsCount;
 			controlPointsSpacing = parameters.ControlPointsSpacing;
-			submeshVerticesCount = CalculateSubmeshVerticesCount(controlPointsCount);
+			chartVerticesCount = CalculateSubmeshVerticesCount(controlPointsCount);
 			chartsVerticesOffset = Line.VerticesCount * parameters.UserLinesCount;
 			userLines = new Line[parameters.UserLinesCount];
 
@@ -125,14 +125,14 @@ namespace Lime.Widgets.Charts
 			MinMaxSize = new Vector2((controlPointsCount - 1) * controlPointsSpacing, chartsMaxHeight);
 
 			charts = new Chart[parameters.ChartsCount];
-			vertices = new Vector3[chartsVerticesOffset + charts.Length * submeshVerticesCount];
+			vertices = new Vector3[chartsVerticesOffset + charts.Length * chartVerticesCount];
 			for (int j = chartsVerticesOffset, i = 0; i < charts.Length; i++) {
 				var chart = new Chart();
 				charts[i] = chart;
 				chart.IsVisible = true;
 				chart.ColorIndex = i + 1;
 				chart.Points = new float[controlPointsCount];
-				for (int k = 0; k < submeshVerticesCount; k++, j++) {
+				for (int k = 0; k < chartVerticesCount; k++, j++) {
 					int x = (k / 2) * controlPointsSpacing;
 					vertices[j] = new Vector3(x, 0, chart.ColorIndex);
 				}
@@ -179,7 +179,7 @@ namespace Lime.Widgets.Charts
 		protected abstract int CalculateSubmeshVerticesCount(int controlPointsCount);
 
 		protected int GetActiveVerticesCount() =>
-			chartsVerticesOffset + submeshVerticesCount * GetActiveChartsCount();
+			chartsVerticesOffset + chartVerticesCount * GetActiveChartsCount();
 
 		protected int GetActiveChartsCount()
 		{
@@ -267,7 +267,7 @@ namespace Lime.Widgets.Charts
 					mesh.Topology = PrimitiveTopology.TriangleStrip;
 					mesh.Draw(
 						startVertex: Line.VerticesCount * Charts.userLines.Length,
-						vertexCount: Charts.GetActiveChartsCount() * Charts.submeshVerticesCount,
+						vertexCount: Charts.GetActiveChartsCount() * Charts.chartVerticesCount,
 						profilingInfo);
 					mesh.Topology = PrimitiveTopology.TriangleList;
 					mesh.Draw(0, Line.VerticesCount * Charts.userLines.Length, profilingInfo);

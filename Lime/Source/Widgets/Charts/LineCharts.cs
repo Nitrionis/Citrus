@@ -34,6 +34,7 @@ namespace Lime.Widgets.Charts
 		protected override void RecalculateVertices()
 		{
 			if (!isMeshUpdateRequired) return;
+			isMeshUpdateRequired = false;
 			UpdateUserLines(IsIndependentMode ? 1 : chartsMaxHeight / chartsMaxValue);
 			int parity = 0;
 			int vertexIndex = Line.VerticesCount * userLines.Length;

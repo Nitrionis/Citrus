@@ -445,6 +445,7 @@
     <Compile Include="Source\Widgets\Bone.cs" />
     <Compile Include="Source\Widgets\BoneArray.cs" />
     <Compile Include="Source\Widgets\Button.cs" />
+    <Compile Include="Source\Widgets\Charts\AreaCharts.cs" />
     <Compile Include="Source\Widgets\Charts\Charts.cs" />
     <Compile Include="Source\Widgets\Charts\Legend.cs" />
     <Compile Include="Source\Widgets\Charts\LineCharts.cs" />
