@@ -122,6 +122,7 @@ namespace Lime.Graphics.Platform
 					foreach (var dc in DrawCalls) {
 						dc.Free();
 					}
+					DrawCalls.Clear();
 				}
 				IsDeepProfilingEnabled = false;
 				IsDeepProfilingCompleted = false;
