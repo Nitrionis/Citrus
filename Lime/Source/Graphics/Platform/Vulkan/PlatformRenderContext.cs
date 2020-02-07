@@ -119,7 +119,7 @@ namespace Lime.Graphics.Platform.Vulkan
 			placeholderTexture.SetData(0, new[] { Color4.Black });
 			ResetState();
 #if PROFILER_GPU
-			profiler = new PlatformProfiler(ref device, ref physicalDeviceLimits, ref physicalDevice.QueueFamilyProperties[queueFamilyIndex]);
+			profiler = new PlatformProfiler(device, physicalDeviceLimits, physicalDevice.QueueFamilyProperties[queueFamilyIndex]);
 #endif
 		}
 
@@ -345,7 +345,7 @@ namespace Lime.Graphics.Platform.Vulkan
 			swapchain.Present();
 			swapchain = null;
 #if PROFILER_GPU
-			profiler.FrameRenderFinished();
+			profiler.FrameRenderFinished(submitInfos.Peek().FenceValue, lastCompletedFenceValue);
 #endif
 		}
 

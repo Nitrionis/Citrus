@@ -27,6 +27,13 @@ namespace Lime.Graphics.Platform
 			public bool IsDeepProfilingEnabled;
 
 			/// <summary>
+			/// This field indicates whether frame profiling is complete.
+			/// Some data will not be available until the rendering of the frame is completed.
+			/// </summary>
+			[YuzuRequired]
+			public bool IsDeepProfilingCompleted;
+
+			/// <summary>
 			/// The number of draw calls that were processed by the GPU.
 			/// Includes only scene draw calls.
 			/// </summary>
@@ -117,6 +124,7 @@ namespace Lime.Graphics.Platform
 					}
 				}
 				IsDeepProfilingEnabled = false;
+				IsDeepProfilingCompleted = false;
 
 				return this;
 			}
@@ -164,27 +172,40 @@ namespace Lime.Graphics.Platform
 		/// Ensures that the frame is not reset.
 		/// </summary>
 		/// <param name="index">Item index in <see cref="Items"/></param>
+		/// <returns>Returns Item or null if the frame is still in profiling.</returns>
 		/// <remarks>
 		/// Only one frame can be locked at a time.
 		/// Previous frame will be automatically unlocked.
 		/// </remarks>
-		public Item LockFrame(long index)
+		public Item TryLockFrame(long index)
 		{
 			if (ProfiledFramesCount - lockedIndex < HistoryFramesCount) {
 				SwapItemWithLocked(lockedIndex);
 			}
-			var item = SwapItemWithLocked(index);
-			lockedIndex = index;
+			Item item = items[index % items.Length];
+			if (item != null && item.IsDeepProfilingCompleted) {
+				SwapItemWithLocked(index);
+				lockedIndex = index;
+			} else {
+				item = null;
+			}
 			return item;
 		}
 
-		private Item SwapItemWithLocked(long index)
+		protected Item GetFrameInHistory(long index)
+		{
+			if (ProfiledFramesCount - index >= HistoryFramesCount) {
+				throw new InvalidOperationException();
+			}
+			return items[index % items.Length];
+		}
+
+		private void SwapItemWithLocked(long index)
 		{
 			index %= items.Length;
 			var item = items[index];
 			items[index] = lockedItem;
 			lockedItem = item;
-			return item;
 		}
 	}
 }

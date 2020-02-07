@@ -25,8 +25,6 @@ namespace Lime.Graphics.Platform
 		/// </summary>
 		public abstract bool IsDeepProfiling { get; set; }
 
-		protected bool isSceneOnly = true;
-
 		/// <summary>
 		/// If enabled, objects that are not part of the scene will not participate
 		/// in deep profiling. Will be applied in the next frame.
@@ -40,7 +38,7 @@ namespace Lime.Graphics.Platform
 		/// </summary>
 		protected bool isMainWindowTarget;
 
-		private int maxDrawCallSCount = DrawCallBufferStartSize;
+		protected int maxDrawCallsCount { get; private set; } = DrawCallBufferStartSize;
 
 		protected PlatformProfiler()
 		{
@@ -71,12 +69,19 @@ namespace Lime.Graphics.Platform
 			}
 			OnFrameRenderCompleted?.Invoke();
 			isProfilingRequired = IsActive;
-			maxDrawCallSCount = Math.Max(maxDrawCallSCount, LastFrame.FullDrawCallCount);
-			if (LastFrame.DrawCalls.Capacity <= maxDrawCallSCount) {
-				LastFrame.DrawCalls.Capacity = GetNextSize(maxDrawCallSCount);
-			}
-			if (resultsBuffer.DrawCalls.Capacity <= maxDrawCallSCount) {
-				resultsBuffer.DrawCalls.Capacity = GetNextSize(maxDrawCallSCount);
+			CheckDrawCallsListsCapacity();
+		}
+
+		private void CheckDrawCallsListsCapacity()
+		{
+			if (LastFrame != null) {
+				maxDrawCallsCount = Math.Max(maxDrawCallsCount, LastFrame.FullDrawCallCount);
+				if (LastFrame.DrawCalls.Capacity <= maxDrawCallsCount) {
+					LastFrame.DrawCalls.Capacity = GetNextSize(maxDrawCallsCount);
+				}
+				if (resultsBuffer.DrawCalls.Capacity <= maxDrawCallsCount) {
+					resultsBuffer.DrawCalls.Capacity = GetNextSize(maxDrawCallsCount);
+				}
 			}
 		}
 
