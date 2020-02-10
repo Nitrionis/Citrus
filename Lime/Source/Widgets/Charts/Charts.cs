@@ -12,11 +12,11 @@ namespace Lime.Widgets.Charts
 		protected readonly Mesh<Vector3> mesh;
 		protected readonly Vector3[] vertices;
 		protected readonly Vector4[] colors;
-		protected readonly int controlPointsSpacing;
-		protected readonly int controlPointsCount;
 		protected readonly int chartVerticesCount;
 		protected readonly int chartsMaxHeight;
 		protected readonly int chartsVerticesOffset;
+		public readonly int ControlPointsSpacing;
+		public readonly int ControlPointsCount;
 
 		protected bool isMeshUpdateRequired = false;
 
@@ -110,9 +110,9 @@ namespace Lime.Widgets.Charts
 		public Charts(Parameters parameters)
 		{
 			chartsMaxHeight = parameters.ChartHeight;
-			controlPointsCount = parameters.ControlPointsCount;
-			controlPointsSpacing = parameters.ControlPointsSpacing;
-			chartVerticesCount = CalculateSubmeshVerticesCount(controlPointsCount);
+			ControlPointsCount = parameters.ControlPointsCount;
+			ControlPointsSpacing = parameters.ControlPointsSpacing;
+			chartVerticesCount = CalculateSubmeshVerticesCount(ControlPointsCount);
 			chartsVerticesOffset = Line.VerticesCount * parameters.UserLinesCount;
 			userLines = new Line[parameters.UserLinesCount];
 
@@ -122,7 +122,7 @@ namespace Lime.Widgets.Charts
 			HitTestMethod = HitTestMethod.BoundingRect;
 			Clicked += SendSlice;
 			OnSliceSelected = parameters.OnSliceSelected;
-			var size = new Vector2((controlPointsCount - 1) * controlPointsSpacing, chartsMaxHeight);
+			var size = new Vector2((ControlPointsCount - 1) * ControlPointsSpacing, chartsMaxHeight);
 			Size = size;
 			MinMaxSize = size;
 
@@ -132,10 +132,10 @@ namespace Lime.Widgets.Charts
 				var chart = new Chart();
 				charts[i] = chart;
 				chart.IsVisible = true;
-				chart.ColorIndex = i + 1;
-				chart.Points = new float[controlPointsCount];
+				chart.ColorIndex = i;
+				chart.Points = new float[ControlPointsCount];
 				for (int k = 0; k < chartVerticesCount; k++, j++) {
-					int x = (k / 2) * controlPointsSpacing;
+					int x = (k / 2) * ControlPointsSpacing;
 					vertices[j] = new Vector3(x, 0, chart.ColorIndex);
 				}
 			}
@@ -153,8 +153,8 @@ namespace Lime.Widgets.Charts
 
 		private void SendSlice()
 		{
-			int index = Math.Min(controlPointsCount - 1,
-				((int)LocalMousePosition().X + controlPointsSpacing / 2) / controlPointsSpacing);
+			int index = Math.Min(ControlPointsCount - 1,
+				((int)LocalMousePosition().X + ControlPointsSpacing / 2) / ControlPointsSpacing);
 			OnSliceSelected?.Invoke(GetSlice(index));
 		}
 
@@ -176,7 +176,7 @@ namespace Lime.Widgets.Charts
 			int submeshIndex = 0;
 			foreach (var submesh in charts) {
 				Array.Copy(submesh.Points, 1, submesh.Points, 0, submesh.Points.Length - 1);
-				submesh.Points[controlPointsCount - 1] = points[submeshIndex++];
+				submesh.Points[ControlPointsCount - 1] = points[submeshIndex++];
 			}
 		}
 
@@ -216,6 +216,10 @@ namespace Lime.Widgets.Charts
 				int colorIndex = userLines[i].ColorIndex;
 				s.Y *= scalingFactor;
 				e.Y *= scalingFactor;
+				if (s.Y > chartsMaxHeight && e.Y > chartsMaxHeight) {
+					s = Vector2.Zero;
+					e = Vector2.Zero;
+				}
 				vertices[offset + 0] = new Vector3(s.X,     chartsMaxHeight - s.Y,     colorIndex);
 				vertices[offset + 1] = new Vector3(s.X,     chartsMaxHeight - e.Y - 1, colorIndex);
 				vertices[offset + 2] = new Vector3(e.X + 1, chartsMaxHeight - e.Y - 1, colorIndex);

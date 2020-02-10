@@ -231,8 +231,8 @@ namespace Lime.Graphics.Platform.Vulkan
 		///	in days and months, which is impossible. This is probably a GPU bug. Nvidia GTX 1660 Ti.
 		/// </remarks>
 		private uint CalculateDeltaTime(ulong ts1, ulong ts2) => (uint)((ts2 >= ts1 ?
-				ts2 & timestampValidBitsMask - ts1 & timestampValidBitsMask :
-				ts2 & timestampValidBitsMask + (timestampValidBitsMask - ts1 & timestampValidBitsMask)
+				(ts2 & timestampValidBitsMask) - (ts1 & timestampValidBitsMask) :
+				(ts2 & timestampValidBitsMask) + (timestampValidBitsMask - (ts1 & timestampValidBitsMask))
 			) * timestampPeriod / 1000.0);
 	}
 }

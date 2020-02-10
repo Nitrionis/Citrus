@@ -6,7 +6,7 @@ namespace Lime.Widgets.Charts
 		private float[] accumulatedHeights;
 
 		public AreaCharts(Parameters parameters) : base(parameters) =>
-			accumulatedHeights = new float[controlPointsCount];
+			accumulatedHeights = new float[ControlPointsCount];
 
 		protected override void RecalculateVertices()
 		{
@@ -29,7 +29,7 @@ namespace Lime.Widgets.Charts
 						float point = chart.Points[pointIndex];
 						float ah = accumulatedHeights[pointIndex];
 						accumulatedHeights[pointIndex] += point;
-						float x = controlPointsSpacing * pointIndex;
+						float x = ControlPointsSpacing * pointIndex;
 						float y0 = chartsMaxHeight - (ah + point * parity) * scaleCoefficient;
 						float y1 = chartsMaxHeight - (ah + point * (1 - parity)) * scaleCoefficient;
 						vertices[offset + i + 0] = new Vector3(x, y0, chart.ColorIndex);
