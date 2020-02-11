@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using IPEndPoint = System.Net.IPEndPoint;
 using Lime.Graphics.Platform;
+using Yuzu;
 
 namespace Lime.Profilers
 {
@@ -34,9 +35,16 @@ namespace Lime.Profilers
 
 		public bool IsRemoteProfilerConnected { get; private set; }
 
-		private class Frame // : network item
+		private class Frame : Network.Item
 		{
+			[YuzuRequired]
+			public bool IsEmpty { get; set; }
 
+			[YuzuRequired]
+			public bool IsCloseRequested { get; set; }
+
+			[YuzuRequired]
+			public ProfilerHistory.Item DrawingInfo;
 		}
 
 		/// <summary>

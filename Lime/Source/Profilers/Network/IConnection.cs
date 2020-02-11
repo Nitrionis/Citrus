@@ -4,18 +4,26 @@ using System.Collections.Generic;
 
 namespace Lime.Profilers.Network
 {
+	/// <summary>
+	/// Will be serialized using Yuzu.
+	/// </summary>
 	public interface Item
 	{
 		/// <summary>
 		/// Empty messages are used to maintain a connection.
 		/// </summary>
 		bool IsEmpty { get; }
+
+		/// <summary>
+		/// Indicates that disconnect requested.
+		/// </summary>
+		bool IsCloseRequested { get; set; }
 	}
 
 	internal interface IConnection
 	{
 		/// <summary>
-		/// Indicates if a remote network member is connected.
+		/// Indicates whether a remote network member is connected.
 		/// </summary>
 		bool IsConnected { get; }
 
@@ -41,7 +49,7 @@ namespace Lime.Profilers.Network
 		Action OnReceived { get; set; }
 
 		/// <summary>
-		/// Serializes and sends data.
+		/// Serializes and sends data to remote member.
 		/// </summary>
 		void SerializeAndSend(Item item);
 	}

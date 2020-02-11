@@ -373,8 +373,8 @@
     <Compile Include="Source\Graphics\Platform\ProfilingResult.cs" />
     <Compile Include="Source\Profilers\Network\Client.cs" />
     <Compile Include="Source\Profilers\ITimePeriod.cs" />
-    <Compile Include="Source\Profilers\NetworkConnection.cs" />
     <Compile Include="Source\Profilers\Network\IConnection.cs" />
+    <Compile Include="Source\Profilers\Network\NetworkMember.cs" />
     <Compile Include="Source\Profilers\Network\Server.cs" />
     <Compile Include="Source\Profilers\NodeProfiler.cs" />
     <Compile Include="Source\Profilers\NodeProfilerHelpers\ResultExporter.cs" />
