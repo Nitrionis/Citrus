@@ -25,6 +25,12 @@ namespace Lime.Profilers.Contexts
 			set => GpuProfiler.Instance.IsSceneOnlyDeepProfiling = value;
 		}
 
+		public LocalContext()
+		{
+			GpuHistory = GpuProfiler.Instance;
+			CpuHistory = CpuProfiler.Instance;
+		}
+
 		public override void LocalDeviceFrameRenderCompleted() { }
 	}
 }

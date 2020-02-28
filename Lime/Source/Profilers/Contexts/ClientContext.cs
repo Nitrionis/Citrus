@@ -18,10 +18,16 @@ namespace Lime.Profilers.Contexts
 	{
 		private readonly Network.Client client;
 
+		private struct FrameUpdatePair
+		{
+			public GpuHistory.Item Frame;
+			public CpuHistory.Item Update;
+		}
+
 		/// <remarks>
 		/// Do not send frames that are still rendering on the GPU.
 		/// </remarks>
-		private readonly Queue<GpuHistory.Item> unfinishedFrames;
+		private readonly Queue<FrameUpdatePair> unfinished;
 
 		private readonly ConcurrentQueue<Request> requests;
 
@@ -49,9 +55,10 @@ namespace Lime.Profilers.Contexts
 		public ClientContext()
 		{
 			GpuHistory = GpuProfiler.Instance;
+			CpuHistory = CpuProfiler.Instance;
 			client = new Network.Client();
 			client.OnReceived = RemoteProfilerMessageReceived;
-			unfinishedFrames = new Queue<GpuHistory.Item>();
+			unfinished = new Queue<FrameUpdatePair>();
 			requests = new ConcurrentQueue<Request>();
 			unserializedResponses = new Queue<Response>();
 		}
@@ -62,11 +69,14 @@ namespace Lime.Profilers.Contexts
 		{
 			if (IsActiveContext && client.IsConnected) {
 				if (GpuProfiler.Instance.IsEnabled) {
-					unfinishedFrames.Enqueue(GpuHistory.LastFrame);
+					unfinished.Enqueue(new FrameUpdatePair {
+						Frame = GpuHistory.LastFrame,
+						Update = CpuHistory.LastUpdate
+					});
 				}
 				bool isOptionsSent = false;
-				while (unfinishedFrames.Count > 0 && unfinishedFrames.Peek().IsCompleted) {
-					var frame = unfinishedFrames.Dequeue().LightweightClone();
+				while (unfinished.Count > 0 && unfinished.Peek().Frame.IsCompleted) {
+					var frameUpdatePair = unfinished.Dequeue();
 					Request request;
 					Response response = null;
 					if (!requests.IsEmpty && requests.TryDequeue(out request)) {
@@ -75,7 +85,8 @@ namespace Lime.Profilers.Contexts
 					}
 					client.LazySerializeAndSend(
 						new FrameStatistics {
-							GpuInfo = frame,
+							GpuInfo = frameUpdatePair.Frame.LightweightClone(),
+							CpuInfo = frameUpdatePair.Update.LightweightClone(),
 							Response = response
 						}
 					);

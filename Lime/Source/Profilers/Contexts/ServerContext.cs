@@ -27,6 +27,22 @@ namespace Lime.Profilers.Contexts
 
 		private SparsedGpuHistory sparsedGpuHistory;
 
+		private class SparsedCpuHistory : CpuHistory
+		{
+			public void Enqueue(Item item)
+			{
+				long index = item.UpdateIndex % items.Length;
+				items[index].Reset();
+				items[index] = item;
+				if (ProfiledUpdatesCount < item.UpdateIndex + 1) {
+					ProfiledUpdatesCount = item.UpdateIndex + 1;
+					LastUpdate = item;
+				}
+			}
+		}
+
+		private SparsedCpuHistory sparsedCpuHistory;
+
 		public Action<Response> OnResponseReceived;
 
 		private bool isProfilingEnabled;
@@ -57,6 +73,7 @@ namespace Lime.Profilers.Contexts
 		{
 			sparsedGpuHistory = new SparsedGpuHistory();
 			GpuHistory = sparsedGpuHistory;
+			CpuHistory = new CpuHistory();
 			server = new Network.Server();
 		}
 
@@ -69,6 +86,9 @@ namespace Lime.Profilers.Contexts
 				if (item is FrameStatistics frame) {
 					if (frame.GpuInfo != null) {
 						sparsedGpuHistory.Enqueue(frame.GpuInfo);
+					}
+					if (frame.CpuInfo != null) {
+						sparsedCpuHistory.Enqueue(frame.CpuInfo);
 					}
 					UpdateProfilerOptions(frame);
 					if (frame.Response != null) {

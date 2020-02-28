@@ -100,6 +100,9 @@ namespace Lime.Profilers.Contexts
 			public GpuHistory.Item GpuInfo;
 
 			[YuzuMember]
+			public CpuHistory.Item CpuInfo;
+
+			[YuzuMember]
 			public Response Response;
 		}
 	}

@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Threading;
 using System.Windows.Forms;
 using WinFormsCloseReason = System.Windows.Forms.CloseReason;
+using Lime.Profilers;
 
 namespace Lime
 {
@@ -839,6 +840,9 @@ namespace Lime
 			UnclampedDelta = (float)stopwatch.Elapsed.TotalSeconds;
 			float delta = Mathf.Clamp(UnclampedDelta, 0, Application.MaxDelta);
 			stopwatch.Restart();
+#if PROFILER_GPU
+			CpuProfiler.UpdateStarted();
+#endif
 			if (this == Application.MainWindow && Application.MainMenu != null) {
 				Application.MainMenu.Refresh();
 			}
@@ -868,6 +872,9 @@ namespace Lime
 				}
 				shouldCleanDroppedFiles = !shouldCleanDroppedFiles;
 			}
+#if PROFILER_GPU
+			CpuProfiler.UpdateFinished();
+#endif
 			renderingState = renderControl.CanRender ? RenderingState.Updated : RenderingState.Rendered;
 			WaitForRendering();
 			if (renderControl.CanRender) {
