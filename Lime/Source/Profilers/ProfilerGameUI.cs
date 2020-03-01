@@ -4,15 +4,12 @@ namespace Lime
 {
 	[TangerineRegisterNode(Order = 32)]
 	[TangerineVisualHintGroup("/All/Nodes/Profiler")]
-	public class RemoteProfiler : Widget
+	public class ProfilerGameUI : Widget
 	{
 		private SimpleText statusLabel;
-		private SimpleText ipPortInput;
+		private EditBox ipPortInput;
 		private SimpleButton connectButton;
 		private SimpleButton disconnectButton;
-		private SimpleButton clearAllButton;
-		private SimpleButton clearOneButton;
-		private SimpleButton[] keyboard;
 
 		private Color4 backgroundColor = new Color4(45, 45, 45);
 
@@ -36,11 +33,6 @@ namespace Lime
 				componentsBackgroundColor = value;
 				connectButton.BackgroundColor = value;
 				disconnectButton.BackgroundColor = value;
-				clearAllButton.BackgroundColor = value;
-				clearOneButton.BackgroundColor = value;
-				foreach (var button in keyboard) {
-					button.BackgroundColor = value;
-				}
 			}
 		}
 
@@ -94,7 +86,7 @@ namespace Lime
 
 		public override bool IsNotDecorated() => false;
 
-		public RemoteProfiler()
+		public ProfilerGameUI()
 		{
 			Presenter = new WidgetFlatFillPresenter(backgroundColor);
 
@@ -108,14 +100,14 @@ namespace Lime
 			};
 			AddNode(statusLabel);
 
-			ipPortInput = new SimpleText {
+			ipPortInput = new EditBox {
 				Text = "ip:port",
-				FontHeight = FontHeight,
 				Color = Color4.White,
-				Anchors = Anchors.LeftRight,
-				HAlignment = HAlignment.Center,
-				VAlignment = VAlignment.Center,
+				Anchors = Anchors.LeftRight
 			};
+			ipPortInput.TextWidget.FontHeight = FontHeight;
+			ipPortInput.TextWidget.HAlignment = HAlignment.Center;
+			ipPortInput.TextWidget.VAlignment = VAlignment.Center;
 			AddNode(ipPortInput);
 
 			connectButton = new SimpleButton {
@@ -133,43 +125,6 @@ namespace Lime
 			};
 			disconnectButton.Caption.FontHeight = fontHeight;
 			AddNode(disconnectButton);
-
-			clearAllButton = new SimpleButton {
-				Text = "Clear",
-				Clicked = () => {
-					ipPortInput.Text = "";
-				}
-			};
-			clearAllButton.Caption.FontHeight = fontHeight;
-			AddNode(clearAllButton);
-
-			clearOneButton = new SimpleButton {
-				Text = "<X",
-				Clicked = () => {
-					ipPortInput.Text = ipPortInput.Text.Substring(0, ipPortInput.Text.Length - 1);
-				}
-			};
-			clearOneButton.Caption.FontHeight = fontHeight;
-			AddNode(clearOneButton);
-
-			keyboard = new SimpleButton[12];
-			var buttonsValues = new string[] {
-				"1", "2", "3",
-				"4", "5", "6",
-				"7", "8", "9",
-				".", "0", ":"
-			};
-			for (int i = 0; i < keyboard.Length; i++) {
-				var button = new SimpleButton {
-					Text = buttonsValues[i]
-				};
-				button.Caption.FontHeight = fontHeight;
-				button.Clicked = () => {
-					ipPortInput.Text += button.Caption.Text;
-				};
-				keyboard[i] = button;
-				AddNode(button);
-			}
 
 			UpdateComponentsLocation();
 		}
@@ -191,43 +146,17 @@ namespace Lime
 			connectButton.Position = new Vector2(leftMargin, topOffset);
 			disconnectButton.Size = componentsSize;
 			disconnectButton.Position = new Vector2(leftMargin, topOffset);
-			topOffset += spacing + (int)componentsSize.Y;
-
-			clearAllButton.Position = new Vector2(leftMargin, topOffset);
-			clearAllButton.Size = new Vector2(componentsSize.X / 2, componentsSize.Y);
-			clearOneButton.Position = new Vector2(leftMargin + componentsSize.X / 2, topOffset);
-			clearOneButton.Size = new Vector2(componentsSize.X / 2, componentsSize.Y);
-			topOffset += spacing + (int)componentsSize.Y;
-
-			UpdateKeyboardButtonsLocation(topOffset);
-		}
-
-		private void UpdateKeyboardButtonsLocation(int topMargin)
-		{
-			const int spacing = 3;
-			int keyboardButtonWidth = ((int)componentsSize.X - 2 * spacing) / 3;
-			for (int i = 0; i < keyboard.Length; i++) {
-				keyboard[i].Position = new Vector2(
-					leftMargin + (i % 3) * (keyboardButtonWidth + spacing),
-					topMargin + (i / 3) * (keyboardButtonHeight + spacing)
-				);
-				keyboard[i].Size = new Vector2(keyboardButtonWidth, keyboardButtonHeight);
-			}
 		}
 
 		private void UpdateWidgetsFontHeight()
 		{
 			statusLabel.FontHeight = fontHeight;
-			ipPortInput.FontHeight = fontHeight;
+			ipPortInput.TextWidget.FontHeight = fontHeight;
 			connectButton.Caption.FontHeight = fontHeight;
 			disconnectButton.Caption.FontHeight = fontHeight;
-			clearAllButton.Caption.FontHeight = fontHeight;
-			clearOneButton.Caption.FontHeight = fontHeight;
-			for (int i = 0; i < keyboard.Length; i++) {
-				keyboard[i].Caption.FontHeight = fontHeight;
-			}
 		}
 
+		[YuzuDontGenerateDeserializer]
 		private class SimpleButton : Button
 		{
 			private const int DefaultFontHeight = 16;
