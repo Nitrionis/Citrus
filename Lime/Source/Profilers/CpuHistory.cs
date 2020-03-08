@@ -32,7 +32,6 @@ namespace Lime.Profilers
 		}
 
 		protected readonly Item[] items;
-		public readonly ReadOnlyCollection<Item> Items;
 
 		/// <summary>
 		/// The last profiled update.
@@ -47,11 +46,12 @@ namespace Lime.Profilers
 		public CpuHistory()
 		{
 			items = new Item[GpuHistory.HistoryFramesCount];
-			Items = Array.AsReadOnly(items);
 			for (int i = 0; i < items.Length; i++) {
 				items[i] = new Item();
 			}
 		}
+
+		public Item GetUpdate(long index) => items[index % items.Length];
 
 		public bool IsUpdateIndexValid(long index) =>
 			index > 0 &&

@@ -486,6 +486,9 @@ namespace Lime
 			}
 			active = Form.ActiveForm == form;
 
+#if PROFILER_GPU
+			CpuProfiler.Initialize();
+#endif
 			if (options.UseTimer) {
 				timer = new System.Windows.Forms.Timer {
 					Interval = (int)(1000.0 / 65),
@@ -841,7 +844,7 @@ namespace Lime
 			float delta = Mathf.Clamp(UnclampedDelta, 0, Application.MaxDelta);
 			stopwatch.Restart();
 #if PROFILER_GPU
-			CpuProfiler.UpdateStarted();
+			CpuProfiler.UpdateStarted(Application.MainWindow == this);
 #endif
 			if (this == Application.MainWindow && Application.MainMenu != null) {
 				Application.MainMenu.Refresh();
@@ -873,7 +876,7 @@ namespace Lime
 				shouldCleanDroppedFiles = !shouldCleanDroppedFiles;
 			}
 #if PROFILER_GPU
-			CpuProfiler.UpdateFinished();
+			CpuProfiler.UpdateFinished(Application.MainWindow == this);
 #endif
 			renderingState = renderControl.CanRender ? RenderingState.Updated : RenderingState.Rendered;
 			WaitForRendering();

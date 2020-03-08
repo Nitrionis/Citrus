@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using Yuzu;
 
 namespace Lime.Graphics.Platform
@@ -168,21 +166,53 @@ namespace Lime.Graphics.Platform
 		/// </summary>
 		public Item LastFrame { get; protected set; }
 
-		protected readonly Item[] items;
-		public readonly ReadOnlyCollection<Item> Items;
-
 		/// <summary>
 		/// The total number of profiled frames from the moment the engine starts.
 		/// </summary>
 		public long ProfiledFramesCount { get; protected set; }
 
+		protected readonly Item[] items;
+
+		private Item freeItem;
+		private long protectedIndex;
+
 		public ProfilerHistory()
 		{
 			items = new Item[HistoryFramesCount];
-			Items = Array.AsReadOnly(items);
 			for (int i = 0; i < items.Length; i++) {
 				items[i] = new Item();
 			}
+		}
+
+		/// <summary>
+		/// Ensures that the frame is not reset.
+		/// </summary>
+		/// <remarks>
+		/// Only one frame can be locked at a time.
+		/// Previous frame will be automatically unlocked.
+		/// </remarks>
+		public bool TryLockFrame(long frameIndex)
+		{
+			if (ProfiledFramesCount - protectedIndex > HistoryFramesCount) {
+				freeItem?.Reset();
+			}
+			if (IsFrameIndexValid(frameIndex)) {
+				protectedIndex = frameIndex;
+				return true;
+			} else {
+				return false;
+			}
+		}
+
+		protected Item SafeResetFrame(long frameIndex)
+		{
+			long itemIndex = frameIndex % items.Length;
+			if (frameIndex == protectedIndex) {
+				var protectedFrame = items[itemIndex];
+				items[itemIndex] = freeItem;
+				freeItem = protectedFrame;
+			}
+			return items[itemIndex].Reset();
 		}
 
 		public Item GetFrame(long index) => items[index % items.Length];

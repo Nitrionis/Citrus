@@ -16,7 +16,7 @@ namespace Lime.Widgets.Charts
 
 		protected bool isMeshUpdateRequired = false;
 
-		public Color4 BackgroundColor { get; private set; }
+		public Color4 BackgroundColor { get; set; }
 
 		protected struct Line
 		{

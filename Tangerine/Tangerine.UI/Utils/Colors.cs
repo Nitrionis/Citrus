@@ -313,6 +313,10 @@ namespace Tangerine.UI
 			public Color4 DrawCallSceneOne { get; set; }
 			[YuzuOptional]
 			public Color4 DrawCallSceneTwo { get; set; }
+			[YuzuOptional]
+			public Color4 DrawCallUnselectedOne { get; set; }
+			[YuzuOptional]
+			public Color4 DrawCallUnselectedTwo { get; set; }
 		}
 
 		[YuzuOptional]
@@ -512,6 +516,8 @@ namespace Tangerine.UI
 				DrawCallSceneTwo = new Color4(76, 176, 80),
 				DrawCallUiOne = new Color4(63, 81, 181),
 				DrawCallUiTwo = new Color4(33, 150, 243),
+				DrawCallUnselectedOne = new Color4(60, 60, 60),
+				DrawCallUnselectedTwo = new Color4(60, 60, 60),
 			};
 			return new ColorTheme {
 				IsDark = true,

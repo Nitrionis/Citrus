@@ -24,22 +24,22 @@ namespace Lime.Graphics.Platform
 		/// <list type="bullet">
 		/// <item><description>
 		/// If <see cref="ProfilingInfo"/> created on the local device.
-		/// This can be Node or List of Node or something else.
+		/// This can be Node or List of Node or null.
 		/// </description></item>
 		/// <item><description>
 		/// If <see cref="ProfilingInfo"/> received from outside.
-		/// This can be Node.Id or List of Node.Id or something else.
+		/// This can be Node.Id or List of Node.Id or null.
 		/// </description></item>
 		/// </list>
 		/// </summary>
 		[YuzuRequired]
-		internal object Owners;
+		public object Owners;
 
 		/// <summary>
-		/// if "false" the object is part of the "Tangerine" interface.
+		/// True if at least one owner belongs to the scene.
 		/// </summary>
 		[YuzuRequired]
-		internal bool IsPartOfScene;
+		public bool IsPartOfScene;
 
 		/// <summary>
 		/// Material used during rendering.
@@ -55,7 +55,7 @@ namespace Lime.Graphics.Platform
 		/// </list>
 		/// </summary>
 		[YuzuRequired]
-		internal object Material;
+		public object Material;
 
 		/// <summary>
 		/// Material render pass index.
@@ -68,9 +68,10 @@ namespace Lime.Graphics.Platform
 
 		public static ProfilingInfo Acquire(object material = null, int passIndex = 0)
 		{
-			var owners = RenderObjectOwnersInfo.CurrentNode;
-			bool isPartOfScene = ReferenceEquals(RenderObjectOwnersInfo.CurrentManager, SceneNodeManager);
-			return Acquire(owners, isPartOfScene, material, passIndex);
+			bool isPartOfScene =
+				RenderObjectOwnersInfo.CurrentManager == null ||
+				ReferenceEquals(RenderObjectOwnersInfo.CurrentManager, SceneNodeManager);
+			return Acquire(RenderObjectOwnersInfo.CurrentNode, isPartOfScene, material, passIndex);
 		}
 
 		public static ProfilingInfo Acquire(object owners, bool isPartOfScene, object material, int passIndex)

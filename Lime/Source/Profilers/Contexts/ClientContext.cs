@@ -167,7 +167,7 @@ namespace Lime.Profilers.Contexts
 			0 < index && index < GpuHistory.ProfiledFramesCount &&
 			GpuHistory.ProfiledFramesCount - index < GpuHistory.HistoryFramesCount;
 
-		protected override void Completed()
+		public override void Completed()
 		{
 			client.RequestClose();
 			while (unserializedResponses.Count > 0) {

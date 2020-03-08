@@ -9,7 +9,7 @@ namespace Lime.Graphics.Platform
 		/// <summary>
 		/// Use to send a signal that the frame has been sent to the GPU.
 		/// </summary>
-		public Action OnFrameRenderCompleted;
+		public Action FrameRenderCompleted;
 
 		protected bool isProfilingEnabled = true;
 		protected bool isProfilingRequired = true;
@@ -59,6 +59,7 @@ namespace Lime.Graphics.Platform
 			ProfiledFramesCount = 1;
 			resultsBuffer = items[0].Reset();
 			resultsBuffer.FrameIndex = 0;
+			LastFrame = resultsBuffer;
 		}
 
 		/// <summary>
@@ -79,15 +80,15 @@ namespace Lime.Graphics.Platform
 				resultsBuffer = AcquireResultsBuffer();
 			}
 			RenderBatchProfiler.Reset();
-			OnFrameRenderCompleted?.Invoke();
+			FrameRenderCompleted?.Invoke();
 			isSceneOnlyDeepProfiling = isSceneOnlyDeepProfilingRequired;
 			CheckDrawCallsBufferCapacity();
 		}
 
 		private Item AcquireResultsBuffer()
 		{
-			LastFrame = items[(ProfiledFramesCount - 1) % items.Length];
-			var buffer = items[ProfiledFramesCount % items.Length].Reset();
+			LastFrame = GetFrame(ProfiledFramesCount - 1);
+			var buffer = SafeResetFrame(ProfiledFramesCount);
 			buffer.FrameIndex = ProfiledFramesCount++;
 			return buffer;
 		}

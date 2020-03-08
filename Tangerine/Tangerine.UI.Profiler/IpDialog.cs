@@ -1,0 +1,92 @@
+using System;
+using System.Net;
+using Lime;
+
+namespace Tangerine.UI
+{
+	internal class IpDialog
+	{
+		private readonly Window window;
+
+		public struct Result
+		{
+			public IPAddress IP;
+			public int Port;
+		}
+
+		private Result result = new Result { IP = null, Port = 0 };
+
+		public IpDialog(bool isPortRequired = false)
+		{
+			ThemedButton okButton;
+			ThemedDropDownList dropDownList = InitializeIpList();
+			ThemedEditBox editBox = new ThemedEditBox {
+				Visible = isPortRequired
+			};
+			window = new Window(new WindowOptions {
+				Title = "Choose IP",
+				Visible = false,
+				Style = WindowStyle.Dialog,
+			});
+			WindowWidget rootWidget = new ThemedInvalidableWindowWidget(window) {
+				LayoutBasedWindowSize = true,
+				Padding = new Thickness(8),
+				Layout = new VBoxLayout { Spacing = 16 },
+				Nodes = {
+					new Widget {
+						Layout = new HBoxLayout(),
+						Nodes = {
+							new Widget {
+								Layout = new VBoxLayout(),
+								Nodes = {
+									new ThemedSimpleText("ip"),
+									new ThemedSimpleText("port") { Visible = isPortRequired }
+								}
+							},
+							new Widget {
+								Layout = new VBoxLayout(),
+								Nodes = {
+									dropDownList,
+									editBox
+								}
+							},
+						}
+					},
+					(okButton = new ThemedButton("Ok"))
+				}
+			};
+			okButton.Clicked += () => {
+				result = new Result();
+				bool isIpValid = IPAddress.TryParse(dropDownList.Text, out result.IP);
+				bool isPortValid = int.TryParse(editBox.Text, out result.Port);
+				if (isIpValid && isPortValid) {
+					window.Close();
+				} else {
+					editBox.Text =
+					"wrong " +
+					(!isIpValid ?                  "ip " : "") +
+					(!isIpValid && !isPortValid ? "and " : "") +
+					(!isPortValid ?               "port" : "");
+				}
+			};
+		}
+
+		private ThemedDropDownList InitializeIpList()
+		{
+			var ipPresets = new ThemedDropDownList() {
+				MinMaxWidth = 160
+			};
+			foreach (var ip in Dns.GetHostEntry(Dns.GetHostName()).AddressList) {
+				ipPresets.Items.Add(new CommonDropDownList.Item(ip.ToString()));
+			}
+			ipPresets.Index = 0;
+			return ipPresets;
+		}
+
+		public Result Show()
+		{
+			window.ShowModal();
+			return result;
+		}
+	}
+}

@@ -8,6 +8,13 @@ namespace Lime.Profilers
 	{
 		public static CpuProfiler Instance { get; private set; }
 
+		public static void Initialize()
+		{
+			if (Instance == null) {
+				Instance = new CpuProfiler();
+			}
+		}
+
 		private const long FrameIndexUnset = -1;
 		private const long FrameIndexPendingConfirmation = -2;
 
@@ -17,10 +24,6 @@ namespace Lime.Profilers
 
 		public CpuProfiler()
 		{
-			if (Instance != null) {
-				throw new InvalidOperationException();
-			}
-			Instance = this;
 			stopwatch = new Stopwatch();
 			LastUpdate = new Item {
 				FrameIndex = FrameIndexUnset
@@ -32,30 +35,34 @@ namespace Lime.Profilers
 				FrameIndexPendingConfirmation : FrameIndexUnset;
 		}
 
-		public static void UpdateStarted() => Instance.NextUpdateStarted();
+		public static void UpdateStarted(bool isMainWindow) =>
+			Instance.NextUpdateStarted(isMainWindow);
 
-		private void NextUpdateStarted()
+		private void NextUpdateStarted(bool isMainWindow)
 		{
-			if (LastUpdate.FrameIndex == FrameIndexPendingConfirmation) {
-				long frameIndex = GpuProfiler.Instance.LastFrame.FrameIndex;
-				if (previousFrameIndex < frameIndex) {
-					LastUpdate.FrameIndex = frameIndex;
-					previousFrameIndex = frameIndex;
+			if (isMainWindow) {
+				if (LastUpdate.FrameIndex == FrameIndexPendingConfirmation) {
+					long frameIndex = GpuProfiler.Instance.LastFrame.FrameIndex;
+					if (previousFrameIndex < frameIndex) {
+						LastUpdate.FrameIndex = frameIndex;
+						previousFrameIndex = frameIndex;
+					} else {
+						DropLastFrame();
+					}
 				}
-				else {
-					DropLastFrame();
-				}
+				LastUpdate.DeltaTime = stopwatch.ElapsedMilliseconds;
+				stopwatch.Restart();
 			}
-			LastUpdate.DeltaTime = stopwatch.ElapsedMilliseconds;
-			stopwatch.Restart();
 		}
 
-		public static void UpdateFinished()
+		public static void UpdateFinished(bool isMainWindow)
 		{
-			Instance.resultsBuffer = Instance.AcquireResultsBuffer();
-			Instance.resultsBuffer.FrameIndex =
-				GpuProfiler.Instance == null || GpuProfiler.Instance.IsEnabled ?
-					FrameIndexPendingConfirmation : FrameIndexUnset;
+			if (isMainWindow) {
+				Instance.resultsBuffer = Instance.AcquireResultsBuffer();
+				Instance.resultsBuffer.FrameIndex =
+					GpuProfiler.Instance == null || GpuProfiler.Instance.IsEnabled ?
+						FrameIndexPendingConfirmation : FrameIndexUnset;
+			}
 		}
 
 		private Item AcquireResultsBuffer()

@@ -12,7 +12,7 @@ namespace Lime.Profilers
 
 		public static void Initialize()
 		{
-			if (instance != null) {
+			if (instance == null) {
 				instance = new LimeProfiler();
 			}
 		}
@@ -20,7 +20,8 @@ namespace Lime.Profilers
 		private static ProfilerContext nextContext;
 		private static ProfilerContext currentContext;
 
-		public static Action OnLocalDeviceFrameRenderCompleted;
+		public static Action ContextChanged;
+		public static Action LocalDeviceFrameRenderCompleted;
 
 		public static GpuHistory GpuHistory { get => currentContext.GpuHistory; }
 		public static CpuHistory CpuHistory { get => currentContext.CpuHistory; }
@@ -46,19 +47,20 @@ namespace Lime.Profilers
 		private LimeProfiler()
 		{
 			SetContext(new LocalContext());
-			GpuProfiler.Instance.OnFrameRenderCompleted = LocalDeviceFrameRenderCompleted;
+			GpuProfiler.Instance.FrameRenderCompleted = OnLocalDeviceFrameRenderCompleted;
 		}
 
-		public void LocalDeviceFrameRenderCompleted()
+		public void OnLocalDeviceFrameRenderCompleted()
 		{
 			if (nextContext != null) {
 				currentContext?.Completed();
 				currentContext = nextContext;
 				nextContext = null;
 				currentContext.Activated();
+				ContextChanged?.Invoke();
 			}
 			currentContext.LocalDeviceFrameRenderCompleted();
-			OnLocalDeviceFrameRenderCompleted?.Invoke();
+			LocalDeviceFrameRenderCompleted?.Invoke();
 		}
 
 		public static void SetContext(ProfilerContext context) => nextContext = context;

@@ -4,23 +4,27 @@ using Lime.Widgets.Charts;
 using Lime.Profilers;
 using GpuHistory = Lime.Graphics.Platform.ProfilerHistory;
 
-namespace Tangerine.UI.Profiler
+namespace Tangerine.UI
 {
 	internal class ChartsPanel : Widget
 	{
-		private Legend areaLegend;
-		private AreaCharts areaCharts;
+		private readonly Legend areaLegend;
+		private readonly AreaCharts areaCharts;
+		private readonly float[] originalCpuPoints;
 
-		private Legend lineLegend;
-		private LineCharts lineCharts;
+		private readonly Legend lineLegend;
+		private readonly LineCharts lineCharts;
 
-		private struct Indices
+		private readonly Widget areaChartsPanel;
+		private readonly Widget lineChartsPanel;
+
+		public struct Indices
 		{
-			public long frame;
-			public long update;
+			public long Frame;
+			public long Update;
 		}
 
-		private Indices[] indices;
+		public Indices[] FrameUpdateIndices;
 
 		private ChartsContainer.Slice areaLastSlice;
 		private ChartsContainer.Slice lineLastSlice;
@@ -49,7 +53,7 @@ namespace Tangerine.UI.Profiler
 				Color4.White,
 				Color4.Red
 			};
-			indices = new Indices[GpuHistory.HistoryFramesCount];
+			FrameUpdateIndices = new Indices[GpuHistory.HistoryFramesCount];
 			// Create area charts.
 			var parameters = new AreaCharts.Parameters(GpuHistory.HistoryFramesCount, colors) {
 				ChartsCount = 3,
@@ -76,6 +80,7 @@ namespace Tangerine.UI.Profiler
 				MinMaxHeight = parameters.Height,
 				Height = parameters.Height
 			};
+			originalCpuPoints = new float[GpuHistory.HistoryFramesCount];
 			// Create line chars.
 			parameters = new LineCharts.Parameters(GpuHistory.HistoryFramesCount, colors) {
 				IsIndependentMode = true,
@@ -98,19 +103,21 @@ namespace Tangerine.UI.Profiler
 				new Legend.ItemDescription { Color = colors[3], Name = "Triangles",         Format = "{0,6}" },
 			};
 			lineLegend = new Legend(items, lineCharts.SetActive);
+			areaChartsPanel = new Widget {
+				Layout = new VBoxLayout { Spacing = 6 },
+				Nodes = { areaLegend, lineLegend },
+				Padding = new Thickness(6)
+			};
+			lineChartsPanel = new Widget {
+				Layout = new VBoxLayout { Spacing = 6 },
+				Nodes = { areaCharts, lineCharts },
+				Padding = new Thickness(6)
+			};
 			AddNode(new Widget {
 				Layout = new HBoxLayout(),
 				Nodes = {
-					new Widget {
-						Layout = new VBoxLayout { Spacing = 6 },
-						Nodes = { areaLegend, lineLegend },
-						Padding = new Thickness(6)
-					},
-					new Widget {
-						Layout = new VBoxLayout { Spacing = 6 },
-						Nodes = { areaCharts, lineCharts },
-						Padding = new Thickness(6)
-					}
+					areaChartsPanel,
+					lineChartsPanel
 				}
 			});
 		}
@@ -123,19 +130,24 @@ namespace Tangerine.UI.Profiler
 
 		public void Reset()
 		{
-			for (int i = 0; i < indices.Length; i++) {
-				indices[i] = new Indices { frame = -1, update = -1 };
+			for (int i = 0; i < FrameUpdateIndices.Length; i++) {
+				FrameUpdateIndices[i] = new Indices { Frame = -1, Update = -1 };
 			}
 			areaCharts.Reset();
 			lineCharts.Reset();
 		}
 
+		public void SetAreaChartsPanelVisible(bool value) => areaChartsPanel.Visible = value;
+		public void SetLineChartsPanelVisible(bool value) => lineChartsPanel.Visible = value;
+
 		private void PushChartsSlice(GpuHistory.Item frame, CpuHistory.Item update)
 		{
+			Array.Copy(originalCpuPoints, 1, originalCpuPoints, 0, originalCpuPoints.Length - 1);
+			originalCpuPoints[originalCpuPoints.Length - 1] = update.DeltaTime;
 			var points = new float[] {
-				(float)frame.FullGpuRenderTime, // GPU
-				update.DeltaTime, // CPU
-				0f, // Selected
+				(float)frame.FullGpuRenderTime,
+				update.DeltaTime,
+				0f,
 			};
 			areaCharts.PushSlice(points);
 			areaLegend.SetValues(points);
@@ -157,8 +169,8 @@ namespace Tangerine.UI.Profiler
 			areaLegend.SetValues(areaLastSlice.Points);
 			lineLegend.SetValues(lineLastSlice.Points);
 
-			long frameIndex = indices[slice.Index].frame;
-			long updateIndex = indices[slice.Index].update;
+			long frameIndex = FrameUpdateIndices[slice.Index].Frame;
+			long updateIndex = FrameUpdateIndices[slice.Index].Update;
 			if (
 				LimeProfiler.GpuHistory.IsFrameIndexValid(frameIndex) &&
 				LimeProfiler.CpuHistory.IsUpdateIndexValid(updateIndex)
@@ -192,6 +204,21 @@ namespace Tangerine.UI.Profiler
 					areaLastSlice.Index = areaLastSlice.Index - 1;
 					lineLastSlice.Index = lineLastSlice.Index - 1;
 				}
+			}
+		}
+
+		/// <summary>
+		/// todo
+		/// </summary>
+		public void UpdateSelectedObjectsRenderTime(float[] selectedPoints)
+		{
+			var cpuTimeChart = areaCharts.Charts[1];
+			for (int i = 0; i < cpuTimeChart.Points.Length; i++) {
+				cpuTimeChart.Points[i] = originalCpuPoints[i] - selectedPoints[i];
+			}
+			var selectedTimeChart = areaCharts.Charts[2];
+			for (int i = 0; i < cpuTimeChart.Points.Length; i++) {
+				selectedTimeChart.Points[i] = selectedPoints[i];
 			}
 		}
 	}

@@ -19,8 +19,9 @@ namespace Lime.Graphics.Platform
 		public void ProcessNode(object node, object manager)
 		{
 			drawCallsOwners.Add(node);
-			bool isPartOfScene = ReferenceEquals(ProfilingInfo.SceneNodeManager, manager);
-			this.isPartOfScene |= isPartOfScene;
+			isPartOfScene |=
+				ProfilingInfo.SceneNodeManager == null ||
+				ReferenceEquals(ProfilingInfo.SceneNodeManager, manager);
 		}
 	}
 }
