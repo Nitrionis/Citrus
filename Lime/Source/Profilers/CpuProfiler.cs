@@ -15,24 +15,20 @@ namespace Lime.Profilers
 			}
 		}
 
-		private const long FrameIndexUnset = -1;
-		private const long FrameIndexPendingConfirmation = -2;
-
-		private CpuHistory.Item resultsBuffer;
+		private Item resultsBuffer;
 		private Stopwatch stopwatch;
-		private long previousFrameIndex;
 
 		public CpuProfiler()
 		{
 			stopwatch = new Stopwatch();
 			LastUpdate = new Item {
-				FrameIndex = FrameIndexUnset
+				FrameIndex = Item.FrameIndexUnset
 			};
 			ProfiledUpdatesCount = 1;
 			resultsBuffer = items[0].Reset();
 			resultsBuffer.UpdateIndex = 0;
 			resultsBuffer.FrameIndex = GpuProfiler.Instance.IsEnabled ?
-				FrameIndexPendingConfirmation : FrameIndexUnset;
+				Item.FrameIndexPendingConfirmation : Item.FrameIndexUnset;
 		}
 
 		public static void UpdateStarted(bool isMainWindow) =>
@@ -41,14 +37,12 @@ namespace Lime.Profilers
 		private void NextUpdateStarted(bool isMainWindow)
 		{
 			if (isMainWindow) {
-				if (LastUpdate.FrameIndex == FrameIndexPendingConfirmation) {
-					long frameIndex = GpuProfiler.Instance.LastFrame.FrameIndex;
-					if (previousFrameIndex < frameIndex) {
-						LastUpdate.FrameIndex = frameIndex;
-						previousFrameIndex = frameIndex;
-					} else {
-						DropLastFrame();
-					}
+				if (LastUpdate.FrameIndex == GpuProfiler.Instance.ProfiledFramesCount) {
+					// Drop last update
+					ProfiledUpdatesCount--;
+					LastUpdate = items[(ProfiledUpdatesCount - 1) % items.Length];
+				} else {
+					resultsBuffer = AcquireResultsBuffer();
 				}
 				LastUpdate.DeltaTime = stopwatch.ElapsedMilliseconds;
 				stopwatch.Restart();
@@ -58,25 +52,17 @@ namespace Lime.Profilers
 		public static void UpdateFinished(bool isMainWindow)
 		{
 			if (isMainWindow) {
-				Instance.resultsBuffer = Instance.AcquireResultsBuffer();
-				Instance.resultsBuffer.FrameIndex =
-					GpuProfiler.Instance == null || GpuProfiler.Instance.IsEnabled ?
-						FrameIndexPendingConfirmation : FrameIndexUnset;
+				Instance.LastUpdate = Instance.resultsBuffer;
+				Instance.ProfiledUpdatesCount++;
 			}
 		}
 
 		private Item AcquireResultsBuffer()
 		{
-			LastUpdate = items[(ProfiledUpdatesCount - 1) % items.Length];
 			var buffer = items[ProfiledUpdatesCount % items.Length].Reset();
-			buffer.UpdateIndex = ProfiledUpdatesCount++;
+			buffer.UpdateIndex = ProfiledUpdatesCount - 1;
+			buffer.FrameIndex = GpuProfiler.Instance.ProfiledFramesCount;
 			return buffer;
-		}
-
-		private void DropLastFrame()
-		{
-			ProfiledUpdatesCount--;
-			LastUpdate = items[(ProfiledUpdatesCount - 1) % items.Length];
 		}
 	}
 }

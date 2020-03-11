@@ -65,8 +65,12 @@ namespace Lime.Graphics.Platform
 		/// <summary>
 		/// It is called once per frame before writing commands to the command buffer.
 		/// </summary>
-		internal virtual void FrameRenderStarted(bool isMainWindowTarget) =>
+		internal virtual void FrameRenderStarted(bool isMainWindowTarget)
+		{
+			this.isMainWindowTarget = isMainWindowTarget;
 			isProfilingEnabled = isProfilingRequired && isMainWindowTarget;
+			RenderBatchProfiler.Reset();
+		}
 
 		/// <summary>
 		/// Invoked after sending a frame to the GPU.
@@ -79,10 +83,11 @@ namespace Lime.Graphics.Platform
 				resultsBuffer.IsSceneOnlyDeepProfiling = isSceneOnlyDeepProfiling;
 				resultsBuffer = AcquireResultsBuffer();
 			}
-			RenderBatchProfiler.Reset();
-			FrameRenderCompleted?.Invoke();
-			isSceneOnlyDeepProfiling = isSceneOnlyDeepProfilingRequired;
-			CheckDrawCallsBufferCapacity();
+			if (isMainWindowTarget) {
+				FrameRenderCompleted?.Invoke();
+				isSceneOnlyDeepProfiling = isSceneOnlyDeepProfilingRequired;
+				CheckDrawCallsBufferCapacity();
+			}
 		}
 
 		private Item AcquireResultsBuffer()

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Lime;
@@ -49,17 +50,20 @@ namespace Tangerine.UI.Timeline
 		{
 			lastFrame = frame;
 			ResetContainer();
-			frame.DrawCalls.Sort(0, frame.FullDrawCallCount, new TimePeriodComparer<DrawCallInfo>());
-			for (int i = 0; i < frame.FullDrawCallCount; i++) {
+			int drawCallsCount = frame.IsSceneOnlyDeepProfiling ?
+				frame.SceneDrawCallCount : frame.FullDrawCallCount;
+			frame.DrawCalls.Sort(0, drawCallsCount, new TimePeriodComparer<DrawCallInfo>());
+			for (int i = 0; i < drawCallsCount; i++) {
 				Widget widget = new DrawCallWidget(frame.DrawCalls[i], DrawCallSelected);
 				widget.Visible = IsItemVisible(widget);
 				container.AddNode(widget);
 			}
-			float historyHeight = freeSpaceOfLines.Count * (ItemHeight + ItemTopMargin) + ItemTopMargin;
-			UpdateHistorySize(new Vector2(CalculateHistoryWidth(), historyHeight));
+			container.Width = CalculateHistoryWidth();
+			UpdateItemsPositions();
 		}
 
 		protected override float CalculateHistoryWidth() =>
+			lastFrame == null ? 2000 :
 			(float)lastFrame.FullGpuRenderTime * 1000 / MicrosecondsInPixel;
 
 		protected override void UpdateItemTransform(Node widget)
@@ -77,8 +81,7 @@ namespace Tangerine.UI.Timeline
 				secondLength = (uint)MicrosecondsInPixel;
 			}
 			uint finalLength = firstLength + secondLength;
-			var period = finalLength != (dc.Finish - dc.Start) ?
-				new TimePeriod(dc.Start, dc.Start + finalLength) : (ITimePeriod)dc;
+			var period = new TimePeriod(dc.Start, dc.Start + finalLength);
 			var pos = AcquirePosition(period);
 
 			drawCallWidget.Position = pos;
@@ -99,11 +102,11 @@ namespace Tangerine.UI.Timeline
 				return true;
 			}
 			var pi = drawCallInfo.ProfilingInfo;
-			if (pi.Owners is List<object> list) {
+			if (pi.Owners is IList list) {
 				foreach (var item in list) {
 					if (item != null) {
-						if (item is Node node && node.Id != null && regex.IsMatch(node.Id)) {
-							return true;
+						if (item is Node node) {
+							return node.Id != null && regex.IsMatch(node.Id);
 						} else {
 							if (regex.IsMatch((string)item)) {
 								return true;
@@ -112,8 +115,8 @@ namespace Tangerine.UI.Timeline
 					}
 				}
 			} else if (pi.Owners != null) {
-				if (pi.Owners is Node node && node.Id != null && regex.IsMatch(node.Id)) {
-					return true;
+				if (pi.Owners is Node node) {
+					return node.Id != null && regex.IsMatch(node.Id);
 				} else {
 					if (regex.IsMatch((string)pi.Owners)) {
 						return true;
@@ -196,7 +199,7 @@ namespace Tangerine.UI.Timeline
 			public void SceneFilterChanged(bool value)
 			{
 				var pi = DrawCallInfo.ProfilingInfo;
-				isSceneFilterPassed = !value || pi.Owners == null || pi.IsPartOfScene;
+				isSceneFilterPassed = !value || pi.IsPartOfScene;
 				DecorateWidget();
 			}
 
@@ -211,14 +214,14 @@ namespace Tangerine.UI.Timeline
 			private static PresenterPair GetColorTheme(DrawCallInfo drawCall)
 			{
 				var presenterPair = presenters[(int)ColorPair.Unknown];
-				if (drawCall.ProfilingInfo.Owners != null) {
-					var pi = drawCall.ProfilingInfo;
+				var pi = drawCall.ProfilingInfo;
+				if (pi.Owners != null) {
 					if (pi.IsPartOfScene) {
 						presenterPair = presenters[(int)ColorPair.Scene];
 					} else {
 						presenterPair = presenters[(int)ColorPair.UI];
 					}
-					if (pi.Owners is List<object> list) {
+					if (pi.Owners is IList list) {
 						bool isOwnersSet = true;
 						foreach (var item in list) {
 							isOwnersSet &= item != null;
@@ -226,8 +229,6 @@ namespace Tangerine.UI.Timeline
 						if (!isOwnersSet) {
 							presenterPair = presenters[(int)ColorPair.Unknown];
 						}
-					} else if (pi.Owners == null) {
-						presenterPair = presenters[(int)ColorPair.Unknown];
 					}
 				}
 				return presenterPair;

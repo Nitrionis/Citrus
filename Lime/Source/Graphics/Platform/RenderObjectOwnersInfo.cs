@@ -1,9 +1,22 @@
+using System.Collections.Generic;
+
 namespace Lime.Graphics.Platform
 {
 	public class RenderObjectOwnersInfo
 	{
+		private static Stack<object> nodes;
+		private static Stack<object> managers;
+
 		public static object CurrentNode { get; protected set; }
 		public static object CurrentManager { get; protected set; }
+
+		static RenderObjectOwnersInfo()
+		{
+			nodes = new Stack<object>();
+			managers = new Stack<object>();
+			nodes.Push(null);
+			managers.Push(null);
+		}
 
 		private object node;
 		private object manager;
@@ -24,6 +37,8 @@ namespace Lime.Graphics.Platform
 		{
 			CurrentNode = node;
 			CurrentManager = manager;
+			nodes.Push(node);
+			managers.Push(manager);
 		}
 
 		/// <summary>
@@ -31,8 +46,10 @@ namespace Lime.Graphics.Platform
 		/// </summary>
 		public void ResetGlobalProfilerData()
 		{
-			CurrentNode = null;
-			CurrentManager = null;
+			nodes.Pop();
+			managers.Pop();
+			CurrentNode = nodes.Peek();
+			CurrentManager = managers.Peek();
 		}
 	}
 }

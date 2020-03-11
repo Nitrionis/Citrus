@@ -41,8 +41,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IndexesStorage.cs" />
     <Compile Include="IpDialog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Widgets\AreaReplaceableCharts.cs" />
     <Compile Include="Widgets\ChartsPanel.cs" />
     <Compile Include="Widgets\GpuTrace.cs" />
     <Compile Include="Widgets\MainControlPanel.cs" />

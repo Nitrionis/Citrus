@@ -978,7 +978,7 @@ namespace Lime.Graphics.Platform.Vulkan
 #if !PROFILER_GPU
 				Draw(0, clearVertices.Length);
 #else
-				Draw(0, clearVertices.Length, ProfilingInfo.Acquire());
+				Draw(0, clearVertices.Length, ProfilingInfo.Acquire(ProfilingInfo.ClearMaterial.Instance));
 #endif
 			} finally {
 				SetViewport(oldViewport);

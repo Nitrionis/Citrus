@@ -89,7 +89,7 @@ namespace Lime.Widgets.Charts
 			/// <summary>
 			/// Called when you click on the charts.
 			/// </summary>
-			public Action<Slice> OnSliceSelected;
+			public Action<Slice> SliceSelected;
 
 			public Parameters(int controlPointsCount, Color4[] colors)
 			{
@@ -115,7 +115,7 @@ namespace Lime.Widgets.Charts
 				int index = Math.Min(
 					ControlPointsCount - 1,
 					((int)LocalMousePosition().X + ControlPointsSpacing / 2) / ControlPointsSpacing);
-				parameters.OnSliceSelected?.Invoke(GetSlice(index));
+				parameters.SliceSelected?.Invoke(GetSlice(index));
 			};
 			var size = new Vector2((ControlPointsCount - 1) * ControlPointsSpacing, chartsHeight);
 			Size = size;
@@ -126,12 +126,12 @@ namespace Lime.Widgets.Charts
 				colors[i] = parameters.Colors[i].ToVector4();
 			}
 			material = new ChartMaterial() { Colors = colors };
+			Charts = new Chart[parameters.ChartsCount];
 			mesh = new Mesh<Vector3> {
 				Indices = new ushort[] { 0 },
 				Vertices = new Vector3[chartsVerticesOffset + Charts.Length * chartVerticesCount],
 				AttributeLocations = ChartMaterial.ShaderProgram.MeshAttribLocations
 			};
-			Charts = new Chart[parameters.ChartsCount];
 			for (int j = chartsVerticesOffset, i = 0; i < Charts.Length; i++) {
 				var chart = new Chart();
 				Charts[i] = chart;
@@ -177,7 +177,7 @@ namespace Lime.Widgets.Charts
 			}
 		}
 
-		public void Reset()
+		public virtual void Reset()
 		{
 			foreach (var chart in Charts) {
 				for (int i = 0; i < chart.Points.Length; i++) {

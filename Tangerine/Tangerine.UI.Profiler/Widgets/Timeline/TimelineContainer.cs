@@ -33,6 +33,7 @@ namespace Tangerine.UI.Timeline
 		{
 			Presenter = new WidgetFlatFillPresenter(ColorTheme.Current.Profiler.TimelineBackground);
 			Layout = new VBoxLayout();
+			MinMaxHeight = 100;
 
 			Input.AcceptMouseBeyondWidget = false;
 			Input.AcceptMouseThroughDescendants = true;
@@ -43,7 +44,9 @@ namespace Tangerine.UI.Timeline
 				Offset = 0
 			};
 
-			container = new Widget();
+			container = new Widget {
+				MinMaxHeight = 64
+			};
 
 			horizontalScrollView = new ThemedScrollView(ScrollDirection.Horizontal) {
 				Anchors = Anchors.LeftRightTopBottom
@@ -51,7 +54,7 @@ namespace Tangerine.UI.Timeline
 			horizontalScrollView.Content.Layout = new HBoxLayout();
 
 			verticalScrollView = new ThemedScrollView(ScrollDirection.Vertical) {
-				Anchors = Anchors.TopBottom,
+				Anchors = Anchors.LeftRightTopBottom
 			};
 			verticalScrollView.Content.Layout = new VBoxLayout();
 
@@ -127,8 +130,7 @@ namespace Tangerine.UI.Timeline
 			if (lineIndex == -1) {
 				lineIndex = freeSpaceOfLines.Count;
 				freeSpaceOfLines.Add(period.Finish);
-			}
-			else {
+			} else {
 				freeSpaceOfLines[lineIndex] = period.Finish;
 			}
 			return new Vector2(

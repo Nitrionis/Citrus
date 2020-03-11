@@ -109,7 +109,7 @@ namespace Lime.Graphics.Platform.Vulkan
 		internal override void FrameRenderStarted(bool isMainWindowTarget)
 		{
 			base.FrameRenderStarted(isMainWindowTarget);
-			isProfilingEnabled &= isSupported && currentPool != null;
+			isProfilingEnabled &= isSupported;
 			if (isProfilingEnabled) {
 				currentPool = AcquireQueryPool(resultsBuffer.FrameIndex, timestamps.Length);
 			}
@@ -147,7 +147,7 @@ namespace Lime.Graphics.Platform.Vulkan
 				}
 				isDrawCallDeepProfilingStarted =
 					isDeepProfilingEnabled &&
-					(!isSceneOnlyDeepProfiling || profilingInfo.IsPartOfScene || profilingInfo.Owners == null) &&
+					(!isSceneOnlyDeepProfiling || profilingInfo.IsPartOfScene) &&
 					nextTimestampIndex < timestamps.Length - TimestampsPerDrawCall;
 				if (isDrawCallDeepProfilingStarted) {
 					var profilingResult = ProfilingResult.Acquire();
@@ -173,7 +173,7 @@ namespace Lime.Graphics.Platform.Vulkan
 
 		public void FrameRenderFinished(ulong frameCompletedFenceValue, ulong lastCompletedFenceValue)
 		{
-			bool isNeedResize = timestamps.Length < nextTimestampIndex;
+			bool isNeedResize = timestamps.Length - TimestampsPerDrawCall <= nextTimestampIndex;
 			if (isNeedResize) {
 				Array.Resize(ref timestamps, GetNextTimestampsBufferCapacity());
 			}
@@ -199,12 +199,13 @@ namespace Lime.Graphics.Platform.Vulkan
 				var frame = GetFrame(pool.FrameIndex);
 				frame.FullGpuRenderTime = 0.001 * CalculateDeltaTime(timestamps[0], timestamps[1]);
 				if (frame.IsDeepProfilingEnabled) {
-					for (int i = 0, t = TimestampsReserved; i < frame.FullDrawCallCount; i++) {
+					int drawCallCount = frame.IsSceneOnlyDeepProfiling ?
+						frame.SceneDrawCallCount : frame.FullDrawCallCount;
+					for (int i = 0, t = TimestampsReserved; i < drawCallCount; i++) {
 						var dc = frame.DrawCalls[i];
 						bool isContainsRenderingTime =
 							!frame.IsSceneOnlyDeepProfiling ||
-							dc.ProfilingInfo.IsPartOfScene ||
-							dc.ProfilingInfo.Owners == null;
+							dc.ProfilingInfo.IsPartOfScene;
 						if (isContainsRenderingTime) {
 							dc.StartTime              = CalculateDeltaTime(timestamps[0], timestamps[t++]);
 							dc.AllPreviousFinishTime  = CalculateDeltaTime(timestamps[0], timestamps[t++]);

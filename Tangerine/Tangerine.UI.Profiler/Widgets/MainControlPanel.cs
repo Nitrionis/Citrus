@@ -18,6 +18,9 @@ namespace Tangerine.UI
 		{
 			Layout = new HBoxLayout();
 			Padding = new Thickness(8, 0, 2, 0);
+			AddNode(new ThemedButton("Settings") {
+				Clicked = () => { settingsWidget.Visible = !settingsWidget.Visible; }
+			});
 			profilingMode = new ThemedDropDownList() {
 				Padding = new Thickness(0, 4),
 				MinMaxWidth = 128
@@ -28,9 +31,6 @@ namespace Tangerine.UI
 			profilingMode.Index = 0;
 			profilingMode.Changed += ProfilingModeChanged;
 			AddNode(profilingMode);
-			AddNode(new ThemedButton("Settings") {
-				Clicked = () => { settingsWidget.Visible = !settingsWidget.Visible; }
-			});
 			pauseСontinueButton = new ThemedButton("Pause|Сontinue") {
 				Clicked = () => { LimeProfiler.IsProfilingEnabled = !LimeProfiler.IsProfilingEnabled; }
 			};

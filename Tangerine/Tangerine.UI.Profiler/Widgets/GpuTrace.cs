@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Lime;
 using DrawCallInfo = Lime.Graphics.Platform.ProfilingResult;
 using Tangerine.UI.Timeline;
+using System.Collections;
 
 namespace Tangerine.UI
 {
@@ -27,8 +28,10 @@ namespace Tangerine.UI
 
 		public GpuTrace()
 		{
-			Presenter = new WidgetFlatFillPresenter(new Color4(32, 33, 35));
+			Presenter = new WidgetFlatFillPresenter(ColorTheme.Current.Profiler.TimelineBackground);
 			Layout = new VBoxLayout();
+			Anchors = Anchors.LeftRight;
+			MinMaxHeight = 24;
 
 			Timeline = new DrawCallsTimeline {
 				DrawCallSelected = DrawCallSelected
@@ -47,7 +50,7 @@ namespace Tangerine.UI
 			AddNode(new Widget {
 				Layout = new HBoxLayout(),
 				Anchors = Anchors.LeftRight,
-				MinMaxHeight = 32,
+				MinMaxHeight = 24,
 				Nodes = {
 					CreateText("Scene only", new Thickness(6, 0)),
 					(sceneFilter = new ColorCheckBox(Color4.White) {
@@ -67,7 +70,7 @@ namespace Tangerine.UI
 							MinMaxSize = ownersListSize,
 							Size = ownersListSize,
 							Padding = new Thickness(6, 16, 0, 0),
-							Color = Color4.White
+							Color = ColorTheme.Current.Profiler.LegendText
 						}) }
 					},
 					CreateText("Material", new Thickness(16, 0, 0)),
@@ -98,10 +101,12 @@ namespace Tangerine.UI
 			ownersList.Items.Clear();
 			var pi = drawCall.ProfilingInfo;
 			if (pi.Owners != null) {
-				if (pi.Owners is List<object> owners) {
-					ownersText = "Owners batch " + owners.Count;
+				if (pi.Owners is IList list) {
+					int ownersCount = 0;
+					ownersText = "Owners batch ";
 					var dictionary = new Dictionary<string, int>();
-					foreach (var item in owners) {
+					foreach (var item in list) {
+						ownersCount++;
 						string owner = GetOwnerName(item);
 						if (dictionary.ContainsKey(owner)) {
 							dictionary[owner]++;
@@ -112,6 +117,7 @@ namespace Tangerine.UI
 					foreach (var v in dictionary) {
 						ownersList.Items.Add(new DropDownList.Item(v.Key + " " + v.Value));
 					}
+					ownersText += ownersCount;
 				} else {
 					ownersList.Items.Add(new DropDownList.Item(GetOwnerName(pi.Owners)));
 				}

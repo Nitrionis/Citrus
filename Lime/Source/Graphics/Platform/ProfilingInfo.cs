@@ -79,7 +79,7 @@ namespace Lime.Graphics.Platform
 			var profilingInfo = freeInstances.Count > 0 ? freeInstances.Pop() : new ProfilingInfo();
 			profilingInfo.isFree = false;
 			profilingInfo.Owners = owners;
-			profilingInfo.IsPartOfScene = isPartOfScene;
+			profilingInfo.IsPartOfScene = isPartOfScene || owners == null;
 			profilingInfo.Material = material;
 			profilingInfo.CurrentRenderPassIndex = passIndex;
 			return profilingInfo;
@@ -93,6 +93,11 @@ namespace Lime.Graphics.Platform
 				freeInstances.Push(this);
 				isFree = true;
 			}
+		}
+
+		public class ClearMaterial
+		{
+			public static readonly ClearMaterial Instance = new ClearMaterial();
 		}
 	}
 }

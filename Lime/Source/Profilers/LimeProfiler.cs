@@ -46,7 +46,8 @@ namespace Lime.Profilers
 
 		private LimeProfiler()
 		{
-			SetContext(new LocalContext());
+			currentContext = new LocalContext();
+			SetContext(currentContext);
 			GpuProfiler.Instance.FrameRenderCompleted = OnLocalDeviceFrameRenderCompleted;
 		}
 
