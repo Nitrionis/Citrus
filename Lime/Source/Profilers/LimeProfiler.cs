@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Lime.Profilers.Contexts;
 using ProfilerContext = Lime.Profilers.Contexts.Context;
 using GpuHistory = Lime.Graphics.Platform.ProfilerHistory;
@@ -55,8 +56,7 @@ namespace Lime.Profilers
 		{
 			if (nextContext != null) {
 				currentContext?.Completed();
-				currentContext = nextContext;
-				nextContext = null;
+				currentContext = Interlocked.Exchange(ref nextContext, null);
 				currentContext.Activated();
 				ContextChanged?.Invoke();
 			}

@@ -26,15 +26,12 @@
 	"Color":[4294967295],
 	"Nodes":[
 		{
-			"class":"Lime.RemoteProfiler, Lime",
-			"ComponentsBackgroundColor":[4282532418],
-			"ComponentsSize":[449.4,46.2],
-			"FontHeight":43,
-			"Id":"RemoteProfiler",
-			"KeyboardButtonHeight":61,
+			"class":"Lime.ProfilerGameUI, Lime",
+			"FontHeight":42,
+			"Id":"ProfilerGameUI",
 			"Pivot":[0.5,0.5],
-			"Position":[276,307],
-			"Size":[520,538]
+			"Position":[478,129.5497],
+			"Size":[644,183.0994]
 		},
 		{
 			"class":"Lime.Frame, Lime",

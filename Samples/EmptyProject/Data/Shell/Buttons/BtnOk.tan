@@ -99,7 +99,7 @@
 			"Size":[160,160],
 			"Texture":{
 				"class":"Lime.SerializableTexture, Lime",
-				"SerializationPath":"/Shell/Buttons/IcoOk"
+				"SerializationPath":"IcoOk"
 			}
 		},
 		{
@@ -134,7 +134,7 @@
 							0,
 							{
 								"class":"Lime.SerializableTexture, Lime",
-								"SerializationPath":"/Shell/Buttons/RoundGreen"
+								"SerializationPath":"RoundGreen"
 							}
 						],
 						[
@@ -142,7 +142,7 @@
 							0,
 							{
 								"class":"Lime.SerializableTexture, Lime",
-								"SerializationPath":"/Shell/Buttons/RoundDisable"
+								"SerializationPath":"RoundDisable"
 							}
 						]
 					],
@@ -156,7 +156,7 @@
 			"Size":[262,262],
 			"Texture":{
 				"class":"Lime.SerializableTexture, Lime",
-				"SerializationPath":"/Shell/Buttons/RoundGreen"
+				"SerializationPath":"RoundGreen"
 			}
 		},
 		{
@@ -180,7 +180,7 @@
 			"Size":[304,304],
 			"Texture":{
 				"class":"Lime.SerializableTexture, Lime",
-				"SerializationPath":"/Shell/Buttons/RoundFrame2"
+				"SerializationPath":"RoundFrame2"
 			}
 		}
 	],

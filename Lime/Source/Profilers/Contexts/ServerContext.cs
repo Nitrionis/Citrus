@@ -11,6 +11,8 @@ namespace Lime.Profilers.Contexts
 	{
 		private readonly Network.Server server;
 
+		public IPEndPoint LocalEndpoint => (IPEndPoint)server.Listener.LocalEndpoint;
+
 		private class SparsedGpuHistory : Graphics.Platform.ProfilerHistory
 		{
 			public void Enqueue(Item item)
@@ -72,8 +74,9 @@ namespace Lime.Profilers.Contexts
 		public ServerContext()
 		{
 			sparsedGpuHistory = new SparsedGpuHistory();
+			sparsedCpuHistory = new SparsedCpuHistory();
 			GpuHistory = sparsedGpuHistory;
-			CpuHistory = new CpuHistory();
+			CpuHistory = sparsedCpuHistory;
 			server = new Network.Server();
 		}
 
@@ -90,12 +93,14 @@ namespace Lime.Profilers.Contexts
 					if (frame.CpuInfo != null) {
 						sparsedCpuHistory.Enqueue(frame.CpuInfo);
 					}
+					Application.MainWindow.Invalidate();
 					UpdateProfilerOptions(frame);
 					if (frame.Response != null) {
 						ProcessResponse(frame.Response);
 					}
 				}
 			}
+			server.TryReceive();
 		}
 
 		private void UpdateProfilerOptions(FrameStatistics frame)

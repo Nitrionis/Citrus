@@ -23,6 +23,9 @@ namespace Tangerine.UI
 			ThemedEditBox editBox = new ThemedEditBox {
 				Visible = isPortRequired
 			};
+			ThemedSimpleText statusLabel = new ThemedSimpleText {
+				Text = !isPortRequired ? "Data receiver mode parameters" : "Data source mode parameters"
+			};
 			window = new Window(new WindowOptions {
 				Title = "Choose IP",
 				Visible = false,
@@ -33,8 +36,9 @@ namespace Tangerine.UI
 				Padding = new Thickness(8),
 				Layout = new VBoxLayout { Spacing = 16 },
 				Nodes = {
+					statusLabel,
 					new Widget {
-						Layout = new HBoxLayout(),
+						Layout = new HBoxLayout { Spacing = 8 },
 						Nodes = {
 							new Widget {
 								Layout = new VBoxLayout(),
@@ -59,14 +63,14 @@ namespace Tangerine.UI
 				result = new Result();
 				bool isIpValid = IPAddress.TryParse(dropDownList.Text, out result.IP);
 				bool isPortValid = int.TryParse(editBox.Text, out result.Port);
-				if (isIpValid && isPortValid) {
+				if (isIpValid && (!isPortRequired || isPortValid)) {
 					window.Close();
 				} else {
-					editBox.Text =
-					"wrong " +
-					(!isIpValid ?                  "ip " : "") +
-					(!isIpValid && !isPortValid ? "and " : "") +
-					(!isPortValid ?               "port" : "");
+					statusLabel.Text =
+						"wrong " +
+						(!isIpValid ?                  "ip " : "") +
+						(!isIpValid && !isPortValid ? "and " : "") +
+						(!isPortValid ?               "port" : "");
 				}
 			};
 		}

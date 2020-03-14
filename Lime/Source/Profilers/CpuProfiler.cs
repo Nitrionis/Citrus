@@ -28,7 +28,7 @@ namespace Lime.Profilers
 			resultsBuffer = items[0].Reset();
 			resultsBuffer.UpdateIndex = 0;
 			resultsBuffer.FrameIndex = GpuProfiler.Instance.IsEnabled ?
-				Item.FrameIndexPendingConfirmation : Item.FrameIndexUnset;
+				GpuProfiler.Instance.ProfiledFramesCount : Item.FrameIndexUnset;
 		}
 
 		public static void UpdateStarted(bool isMainWindow) =>

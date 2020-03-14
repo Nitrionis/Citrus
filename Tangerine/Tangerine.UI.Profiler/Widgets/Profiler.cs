@@ -30,8 +30,6 @@ namespace Tangerine.UI
 		private bool isSceneOnlyDrawCallsRenderTime;
 
 		private bool isNodeFilteringChanged;
-		private long lastProfiledFrameIndex;
-		private long lastProfiledUpdateIndex;
 
 		/// <summary>
 		/// Rendering time for each frame for selected draw calls.
@@ -66,9 +64,9 @@ namespace Tangerine.UI
 		private void Reset()
 		{
 			isNodeFilteringChanged = false;
-			lastProfiledFrameIndex = LimeProfiler.GpuHistory.ProfiledFramesCount + 1;
-			lastProfiledUpdateIndex = LimeProfiler.CpuHistory.ProfiledUpdatesCount + 1;
 			chartsPanel.Reset();
+			unpushedUpdates.Clear();
+			lastPushed = null;
 		}
 
 		private IEnumerator<object> StateUpdateTask()
@@ -89,26 +87,26 @@ namespace Tangerine.UI
 		private IEnumerator<object> ChartsUpdateTask()
 		{
 			while (true) {
-				if (
-					lastPushed != LimeProfiler.CpuHistory.LastUpdate &&
-					LimeProfiler.CpuHistory.LastUpdate.FrameIndex != CpuHistory.Item.FrameIndexUnset
-					)
-				{
-					lastPushed = LimeProfiler.CpuHistory.LastUpdate;
-					unpushedUpdates.Enqueue(LimeProfiler.CpuHistory.LastUpdate);
-				}
-				var update = unpushedUpdates.Count == 0 ? null : unpushedUpdates.Peek();
-				if (update != null && update.FrameIndex != LimeProfiler.GpuHistory.ProfiledFramesCount) {
-					var frame = LimeProfiler.GpuHistory.GetFrame(update.FrameIndex);
-					if (frame.IsCompleted) {
-						chartsPanel.FrameCompleted(frame, update);
-						indexesStorage.Enqueue(new IndexesStorage.Item {
-							FrameIndex = frame.FrameIndex,
-							UpdateIndex = update.UpdateIndex
-						});
-						unpushedUpdates.Dequeue();
-					}
-				}
+				//if (
+				//	lastPushed != LimeProfiler.CpuHistory.LastUpdate &&
+				//	LimeProfiler.CpuHistory.LastUpdate.FrameIndex != CpuHistory.Item.FrameIndexUnset
+				//	)
+				//{
+				//	lastPushed = LimeProfiler.CpuHistory.LastUpdate;
+				//	unpushedUpdates.Enqueue(LimeProfiler.CpuHistory.LastUpdate);
+				//}
+				//var update = unpushedUpdates.Count == 0 ? null : unpushedUpdates.Peek();
+				//if (update != null && update.FrameIndex != LimeProfiler.GpuHistory.ProfiledFramesCount) {
+				//	var frame = LimeProfiler.GpuHistory.GetFrame(update.FrameIndex);
+				//	if (frame.IsCompleted) {
+				//		chartsPanel.FrameCompleted(frame, update);
+				//		indexesStorage.Enqueue(new IndexesStorage.Item {
+				//			FrameIndex = frame.FrameIndex,
+				//			UpdateIndex = update.UpdateIndex
+				//		});
+				//		unpushedUpdates.Dequeue();
+				//	}
+				//}
 				yield return null;
 			}
 		}
@@ -123,7 +121,7 @@ namespace Tangerine.UI
 			geometryInfoCheckBox.Changed += (args) => {
 				chartsPanel.SetLineChartsPanelVisible(args.Value);
 			};
-			gpuTraceCheckBox = new ThemedCheckBox { Checked = false };
+			gpuTraceCheckBox = new ThemedCheckBox { Checked = true };
 			gpuTraceCheckBox.Changed += (args) => {
 				gpuTrace.Visible = args.Value;
 			};
@@ -153,6 +151,7 @@ namespace Tangerine.UI
 			settingsWidget = new Widget {
 				Layout = new VBoxLayout(),
 				Padding = new Thickness(8),
+				Visible = false,
 				Nodes = {
 					HGroup(baseInfoCheckBox, CreateLabel("Basic rendering information")),
 					HGroup(geometryInfoCheckBox, CreateLabel("Rendering geometry information")),
@@ -166,26 +165,27 @@ namespace Tangerine.UI
 
 		private void OnLocalDeviceFrameRenderCompleted()
 		{
-
-			//while (lastProfiledFrameIndex < LimeProfiler.GpuHistory.LastFrame.FrameIndex) {
-			//	var frame = LimeProfiler.GpuHistory.GetFrame(lastProfiledFrameIndex + 1);
-			//	var update = LimeProfiler.CpuHistory.GetUpdate(lastProfiledUpdateIndex + 1);
-			//	if (update.FrameIndex == CpuHistory.Item.FrameIndexUnset) {
-			//		lastProfiledFrameIndex++;
-			//		lastProfiledUpdateIndex++;
-			//	} else if (!frame.IsCompleted || update.FrameIndex == CpuHistory.Item.FrameIndexPendingConfirmation) {
-			//		break;
-			//	} else {
-			//		chartsPanel.FrameCompleted(frame, update);
-			//		indexesStorage.Enqueue(new IndexesStorage.Item {
-			//			FrameIndex = frame.FrameIndex,
-			//			UpdateIndex = update.UpdateIndex
-			//		});
-			//		//lastProfiledFrameIndex++;
-			//		//lastProfiledUpdateIndex++;
-			//	}
-			//}
-			// move to separate thread
+			if (
+				lastPushed != LimeProfiler.CpuHistory.LastUpdate &&
+				LimeProfiler.CpuHistory.LastUpdate.FrameIndex != CpuHistory.Item.FrameIndexUnset &&
+				LimeProfiler.CpuHistory.LastUpdate.FrameIndex != LimeProfiler.GpuHistory.ProfiledFramesCount // todo
+				)
+			{
+				lastPushed = LimeProfiler.CpuHistory.LastUpdate;
+				unpushedUpdates.Enqueue(LimeProfiler.CpuHistory.LastUpdate);
+			}
+			var update = unpushedUpdates.Count == 0 ? null : unpushedUpdates.Peek();
+			if (update != null && update.FrameIndex != LimeProfiler.GpuHistory.ProfiledFramesCount) {
+				var frame = LimeProfiler.GpuHistory.GetFrame(update.FrameIndex);
+				if (frame.IsCompleted) {
+					chartsPanel.FrameCompleted(frame, update);
+					indexesStorage.Enqueue(new IndexesStorage.Item {
+						FrameIndex = frame.FrameIndex,
+						UpdateIndex = update.UpdateIndex
+					});
+					unpushedUpdates.Dequeue();
+				}
+			}
 			if (isNodeFilteringChanged) {
 				isNodeFilteringChanged = false;
 				SelectRenderTime(gpuTrace.Timeline.IsSceneOnly, gpuTrace.Timeline.RegexNodeFilter, selectedRenderTime);

@@ -69,6 +69,7 @@ namespace Lime.Profilers.Contexts
 		{
 			if (IsActiveContext && client.IsConnected) {
 				if (GpuProfiler.Instance.IsEnabled) {
+					// todo
 					unfinished.Enqueue(new FrameUpdatePair {
 						Frame = GpuHistory.LastFrame,
 						Update = CpuHistory.LastUpdate

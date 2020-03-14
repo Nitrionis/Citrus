@@ -165,8 +165,8 @@ namespace Tangerine.UI.Timeline
 				}
 			};
 
-			private bool isSceneFilterPassed;
-			private bool isContainsTargetNode;
+			private bool isSceneFilterPassed = true;
+			private bool isContainsTargetNode = true;
 
 			public DrawCallWidget(DrawCallInfo drawCall, Action<DrawCallInfo> drawCallSelected)
 			{

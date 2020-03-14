@@ -11,8 +11,8 @@ namespace Lime.Profilers.Network
 	{
 		private static readonly string MsgPrefix = "Profiler Server ";
 
-		private TcpListener listener;
-		private Stopwatch stopwatch;
+		public TcpListener Listener { get; private set; }
+		private readonly Stopwatch stopwatch;
 		private int timeSinceLastReceive;
 
 		public Server()
@@ -34,8 +34,8 @@ namespace Lime.Profilers.Network
 		{
 			bool isSuccessfullyCreated = true;
 			try {
-				listener = new TcpListener(ipEndPoint);
-				listener.Start();
+				Listener = new TcpListener(ipEndPoint);
+				Listener.Start();
 				thread = new Thread(() => {
 					Thread.CurrentThread.IsBackground = true;
 					try {
@@ -68,7 +68,7 @@ namespace Lime.Profilers.Network
 
 		private void WaitConnectionRequest()
 		{
-			while (!listener.Pending() && !isCloseRequested) {
+			while (!Listener.Pending() && !isCloseRequested) {
 				Thread.Sleep(100);
 			}
 		}
@@ -76,8 +76,8 @@ namespace Lime.Profilers.Network
 		private void InitializeConnection()
 		{
 			if (!isCloseRequested) {
-				client = listener.AcceptTcpClient();
-				listener.Stop();
+				client = Listener.AcceptTcpClient();
+				Listener.Stop();
 				client.LingerState = lingerOption;
 				stream = client.GetStream();
 				stream.ReadTimeout = NetworkMember.Timeout;
@@ -87,14 +87,10 @@ namespace Lime.Profilers.Network
 
 		private void Sleep()
 		{
-			if (timeSinceLastReceive > NetworkMember.Timeout) {
-				isCloseRequested = true;
-				isRemoteMemberClosed = true;
-			}
 			stopwatch.Restart();
 			bool waitRes = continueEvent.WaitOne(NetworkMember.Timeout / 2);
 			stopwatch.Stop();
-			if (waitRes) {
+			if (waitRes || stream.DataAvailable) {
 				if (stream.DataAvailable) {
 					timeSinceLastReceive = 0;
 				} else {
@@ -102,6 +98,10 @@ namespace Lime.Profilers.Network
 				}
 			} else {
 				timeSinceLastReceive += NetworkMember.Timeout / 2;
+			}
+			if (timeSinceLastReceive > NetworkMember.Timeout) {
+				isCloseRequested = true;
+				isRemoteMemberClosed = true;
 			}
 		}
 	}

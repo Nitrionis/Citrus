@@ -160,7 +160,23 @@ namespace Tangerine.UI
 			lineLastSlice = LineCharts.GetSlice(slice.Index);
 			areaLegend.SetValues(areaLastSlice.Points);
 			lineLegend.SetValues(lineLastSlice.Points);
+			SetSlicePosition();
 			SliceSelected?.Invoke(slice.Index);
+		}
+
+		private void SetSlicePosition()
+		{
+			float x = areaLastSlice.Index * AreaCharts.ControlPointsSpacing;
+			AreaCharts.SetLinePos(
+				lineIndex: 3,
+				start: new Vector2(x, 0),
+				end: new Vector2(x, AreaCharts.Height / AreaCharts.ScaleCoefficient),
+				colorIndex: 10);
+			LineCharts.SetLinePos(
+				lineIndex: 0,
+				start: new Vector2(x, 0),
+				end: new Vector2(x, LineCharts.Height), // because IsIndependentMode
+				colorIndex: 10);
 		}
 
 		private void UpdateActiveSliceIndicator()
@@ -168,19 +184,9 @@ namespace Tangerine.UI
 			if (areaLastSlice != null) {
 				if (areaLastSlice.Index < 0) {
 					AreaCharts.SetLinePos(3, Vector2.Zero, Vector2.Zero, colorIndex: 10);
-					LineCharts.SetLinePos(3, Vector2.Zero, Vector2.Zero, colorIndex: 10);
+					LineCharts.SetLinePos(0, Vector2.Zero, Vector2.Zero, colorIndex: 10);
 				} else {
-					float x = areaLastSlice.Index * AreaCharts.ControlPointsSpacing;
-					AreaCharts.SetLinePos(
-						lineIndex: 3,
-						start: new Vector2(x, 0),
-						end: new Vector2(x, AreaCharts.Height / AreaCharts.ScaleCoefficient),
-						colorIndex: 10);
-					LineCharts.SetLinePos(
-						lineIndex: 0,
-						start: new Vector2(x, 0),
-						end: new Vector2(x, LineCharts.Height), // because IsIndependentMode
-						colorIndex: 10);
+					SetSlicePosition();
 					areaLastSlice.Index -= 1;
 					lineLastSlice.Index -= 1;
 				}

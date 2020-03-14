@@ -1,3 +1,6 @@
+using System.Net;
+using Lime.Profilers;
+using Lime.Profilers.Contexts;
 using Yuzu;
 
 namespace Lime
@@ -6,10 +9,14 @@ namespace Lime
 	[TangerineVisualHintGroup("/All/Nodes/Profiler")]
 	public class ProfilerGameUI : Widget
 	{
+		private static ClientContext context;
+
 		private SimpleText statusLabel;
 		private EditBox ipPortInput;
+		private Widget editBoxBackground;
 		private SimpleButton connectButton;
 		private SimpleButton disconnectButton;
+		private WidgetFlatFillPresenter backgroundPresenter;
 
 		private Color4 backgroundColor = new Color4(45, 45, 45);
 
@@ -19,7 +26,7 @@ namespace Lime
 			get { return backgroundColor; }
 			set {
 				backgroundColor = value;
-				((WidgetFlatFillPresenter)Presenter).Color = value;
+				backgroundPresenter.Color = value;
 			}
 		}
 
@@ -33,6 +40,7 @@ namespace Lime
 				componentsBackgroundColor = value;
 				connectButton.BackgroundColor = value;
 				disconnectButton.BackgroundColor = value;
+				((WidgetFlatFillPresenter)editBoxBackground.Presenter).Color = value;
 			}
 		}
 
@@ -48,116 +56,164 @@ namespace Lime
 			}
 		}
 
-		private int leftMargin = 32;
-
-		[YuzuMember]
-		public int LeftMargin
-		{
-			get { return leftMargin; }
-			set {
-				leftMargin = value;
-				UpdateComponentsLocation();
-			}
-		}
-
-		private Vector2 componentsSize = new Vector2(256, 32);
-
-		[YuzuMember]
-		public Vector2 ComponentsSize
-		{
-			get { return componentsSize; }
-			set {
-				componentsSize = value;
-				UpdateComponentsLocation();
-			}
-		}
-
-		private int keyboardButtonHeight = 32;
-
-		[YuzuMember]
-		public int KeyboardButtonHeight
-		{
-			get { return keyboardButtonHeight; }
-			set {
-				keyboardButtonHeight = value;
-				UpdateComponentsLocation();
-			}
-		}
-
 		public override bool IsNotDecorated() => false;
 
 		public ProfilerGameUI()
 		{
-			Presenter = new WidgetFlatFillPresenter(backgroundColor);
+			backgroundPresenter = new WidgetFlatFillPresenter(backgroundColor);
+			Presenter = backgroundPresenter;
 
 			statusLabel = new SimpleText {
 				Text = "Not connected",
 				FontHeight = FontHeight,
 				Color = Color4.White,
-				Anchors = Anchors.LeftRight,
+				Anchors = Anchors.LeftRightTopBottom,
 				HAlignment = HAlignment.Center,
 				VAlignment = VAlignment.Center,
 			};
-			AddNode(statusLabel);
 
 			ipPortInput = new EditBox {
 				Text = "ip:port",
 				Color = Color4.White,
-				Anchors = Anchors.LeftRight
+				Anchors = Anchors.LeftRightTopBottom,
+				Presenter = new CustomFlatFillPresenter(componentsBackgroundColor)
 			};
+			ipPortInput.SetFocus();
 			ipPortInput.TextWidget.FontHeight = FontHeight;
 			ipPortInput.TextWidget.HAlignment = HAlignment.Center;
 			ipPortInput.TextWidget.VAlignment = VAlignment.Center;
-			AddNode(ipPortInput);
+			ipPortInput.TextWidget.TrimWhitespaces = false;
+			var editorParams = new EditorParams {
+				MaxLines = 1,
+				Scroll = ipPortInput.ScrollView,
+				OffsetContextMenu = p => p + new Vector2(1f, ipPortInput.TextWidget.FontHeight + 1f),
+				SelectAllOnFocus = true
+			};
+			ipPortInput.Editor = new Editor(
+				displayWidget: ipPortInput.TextWidget,
+				editorParams: editorParams,
+				focusableWidget: ipPortInput,
+				clickableWidget: ipPortInput.ScrollWidget);
+			editBoxBackground = new Widget {
+				HitTestTarget = true,
+				Nodes = { ipPortInput }
+			};
 
 			connectButton = new SimpleButton {
 				Text = "Connect",
-				Clicked = () => {
-					connectButton.BackgroundColor = Color4.Green;
-				}
+				Visible = true,
+				Anchors = Anchors.LeftRight,
+				BackgroundColor = componentsBackgroundColor,
+				Clicked = () => TryConnect()
 			};
 			connectButton.Caption.FontHeight = fontHeight;
-			AddNode(connectButton);
 
 			disconnectButton = new SimpleButton {
 				Text = "Disconnect",
-				Visible = false
+				Visible = false,
+				BackgroundColor = componentsBackgroundColor,
+				Clicked = () => {
+					LimeProfiler.SetContext(new LocalContext());
+					backgroundPresenter.Color = BackgroundColor;
+				}
 			};
 			disconnectButton.Caption.FontHeight = fontHeight;
-			AddNode(disconnectButton);
 
-			UpdateComponentsLocation();
+			AddNode(new Widget {
+				Layout = new VBoxLayout { Spacing = 8 },
+				Padding = new Thickness(16),
+				HitTestTarget = false,
+				Anchors = Anchors.LeftRightTopBottom,
+				Nodes = {
+					statusLabel,
+					editBoxBackground,
+					connectButton,
+					disconnectButton,
+				}
+			});
+
+			UpdateWidgetsFontHeight();
 		}
 
-		private void UpdateComponentsLocation()
+		[YuzuAfterDeserialization]
+		private void Deserialized() => ((Widget)Nodes[0]).Size = Size;
+
+		private void TryConnect()
 		{
-			const int spacing = 8;
-			int topOffset = 32;
-
-			statusLabel.Size = componentsSize;
-			statusLabel.Position = new Vector2(leftMargin, topOffset);
-			topOffset += spacing + (int)componentsSize.Y;
-
-			ipPortInput.Size = componentsSize;
-			ipPortInput.Position = new Vector2(leftMargin, topOffset);
-			topOffset += spacing + (int)componentsSize.Y;
-
-			connectButton.Size = componentsSize;
-			connectButton.Position = new Vector2(leftMargin, topOffset);
-			disconnectButton.Size = componentsSize;
-			disconnectButton.Position = new Vector2(leftMargin, topOffset);
+			var values = string.IsNullOrEmpty(ipPortInput.Text) ?
+				new string[] { "" } : ipPortInput.Text.Split(':');
+			IPAddress ip;
+			int port = 0;
+			bool isIpValid = IPAddress.TryParse(values[0], out ip);
+			bool isPortValid = values.Length < 2 ? false : int.TryParse(values[1], out port);
+			if (isIpValid && isPortValid) {
+				context = new ClientContext();
+				LimeProfiler.SetContext(context);
+				if (!context.TryLaunch(new IPEndPoint(ip, port))) {
+					LimeProfiler.SetContext(new LocalContext());
+					statusLabel.Text = "Launch failed";
+					backgroundPresenter.Color = Color4.Red;
+				} else {
+					statusLabel.Text = "Launch completed";
+					backgroundPresenter.Color = Color4.Green.Darken(0.1f);
+				}
+			} else {
+				statusLabel.Text =
+					"wrong " +
+					(!isIpValid ?                  "ip " : "") +
+					(!isIpValid && !isPortValid ? "and " : "") +
+					(!isPortValid ?               "port" : "");
+				backgroundPresenter.Color = Color4.Red;
+			}
 		}
 
 		private void UpdateWidgetsFontHeight()
 		{
 			statusLabel.FontHeight = fontHeight;
+			//statusLabel.MinMaxHeight = fontHeight * 2;
 			ipPortInput.TextWidget.FontHeight = fontHeight;
+			//ipPortInput.MinMaxHeight = fontHeight * 2;
 			connectButton.Caption.FontHeight = fontHeight;
+			//connectButton.MinMaxHeight = fontHeight * 2;
 			disconnectButton.Caption.FontHeight = fontHeight;
+			//disconnectButton.MinMaxHeight = fontHeight * 2;
+		}
+
+		private class CustomFlatFillPresenter : IPresenter
+		{
+			public Color4 BackgroundColor;
+
+			public CustomFlatFillPresenter(Color4 backgroundColor) => BackgroundColor = backgroundColor;
+
+			public bool PartialHitTest(Node node, ref HitTestArgs args) => node.PartialHitTest(ref args);
+
+			public virtual Lime.RenderObject GetRenderObject(Node node)
+			{
+				var widget = (Widget)node;
+				var ro = RenderObjectPool<RenderObject>.Acquire();
+				ro.CaptureRenderState(widget);
+				ro.Size = widget.Size;
+				ro.BackgroundColor = BackgroundColor;
+				return ro;
+			}
+
+			public IPresenter Clone() => (IPresenter)MemberwiseClone();
+
+			private class RenderObject : WidgetRenderObject
+			{
+				public Vector2 Size;
+				public Color4 BackgroundColor;
+
+				public override void Render()
+				{
+					PrepareRenderState();
+					Renderer.DrawRect(Vector2.Zero, Size, BackgroundColor);
+				}
+			}
 		}
 
 		[YuzuDontGenerateDeserializer]
-		private class SimpleButton : Button
+		public class SimpleButton : Button
 		{
 			private const int DefaultFontHeight = 16;
 
@@ -170,15 +226,13 @@ namespace Lime
 				get { return backgroundColor; }
 				set {
 					backgroundColor = value;
-					((ButtonPresenter)Presenter).BackgroundColor = value;
+					((CustomFlatFillPresenter)Presenter).BackgroundColor = value;
 				}
 			}
 
 			public SimpleButton()
 			{
-				Presenter = new ButtonPresenter(Color4.Blue);
-				HitTestTarget = true;
-				HitTestMethod = HitTestMethod.BoundingRect;
+				Presenter = new CustomFlatFillPresenter(Color4.Blue);
 				Caption = new SimpleText {
 					Id = "TextPresenter",
 					TextColor = Color4.White,
@@ -190,39 +244,6 @@ namespace Lime
 				};
 				AddNode(Caption);
 				Caption.ExpandToContainerWithAnchors();
-			}
-
-			private class ButtonPresenter : IPresenter
-			{
-				public Color4 BackgroundColor;
-
-				public ButtonPresenter(Color4 backgroundColor) => BackgroundColor = backgroundColor;
-
-				public bool PartialHitTest(Node node, ref HitTestArgs args) => node.PartialHitTest(ref args);
-
-				public virtual Lime.RenderObject GetRenderObject(Node node)
-				{
-					var widget = (Widget)node;
-					var ro = RenderObjectPool<RenderObject>.Acquire();
-					ro.CaptureRenderState(widget);
-					ro.Size = widget.Size;
-					ro.BackgroundColor = BackgroundColor;
-					return ro;
-				}
-
-				public IPresenter Clone() => (IPresenter)MemberwiseClone();
-
-				private class RenderObject : WidgetRenderObject
-				{
-					public Vector2 Size;
-					public Color4 BackgroundColor;
-
-					public override void Render()
-					{
-						PrepareRenderState();
-						Renderer.DrawRect(Vector2.Zero, Size, BackgroundColor);
-					}
-				}
 			}
 		}
 	}
