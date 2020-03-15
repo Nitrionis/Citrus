@@ -9,9 +9,6 @@ namespace Lime.Profilers
 	{
 		public class Item
 		{
-			public const long FrameIndexUnset = -2;
-			public const long FrameIndexPendingConfirmation = -1;
-
 			[YuzuRequired]
 			public long UpdateIndex;
 

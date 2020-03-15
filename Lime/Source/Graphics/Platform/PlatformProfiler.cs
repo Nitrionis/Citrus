@@ -56,10 +56,8 @@ namespace Lime.Graphics.Platform
 				throw new InvalidOperationException();
 			}
 			Instance = this;
-			ProfiledFramesCount = 1;
-			resultsBuffer = items[0].Reset();
-			resultsBuffer.FrameIndex = 0;
-			LastFrame = resultsBuffer;
+			ProfiledFramesCount = 0;
+			resultsBuffer = AcquireResultsBuffer();
 		}
 
 		/// <summary>
@@ -92,9 +90,9 @@ namespace Lime.Graphics.Platform
 
 		private Item AcquireResultsBuffer()
 		{
-			LastFrame = GetFrame(ProfiledFramesCount - 1);
-			var buffer = SafeResetFrame(ProfiledFramesCount);
-			buffer.FrameIndex = ProfiledFramesCount++;
+			LastFrame = GetFrame(ProfiledFramesCount + HistoryFramesCount);
+			var buffer = SafeResetFrame(++ProfiledFramesCount);
+			buffer.FrameIndex = ProfiledFramesCount;
 			return buffer;
 		}
 

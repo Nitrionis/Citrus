@@ -865,6 +865,11 @@ namespace Lime
 				Input.TextInput = null;
 			}
 			if (wasInvalidated || renderingState == RenderingState.RenderDeferred) {
+#if PROFILER_GPU
+				if (!AsyncRendering) {
+					CpuProfiler.RenderingFencePassed(Application.MainWindow == this);
+				}
+#endif
 				renderControl.Invalidate();
 			}
 			// We give one update cycle to handle files drop
@@ -875,11 +880,11 @@ namespace Lime
 				}
 				shouldCleanDroppedFiles = !shouldCleanDroppedFiles;
 			}
-#if PROFILER_GPU
-			CpuProfiler.UpdateFinished(Application.MainWindow == this);
-#endif
 			renderingState = renderControl.CanRender ? RenderingState.Updated : RenderingState.Rendered;
 			WaitForRendering();
+#if PROFILER_GPU
+			CpuProfiler.RenderingFencePassed(Application.MainWindow == this);
+#endif
 			if (renderControl.CanRender) {
 				RaiseSync();
 				if (AsyncRendering) {

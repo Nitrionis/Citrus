@@ -21,7 +21,7 @@ namespace Tangerine.UI
 		private ThemedCheckBox gpuTraceCheckBox;
 
 		private Queue<CpuHistory.Item> unpushedUpdates;
-		private CpuHistory.Item lastPushed;
+		private CpuHistory.Item lastInUnpushed;
 		private IndexesStorage indexesStorage;
 		private ChartsPanel chartsPanel;
 		private GpuTrace gpuTrace;
@@ -66,7 +66,7 @@ namespace Tangerine.UI
 			isNodeFilteringChanged = false;
 			chartsPanel.Reset();
 			unpushedUpdates.Clear();
-			lastPushed = null;
+			lastInUnpushed = null;
 		}
 
 		private IEnumerator<object> StateUpdateTask()
@@ -165,17 +165,12 @@ namespace Tangerine.UI
 
 		private void OnLocalDeviceFrameRenderCompleted()
 		{
-			if (
-				lastPushed != LimeProfiler.CpuHistory.LastUpdate &&
-				LimeProfiler.CpuHistory.LastUpdate.FrameIndex != CpuHistory.Item.FrameIndexUnset &&
-				LimeProfiler.CpuHistory.LastUpdate.FrameIndex != LimeProfiler.GpuHistory.ProfiledFramesCount // todo
-				)
-			{
-				lastPushed = LimeProfiler.CpuHistory.LastUpdate;
+			if (lastInUnpushed != LimeProfiler.CpuHistory.LastUpdate) {
+				lastInUnpushed = LimeProfiler.CpuHistory.LastUpdate;
 				unpushedUpdates.Enqueue(LimeProfiler.CpuHistory.LastUpdate);
 			}
-			var update = unpushedUpdates.Count == 0 ? null : unpushedUpdates.Peek();
-			if (update != null && update.FrameIndex != LimeProfiler.GpuHistory.ProfiledFramesCount) {
+			if (unpushedUpdates.Count > 0) {
+				var update = unpushedUpdates.Peek();
 				var frame = LimeProfiler.GpuHistory.GetFrame(update.FrameIndex);
 				if (frame.IsCompleted) {
 					chartsPanel.FrameCompleted(frame, update);

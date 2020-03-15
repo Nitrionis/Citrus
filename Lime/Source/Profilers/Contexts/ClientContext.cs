@@ -131,7 +131,7 @@ namespace Lime.Profilers.Contexts
 			if (request.Options != null) {
 				ChangeProfilerOptions(request.Options);
 			}
-			if (request.GpuDrawCallsResultsForFrame && IsFrameIndexValid(request.FrameIndex)) {
+			if (request.GpuDrawCallsResultsForFrame && GpuHistory.IsFrameIndexValid(request.FrameIndex)) {
 				response = response ?? AcquireResponse();
 				response.FrameIndex = request.FrameIndex;
 				var frame = GpuHistory.GetFrame(request.FrameIndex);
@@ -164,10 +164,6 @@ namespace Lime.Profilers.Contexts
 
 		private void ResponseSerialized() => Interlocked.Increment(ref serializedResponsesCount);
 
-		private bool IsFrameIndexValid(long index) =>
-			0 < index && index < GpuHistory.ProfiledFramesCount &&
-			GpuHistory.ProfiledFramesCount - index < GpuHistory.HistoryFramesCount;
-
 		public override void Completed()
 		{
 			client.RequestClose();
@@ -179,7 +175,7 @@ namespace Lime.Profilers.Contexts
 
 		private void FinalizeResponse(Response response)
 		{
-			if (IsFrameIndexValid(response.FrameIndex)) {
+			if (GpuHistory.IsFrameIndexValid(response.FrameIndex)) {
 				// restoring the state of history
 				if (response.DrawCalls != null) {
 					var frame = GpuHistory.GetFrame(response.FrameIndex);

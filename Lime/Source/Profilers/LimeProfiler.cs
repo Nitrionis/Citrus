@@ -23,6 +23,7 @@ namespace Lime.Profilers
 
 		public static Action ContextChanged;
 		public static Action LocalDeviceFrameRenderCompleted;
+		public static Action LocalDeviceUpdateStarted;
 
 		public static GpuHistory GpuHistory { get => currentContext.GpuHistory; }
 		public static CpuHistory CpuHistory { get => currentContext.CpuHistory; }
