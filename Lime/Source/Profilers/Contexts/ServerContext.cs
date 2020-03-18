@@ -82,7 +82,7 @@ namespace Lime.Profilers.Contexts
 
 		public override bool TryLaunch(IPEndPoint ipEndPoint) => server.TryLaunch(ipEndPoint);
 
-		public override void LocalDeviceFrameRenderCompleted()
+		public override void LocalDeviceUpdateStarted()
 		{
 			Network.IItem item;
 			while (!server.Received.IsEmpty && server.Received.TryDequeue(out item)) {
@@ -101,6 +101,11 @@ namespace Lime.Profilers.Contexts
 				}
 			}
 			server.TryReceive();
+		}
+
+		public override void LocalDeviceFrameRenderCompleted()
+		{
+			
 		}
 
 		private void UpdateProfilerOptions(FrameStatistics frame)

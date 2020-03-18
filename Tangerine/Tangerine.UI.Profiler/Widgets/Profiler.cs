@@ -14,14 +14,14 @@ namespace Tangerine.UI
 		private MainControlPanel mainControlPanel;
 
 		private Widget settingsWidget;
-		private ThemedCheckBox baseInfoCheckBox;
+		private ThemedCheckBox cpuInfoCheckBox;
+		private ThemedCheckBox gpuInfoCheckBox;
 		private ThemedCheckBox geometryInfoCheckBox;
 		private ThemedCheckBox gpuDeepProfilingCheckBox;
 		private ThemedCheckBox gpuSceneOnlyDeepProfilingCheckBox;
 		private ThemedCheckBox gpuTraceCheckBox;
 
-		private Queue<CpuHistory.Item> unpushedUpdates;
-		private CpuHistory.Item lastInUnpushed;
+		private long lastProcessedUpdateIndex;
 		private IndexesStorage indexesStorage;
 		private ChartsPanel chartsPanel;
 		private GpuTrace gpuTrace;
@@ -40,6 +40,7 @@ namespace Tangerine.UI
 		{
 			LimeProfiler.Initialize();
 			LimeProfiler.ContextChanged += Reset;
+			LimeProfiler.LocalDeviceUpdateStarted = OnLocalDeviceUpdateStarted;
 			LimeProfiler.LocalDeviceFrameRenderCompleted = OnLocalDeviceFrameRenderCompleted;
 			contentWidget.AddNode(this);
 			Layout = new VBoxLayout();
@@ -57,16 +58,14 @@ namespace Tangerine.UI
 			AddNode(gpuTrace);
 			selectedRenderTime = new float[GpuHistory.HistoryFramesCount];
 			Tasks.Add(StateUpdateTask);
-			unpushedUpdates = new Queue<CpuHistory.Item>();
-			Tasks.Add(ChartsUpdateTask);
+			lastProcessedUpdateIndex = 0;
 		}
 
 		private void Reset()
 		{
 			isNodeFilteringChanged = false;
 			chartsPanel.Reset();
-			unpushedUpdates.Clear();
-			lastInUnpushed = null;
+			lastProcessedUpdateIndex = 0;
 		}
 
 		private IEnumerator<object> StateUpdateTask()
@@ -84,38 +83,15 @@ namespace Tangerine.UI
 			}
 		}
 
-		private IEnumerator<object> ChartsUpdateTask()
-		{
-			while (true) {
-				//if (
-				//	lastPushed != LimeProfiler.CpuHistory.LastUpdate &&
-				//	LimeProfiler.CpuHistory.LastUpdate.FrameIndex != CpuHistory.Item.FrameIndexUnset
-				//	)
-				//{
-				//	lastPushed = LimeProfiler.CpuHistory.LastUpdate;
-				//	unpushedUpdates.Enqueue(LimeProfiler.CpuHistory.LastUpdate);
-				//}
-				//var update = unpushedUpdates.Count == 0 ? null : unpushedUpdates.Peek();
-				//if (update != null && update.FrameIndex != LimeProfiler.GpuHistory.ProfiledFramesCount) {
-				//	var frame = LimeProfiler.GpuHistory.GetFrame(update.FrameIndex);
-				//	if (frame.IsCompleted) {
-				//		chartsPanel.FrameCompleted(frame, update);
-				//		indexesStorage.Enqueue(new IndexesStorage.Item {
-				//			FrameIndex = frame.FrameIndex,
-				//			UpdateIndex = update.UpdateIndex
-				//		});
-				//		unpushedUpdates.Dequeue();
-				//	}
-				//}
-				yield return null;
-			}
-		}
-
 		private Widget CreateSettingsBlock()
 		{
-			baseInfoCheckBox = new ThemedCheckBox { Checked = true };
-			baseInfoCheckBox.Changed += (args) => {
-				chartsPanel.SetAreaChartsPanelVisible(args.Value);
+			cpuInfoCheckBox = new ThemedCheckBox { Checked = true };
+			cpuInfoCheckBox.Changed += (args) => {
+				chartsPanel.SetCpuChartsPanelVisible(args.Value);
+			};
+			gpuInfoCheckBox = new ThemedCheckBox { Checked = true };
+			gpuInfoCheckBox.Changed += (args) => {
+				chartsPanel.SetGpuChartsPanelVisible(args.Value);
 			};
 			geometryInfoCheckBox = new ThemedCheckBox { Checked = true };
 			geometryInfoCheckBox.Changed += (args) => {
@@ -153,8 +129,9 @@ namespace Tangerine.UI
 				Padding = new Thickness(8),
 				Visible = false,
 				Nodes = {
-					HGroup(baseInfoCheckBox, CreateLabel("Basic rendering information")),
-					HGroup(geometryInfoCheckBox, CreateLabel("Rendering geometry information")),
+					HGroup(cpuInfoCheckBox, CreateLabel("CPU information")),
+					HGroup(gpuInfoCheckBox, CreateLabel("GPU information")),
+					HGroup(geometryInfoCheckBox, CreateLabel("Geometry information")),
 					HGroup(gpuTraceCheckBox, CreateLabel("GPU trace timeline")),
 					HGroup(gpuDeepProfilingCheckBox, CreateLabel("Deep profiling GPU")),
 					HGroup(gpuSceneOnlyDeepProfilingCheckBox, CreateLabel("Scene only GPU deep profiling"))
@@ -163,14 +140,10 @@ namespace Tangerine.UI
 			return settingsWidget;
 		}
 
-		private void OnLocalDeviceFrameRenderCompleted()
+		private void OnLocalDeviceUpdateStarted()
 		{
-			if (lastInUnpushed != LimeProfiler.CpuHistory.LastUpdate) {
-				lastInUnpushed = LimeProfiler.CpuHistory.LastUpdate;
-				unpushedUpdates.Enqueue(LimeProfiler.CpuHistory.LastUpdate);
-			}
-			if (unpushedUpdates.Count > 0) {
-				var update = unpushedUpdates.Peek();
+			while (lastProcessedUpdateIndex < LimeProfiler.CpuHistory.ProfiledUpdatesCount) {
+				var update = LimeProfiler.CpuHistory.GetUpdate(lastProcessedUpdateIndex);
 				var frame = LimeProfiler.GpuHistory.GetFrame(update.FrameIndex);
 				if (frame.IsCompleted) {
 					chartsPanel.FrameCompleted(frame, update);
@@ -178,13 +151,20 @@ namespace Tangerine.UI
 						FrameIndex = frame.FrameIndex,
 						UpdateIndex = update.UpdateIndex
 					});
-					unpushedUpdates.Dequeue();
+					lastProcessedUpdateIndex += 1;
+				} else {
+					break;
 				}
 			}
+		}
+
+		private void OnLocalDeviceFrameRenderCompleted()
+		{
 			if (isNodeFilteringChanged) {
 				isNodeFilteringChanged = false;
 				SelectRenderTime(gpuTrace.Timeline.IsSceneOnly, gpuTrace.Timeline.RegexNodeFilter, selectedRenderTime);
-				chartsPanel.AreaCharts.Subtract(ChartsPanel.GpuChartIndex, selectedRenderTime);
+				chartsPanel.GpuCharts.Subtract(0, selectedRenderTime);
+				chartsPanel.GpuCharts.Add(1, selectedRenderTime);
 			}
 		}
 

@@ -26,6 +26,8 @@ namespace Lime.Profilers
 		private long expectedNextFrameIndex;
 		private long expectedNextUpdateIndex;
 
+		public Action Updating;
+
 		public CpuProfiler()
 		{
 			freeItems = new Queue<Item>(UnconfirmedHistorySize);
@@ -58,6 +60,7 @@ namespace Lime.Profilers
 			lastUnconfirmed = resultsBuffer;
 			unconfirmedHistory.Enqueue(resultsBuffer);
 			stopwatch.Restart();
+			Updating?.Invoke();
 		}
 
 		/// <summary>
@@ -79,6 +82,26 @@ namespace Lime.Profilers
 			return buffer;
 		}
 
+		private void TryConfirmUpdate()
+		{
+			if (unconfirmedHistory.Count == 2) {
+				var update = unconfirmedHistory.Peek();
+				long profiledFramesCount;
+				// Since rendering can be performed in another thread,
+				// we use "lock" to ensure that the actual data is read.
+				lock (GpuProfiler.Instance.LockObject) {
+					profiledFramesCount = GpuProfiler.Instance.ProfiledFramesCount;
+				}
+				if (update.FrameIndex < profiledFramesCount) {
+					int index = (int)(ProfiledUpdatesCount++ % items.Length);
+					freeItems.Enqueue(items[index].Reset());
+					items[index] = LastUpdate = unconfirmedHistory.Dequeue();
+				} else {
+					DropUnconfirmedUpdate();
+				}
+			}
+		}
+
 		private void DropUnconfirmedUpdate()
 		{
 			freeItems.Enqueue(unconfirmedHistory.Dequeue());
@@ -88,21 +111,6 @@ namespace Lime.Profilers
 			update.UpdateIndex -= 1;
 			expectedNextFrameIndex -= 1;
 			expectedNextUpdateIndex -= 1;
-		}
-
-		private void TryConfirmUpdate()
-		{
-			if (unconfirmedHistory.Count == 2) {
-				var update = unconfirmedHistory.Peek();
-				if (update.FrameIndex < GpuProfiler.Instance.ProfiledFramesCount) {
-					int index = (int)(ProfiledUpdatesCount++ % items.Length);
-					freeItems.Enqueue(items[index].Reset());
-					items[index] = unconfirmedHistory.Dequeue();
-					LastUpdate = update;
-				} else {
-					DropUnconfirmedUpdate();
-				}
-			}
 		}
 	}
 }

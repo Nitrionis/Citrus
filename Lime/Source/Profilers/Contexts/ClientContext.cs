@@ -18,21 +18,11 @@ namespace Lime.Profilers.Contexts
 	{
 		private readonly Network.Client client;
 
-		private struct FrameUpdatePair
-		{
-			public GpuHistory.Item Frame;
-			public CpuHistory.Item Update;
-		}
-
-		/// <remarks>
-		/// Do not send frames that are still rendering on the GPU.
-		/// </remarks>
-		private readonly Queue<FrameUpdatePair> unfinished;
-
 		private readonly ConcurrentQueue<Request> requests;
-
 		private readonly Queue<Response> unserializedResponses;
 		private int serializedResponsesCount = 0;
+
+		private long lastProcessedUpdateIndex;
 
 		public override bool IsProfilingEnabled
 		{
@@ -58,44 +48,40 @@ namespace Lime.Profilers.Contexts
 			CpuHistory = CpuProfiler.Instance;
 			client = new Network.Client();
 			client.OnReceived = RemoteProfilerMessageReceived;
-			unfinished = new Queue<FrameUpdatePair>();
 			requests = new ConcurrentQueue<Request>();
 			unserializedResponses = new Queue<Response>();
+			lastProcessedUpdateIndex = CpuHistory.ProfiledUpdatesCount;
 		}
 
 		public override bool TryLaunch(IPEndPoint ipEndPoint) => client.TryLaunch(ipEndPoint);
 
-		public override void LocalDeviceFrameRenderCompleted()
+		public override void LocalDeviceUpdateStarted()
 		{
 			if (IsActiveContext && client.IsConnected) {
-				if (GpuProfiler.Instance.IsEnabled) {
-					// todo
-					unfinished.Enqueue(new FrameUpdatePair {
-						Frame = GpuHistory.LastFrame,
-						Update = CpuHistory.LastUpdate
-					});
-				}
-				bool isOptionsSent = false;
-				while (unfinished.Count > 0 && unfinished.Peek().Frame.IsCompleted) {
-					var frameUpdatePair = unfinished.Dequeue();
-					Request request;
-					Response response = null;
-					if (!requests.IsEmpty && requests.TryDequeue(out request)) {
-						response = ProcessRequest(request);
-						unserializedResponses.Enqueue(response);
+				bool isStatisticsSent = false;
+				while (lastProcessedUpdateIndex < CpuHistory.ProfiledUpdatesCount) {
+					var update = CpuHistory.GetUpdate(lastProcessedUpdateIndex);
+					var frame = GpuHistory.GetFrame(update.FrameIndex);
+					if (frame.IsCompleted) {
+						Debug.Write("Client frame.IsCompleted");
+						client.LazySerializeAndSend(
+							new FrameStatistics {
+								// todo there is no point in additional copying
+								GpuInfo = frame.LightweightClone(),
+								CpuInfo = update.LightweightClone(),
+								Response = ProcessRequest()
+							}
+						);
+						isStatisticsSent = true;
+						lastProcessedUpdateIndex += 1;
+					} else {
+						break;
 					}
-					client.LazySerializeAndSend(
-						new FrameStatistics {
-							GpuInfo = frameUpdatePair.Frame.LightweightClone(),
-							CpuInfo = frameUpdatePair.Update.LightweightClone(),
-							Response = response
-						}
-					);
-					isOptionsSent = true;
 				}
-				if (!isOptionsSent) {
+				if (!isStatisticsSent) {
 					client.LazySerializeAndSend(
 						new FrameStatistics {
+							Response = ProcessRequest(),
 							Options = GetCurrentOptions()
 						}
 					);
@@ -105,6 +91,11 @@ namespace Lime.Profilers.Contexts
 				FinalizeResponse(unserializedResponses.Dequeue());
 			}
 			Interlocked.Add(ref serializedResponsesCount, -serializedResponsesCount);
+		}
+
+		public override void LocalDeviceFrameRenderCompleted()
+		{
+			
 		}
 
 		private void RemoteProfilerMessageReceived()
@@ -125,22 +116,26 @@ namespace Lime.Profilers.Contexts
 			OnSerialized = ResponseSerialized
 		};
 
-		private Response ProcessRequest(Request request)
+		private Response ProcessRequest()
 		{
+			Request request;
 			Response response = null;
-			if (request.Options != null) {
-				ChangeProfilerOptions(request.Options);
-			}
-			if (request.GpuDrawCallsResultsForFrame && GpuHistory.IsFrameIndexValid(request.FrameIndex)) {
-				response = response ?? AcquireResponse();
-				response.FrameIndex = request.FrameIndex;
-				var frame = GpuHistory.GetFrame(request.FrameIndex);
-				List<ProfilingResult> drawCalls = null;
-				if (frame.IsDeepProfilingEnabled && frame.IsCompleted) {
-					drawCalls = frame.DrawCalls;
-					frame.DrawCalls = new List<ProfilingResult>();
+			if (!requests.IsEmpty && requests.TryDequeue(out request)) {
+				if (request.Options != null) {
+					ChangeProfilerOptions(request.Options);
 				}
-				response.DrawCalls = drawCalls;
+				if (request.GpuDrawCallsResultsForFrame && GpuHistory.IsFrameIndexValid(request.FrameIndex)) {
+					response = response ?? AcquireResponse();
+					response.FrameIndex = request.FrameIndex;
+					var frame = GpuHistory.GetFrame(request.FrameIndex);
+					List<ProfilingResult> drawCalls = null;
+					if (frame.IsDeepProfilingEnabled && frame.IsCompleted) {
+						drawCalls = frame.DrawCalls;
+						frame.DrawCalls = new List<ProfilingResult>();
+					}
+					response.DrawCalls = drawCalls;
+				}
+				unserializedResponses.Enqueue(response);
 			}
 			return response;
 		}
@@ -173,7 +168,7 @@ namespace Lime.Profilers.Contexts
 			base.Completed();
 		}
 
-		private void FinalizeResponse(Response response)
+		private void FinalizeResponse(Response response) // data race
 		{
 			if (GpuHistory.IsFrameIndexValid(response.FrameIndex)) {
 				// restoring the state of history
@@ -183,15 +178,6 @@ namespace Lime.Profilers.Contexts
 				}
 			}
 		}
-
-		protected void SetProfilingEnabled(bool value) =>
-			GpuProfiler.Instance.IsEnabled = value;
-
-		protected void SetDrawCallsRenderTimeEnabled(bool value) =>
-			GpuProfiler.Instance.IsDeepProfiling = value;
-
-		protected void SetSceneOnlyDrawCallsRenderTime(bool value) =>
-			GpuProfiler.Instance.IsSceneOnlyDeepProfiling = value;
 
 		private ProfilerOptions GetCurrentOptions() => new ProfilerOptions {
 			ProfilingEnabled = ProfilerOptions.StateOf(GpuProfiler.Instance.IsEnabled),

@@ -106,7 +106,9 @@ namespace Tangerine.UI.Timeline
 				foreach (var item in list) {
 					if (item != null) {
 						if (item is Node node) {
-							return node.Id != null && regex.IsMatch(node.Id);
+							if (node.Id != null && regex.IsMatch(node.Id)) {
+								return true;
+							}
 						} else {
 							if (regex.IsMatch((string)item)) {
 								return true;
@@ -118,9 +120,7 @@ namespace Tangerine.UI.Timeline
 				if (pi.Owners is Node node) {
 					return node.Id != null && regex.IsMatch(node.Id);
 				} else {
-					if (regex.IsMatch((string)pi.Owners)) {
-						return true;
-					}
+					return regex.IsMatch((string)pi.Owners);
 				}
 			}
 			return false;

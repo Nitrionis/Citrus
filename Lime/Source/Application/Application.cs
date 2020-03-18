@@ -53,7 +53,8 @@ namespace Lime
 		public RenderingBackend RenderingBackend =
 			MetalGameView.IsMetalSupported() ? RenderingBackend.Vulkan : RenderingBackend.ES20;
 #else
-		public RenderingBackend RenderingBackend = RenderingBackend.ES20;
+		//public RenderingBackend RenderingBackend = RenderingBackend.ES20;
+		public RenderingBackend RenderingBackend = RenderingBackend.Vulkan;
 #endif // MAC
 	}
 

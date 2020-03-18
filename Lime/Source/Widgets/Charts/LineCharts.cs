@@ -49,6 +49,7 @@ namespace Lime.Widgets.Charts
 			int parity = 0;
 			int chartIndex = 0;
 			int vertexIndex = Line.VerticesCount * userLines.Length;
+			float newChartsMaxValue = 1;
 			foreach (var chart in Charts) {
 				if (chart.IsVisible) {
 					float maxValue = 0;
@@ -73,10 +74,11 @@ namespace Lime.Widgets.Charts
 					}
 					parity = (parity + 1) % 2;
 					maxValuePerChart[chartIndex] = maxValue;
-					chartsMaxValue = Mathf.Max(maxValue, chartsMaxValue);
+					newChartsMaxValue = Mathf.Max(maxValue, newChartsMaxValue);
 				}
 				chartIndex++;
 			}
+			chartsMaxValue = newChartsMaxValue;
 			mesh.DirtyFlags |= MeshDirtyFlags.Vertices;
 		}
 

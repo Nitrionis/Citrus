@@ -7,6 +7,13 @@ namespace Lime.Graphics.Platform
 		public static PlatformProfiler Instance { get; private set; }
 
 		/// <summary>
+		/// Used by lock during history update.
+		/// It is used only for reading current values,
+		/// and do not use to synchronize access to the code.
+		/// </summary>
+		public object LockObject = new object();
+
+		/// <summary>
 		/// Use to send a signal that the frame has been sent to the GPU.
 		/// </summary>
 		public Action FrameRenderCompleted;
@@ -57,7 +64,10 @@ namespace Lime.Graphics.Platform
 			}
 			Instance = this;
 			ProfiledFramesCount = 0;
-			resultsBuffer = AcquireResultsBuffer();
+			resultsBuffer = items[0].Reset();
+			resultsBuffer.FrameIndex = 0;
+			LastFrame = GetFrame(HistoryFramesCount - 1);
+			//resultsBuffer = AcquireResultsBuffer();
 		}
 
 		/// <summary>
@@ -90,9 +100,12 @@ namespace Lime.Graphics.Platform
 
 		private Item AcquireResultsBuffer()
 		{
-			LastFrame = GetFrame(ProfiledFramesCount + HistoryFramesCount);
-			var buffer = SafeResetFrame(++ProfiledFramesCount);
-			buffer.FrameIndex = ProfiledFramesCount;
+			Item buffer;
+			lock (LockObject) {
+				LastFrame = GetFrame(ProfiledFramesCount + HistoryFramesCount);
+				buffer = SafeResetFrame(++ProfiledFramesCount);
+				buffer.FrameIndex = ProfiledFramesCount;
+			}
 			return buffer;
 		}
 

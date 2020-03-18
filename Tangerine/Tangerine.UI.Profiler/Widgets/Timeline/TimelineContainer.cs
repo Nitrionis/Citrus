@@ -108,7 +108,7 @@ namespace Tangerine.UI.Timeline
 		private void UpdateScrollPosition(float hsvp, float pcw, float ncw)
 		{
 			float lmp = LocalMousePosition().X;
-			float pos = (lmp + hsvp) / pcw - lmp / ncw;
+			float pos = Mathf.Clamp((lmp + hsvp) / pcw - lmp / ncw, 0, 1);
 			horizontalScrollView.ScrollPosition = pos * ncw;
 		}
 

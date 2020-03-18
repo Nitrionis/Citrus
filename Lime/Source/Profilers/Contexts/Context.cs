@@ -13,17 +13,16 @@ namespace Lime.Profilers.Contexts
 		public abstract bool IsDrawCallsRenderTimeEnabled { get; set; }
 		public abstract bool IsSceneOnlyDrawCallsRenderTime { get; set; }
 
+		public abstract void LocalDeviceUpdateStarted();
 		public abstract void LocalDeviceFrameRenderCompleted();
 
 		/// <summary>
 		/// Called when the context connected to the profiler.
-		/// Will be synchronized with the completion of frame rendering.
 		/// </summary>
 		public virtual void Activated() => IsActiveContext = true;
 
 		/// <summary>
 		/// Called when the context is disconnected from the profiler.
-		/// Will be synchronized with the completion of frame rendering.
 		/// </summary>
 		public virtual void Completed() => IsActiveContext = false;
 	}

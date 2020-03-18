@@ -47,7 +47,7 @@ namespace Lime
 				var obj = this[i].GetRenderObject(node);
 				if (obj != null) {
 #if PROFILER_GPU
-					ro.SetProfilerData(node, node.Manager);
+					obj.SetOwnersInfo(node, node.Manager);
 #endif
 					ro.Objects.Add(obj);
 				}

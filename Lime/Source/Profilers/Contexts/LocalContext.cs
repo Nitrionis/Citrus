@@ -31,6 +31,8 @@ namespace Lime.Profilers.Contexts
 			CpuHistory = CpuProfiler.Instance;
 		}
 
+		public override void LocalDeviceUpdateStarted() { }
+
 		public override void LocalDeviceFrameRenderCompleted() { }
 	}
 }

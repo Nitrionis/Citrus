@@ -60,6 +60,8 @@ namespace Lime
 
 		public ProfilerGameUI()
 		{
+			LimeProfiler.Initialize();
+
 			backgroundPresenter = new WidgetFlatFillPresenter(backgroundColor);
 			Presenter = backgroundPresenter;
 
@@ -115,6 +117,7 @@ namespace Lime
 				Clicked = () => {
 					LimeProfiler.SetContext(new LocalContext());
 					backgroundPresenter.Color = BackgroundColor;
+					statusLabel.Text = "Not connected";
 				}
 			};
 			disconnectButton.Caption.FontHeight = fontHeight;
@@ -154,10 +157,14 @@ namespace Lime
 					statusLabel.Text = "Launch failed";
 					backgroundPresenter.Color = Color4.Red;
 				} else {
+					connectButton.Visible = false;
+					disconnectButton.Visible = true;
 					statusLabel.Text = "Launch completed";
-					backgroundPresenter.Color = Color4.Green.Darken(0.1f);
+					backgroundPresenter.Color = Color4.Green.Darken(0.2f);
 				}
 			} else {
+				connectButton.Visible = true;
+				disconnectButton.Visible = false;
 				statusLabel.Text =
 					"wrong " +
 					(!isIpValid ?                  "ip " : "") +
@@ -170,13 +177,9 @@ namespace Lime
 		private void UpdateWidgetsFontHeight()
 		{
 			statusLabel.FontHeight = fontHeight;
-			//statusLabel.MinMaxHeight = fontHeight * 2;
 			ipPortInput.TextWidget.FontHeight = fontHeight;
-			//ipPortInput.MinMaxHeight = fontHeight * 2;
 			connectButton.Caption.FontHeight = fontHeight;
-			//connectButton.MinMaxHeight = fontHeight * 2;
 			disconnectButton.Caption.FontHeight = fontHeight;
-			//disconnectButton.MinMaxHeight = fontHeight * 2;
 		}
 
 		private class CustomFlatFillPresenter : IPresenter

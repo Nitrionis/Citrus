@@ -24,7 +24,7 @@ namespace Lime.Graphics.Platform
 		/// <summary>
 		/// Must be called AFTER each <see cref="IPresenter.GetRenderObject(Node)"/>.
 		/// </summary>
-		public void SetProfilerData(object node, object manager)
+		public void SetOwnersInfo(object node, object manager)
 		{
 			this.node = node;
 			this.manager = manager;

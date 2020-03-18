@@ -193,9 +193,6 @@ namespace Lime.Graphics.Platform
 		/// </remarks>
 		public bool TryLockFrame(long frameIndex)
 		{
-			if (ProfiledFramesCount - protectedIndex > HistoryFramesCount) {
-				freeItem?.Reset();
-			}
 			if (IsFrameIndexValid(frameIndex)) {
 				protectedIndex = frameIndex;
 				return true;
@@ -209,7 +206,7 @@ namespace Lime.Graphics.Platform
 			long itemIndex = frameIndex % items.Length;
 			if (frameIndex == protectedIndex) {
 				var protectedFrame = items[itemIndex];
-				items[itemIndex] = freeItem;
+				items[itemIndex] = freeItem.Reset();
 				freeItem = protectedFrame;
 			}
 			return items[itemIndex].Reset();

@@ -18,6 +18,9 @@ namespace Lime.Graphics.Platform
 
 		public void ProcessNode(object node, object manager)
 		{
+			if (node == null) {
+				node = null;
+			}
 			drawCallsOwners.Add(node);
 			isPartOfScene |=
 				node == null ||
