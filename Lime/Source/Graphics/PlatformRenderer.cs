@@ -457,7 +457,7 @@ namespace Lime
 			Context.SetPrimitiveTopology(topology);
 		}
 
-#if !PROFILER_GPU
+#if !LIME_PROFILER
 		public static void Draw(PrimitiveTopology topology, int startVertex, int vertexCount)
 		{
 			PreDraw(topology);

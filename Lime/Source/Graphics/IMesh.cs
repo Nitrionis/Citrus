@@ -7,7 +7,7 @@ namespace Lime
 	public interface IMesh
 	{
 		IMesh ShallowClone();
-#if !PROFILER_GPU
+#if !LIME_PROFILER
 		void Draw(int startVertex, int vertexCount);
 		void DrawIndexed(int startIndex, int indexCount, int baseVertex = 0);
 #else

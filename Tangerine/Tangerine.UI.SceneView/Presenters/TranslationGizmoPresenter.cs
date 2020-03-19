@@ -62,7 +62,7 @@ namespace Tangerine.UI.SceneView
 			Renderer.World = CalcGizmoTransform(node.GlobalTransform, 100);
 			Renderer.CullMode = CullMode.Front;
 			WidgetMaterial.Diffuse.Apply(0);
-#if !PROFILER_GPU
+#if !LIME_PROFILER
 			gizmo.DrawIndexed(0, gizmo.Indices.Length);
 #else
 			gizmo.DrawIndexed(0, gizmo.Indices.Length, 0, ProfilingInfo.Acquire(WidgetMaterial.Diffuse));

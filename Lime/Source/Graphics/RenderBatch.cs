@@ -22,7 +22,7 @@ namespace Lime
 		public const int MaxIndices = 600;
 	}
 
-#if !PROFILER_GPU
+#if !LIME_PROFILER
 	public class RenderBatch<TVertex> : IRenderBatch where TVertex : unmanaged
 #else
 	public class RenderBatch<TVertex> : RenderBatchProfiler, IRenderBatch where TVertex : unmanaged
@@ -53,7 +53,7 @@ namespace Lime
 				Mesh = null;
 			}
 			ownsMesh = false;
-#if PROFILER_GPU
+#if LIME_PROFILER
 			isPartOfScene = false;
 			drawCallsOwners = new List<object>();
 #endif
@@ -61,7 +61,7 @@ namespace Lime
 
 		public void Render()
 		{
-#if PROFILER_GPU
+#if LIME_PROFILER
 			int savedByBatching = drawCallsOwners.Count == 0 ?
 				0 : (drawCallsOwners.Count - 1) * Material.PassCount;
 			FullSavedByBatching += savedByBatching;
@@ -72,7 +72,7 @@ namespace Lime
 			PlatformRenderer.SetTexture(1, Texture2);
 			for (int i = 0; i < Material.PassCount; i++) {
 				Material.Apply(i);
-#if !PROFILER_GPU
+#if !LIME_PROFILER
 				Mesh.DrawIndexed(StartIndex, LastIndex - StartIndex);
 #else
 				profilingInfo.CurrentRenderPassIndex = i;

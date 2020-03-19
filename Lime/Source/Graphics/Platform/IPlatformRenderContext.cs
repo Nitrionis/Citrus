@@ -44,7 +44,7 @@ namespace Lime.Graphics.Platform
 		void SetTexture(int slot, IPlatformTexture2D texture);
 		void SetVertexBuffer(int slot, IPlatformBuffer buffer, int offset);
 		void SetIndexBuffer(IPlatformBuffer buffer, int offset, IndexFormat format);
-#if !PROFILER_GPU
+#if !LIME_PROFILER
 		void Draw(int startVertex, int vertexCount);
 		void DrawIndexed(int startIndex, int indexCount, int baseVertex);
 #else

@@ -364,7 +364,7 @@ namespace Lime
 
 			public override void Render()
 			{
-#if PROFILER_GPU
+#if LIME_PROFILER
 				var profilingInfo = ProfilingInfo.Acquire();
 #endif
 				Renderer.PushState(
@@ -392,12 +392,12 @@ namespace Lime
 							skin.SkinningMode = SkinningMode;
 							skin.SetBones(boneTransforms, submesh.BoneCount);
 						}
-#if PROFILER_GPU
+#if LIME_PROFILER
 						profilingInfo.Material = material;
 #endif
 						for (var i = 0; i < material.PassCount; i++) {
 							material.Apply(i);
-#if !PROFILER_GPU
+#if !LIME_PROFILER
 							mesh.DrawIndexed(0, mesh.Indices.Length);
 #else
 							profilingInfo.CurrentRenderPassIndex = i;
@@ -426,12 +426,12 @@ namespace Lime
 							skin.SkinningMode = SkinningMode;
 							skin.SetBones(dualQuaternionPartA, dualQuaternionPartB, submesh.BoneCount);
 						}
-#if PROFILER_GPU
+#if LIME_PROFILER
 						profilingInfo.Material = material;
 #endif
 						for (var i = 0; i < material.PassCount; i++) {
 							material.Apply(i);
-#if !PROFILER_GPU
+#if !LIME_PROFILER
 							mesh.DrawIndexed(0, mesh.Indices.Length);
 #else
 							profilingInfo.CurrentRenderPassIndex = i;

@@ -46,7 +46,7 @@ namespace Lime
 			for (var i = Count - 1; i >= 0; i--) {
 				var obj = this[i].GetRenderObject(node);
 				if (obj != null) {
-#if PROFILER_GPU
+#if LIME_PROFILER
 					obj.SetOwnersInfo(node, node.Manager);
 #endif
 					ro.Objects.Add(obj);

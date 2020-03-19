@@ -310,7 +310,7 @@ namespace Lime
 				PlatformRenderer.SetTexture(0, lumaTexture);
 				PlatformRenderer.SetTexture(1, chromaTexture);
 				material.Apply(0);
-#if !PROFILER_GPU
+#if !LIME_PROFILER
 				mesh.DrawIndexed(0, mesh.Indices.Length);
 #else
 				mesh.DrawIndexed(0, mesh.Indices.Length, 0, ProfilingInfo.Acquire(material));

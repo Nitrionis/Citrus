@@ -4,7 +4,7 @@ using RenderObjectOwnersInfo = Lime.Graphics.Platform.RenderObjectOwnersInfo;
 
 namespace Lime
 {
-#if !PROFILER_GPU
+#if !LIME_PROFILER
 	public abstract class RenderObject
 #else
 	public abstract class RenderObject : RenderObjectOwnersInfo
@@ -51,11 +51,11 @@ namespace Lime
 		public void Render()
 		{
 			foreach (var ro in objects) {
-#if PROFILER_GPU
+#if LIME_PROFILER
 				ro.SetGlobalProfilerData();
 #endif
 				ro.Render();
-#if PROFILER_GPU
+#if LIME_PROFILER
 				ro.ResetGlobalProfilerData();
 #endif
 			}

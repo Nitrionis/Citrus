@@ -395,11 +395,11 @@ namespace Lime
 			{
 				Renderer.Transform1 = LocalToWorldTransform;
 				foreach (var ro in Objects) {
-#if PROFILER_GPU
+#if LIME_PROFILER
 					ro.SetGlobalProfilerData();
 #endif
 					ro.Render();
-#if PROFILER_GPU
+#if LIME_PROFILER
 					ro.ResetGlobalProfilerData();
 #endif
 				}

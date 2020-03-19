@@ -53,7 +53,7 @@ namespace Lime
 
 		IMesh IMesh.ShallowClone() => ShallowClone();
 
-#if !PROFILER_GPU
+#if !LIME_PROFILER
 		public void Draw(int startVertex, int vertexCount)
 		{
 			PreDraw();

@@ -86,7 +86,7 @@ namespace Lime.Graphics.Platform.OpenGL
 			textures = new PlatformTexture2D[MaxTextureSlots];
 			vertexBuffers = new PlatformBuffer[MaxVertexBufferSlots];
 			vertexOffsets = new int[MaxVertexBufferSlots];
-#if PROFILER_GPU
+#if LIME_PROFILER
 			profiler = new PlatformProfiler();
 #endif
 		}
@@ -95,7 +95,7 @@ namespace Lime.Graphics.Platform.OpenGL
 
 		public void Begin(int glFramebuffer, bool isMainWindow = true)
 		{
-#if PROFILER_GPU
+#if LIME_PROFILER
 			profiler.FrameRenderStarted(isMainWindow);
 #endif
 			glDefaultFramebuffer = glFramebuffer;
@@ -132,7 +132,7 @@ namespace Lime.Graphics.Platform.OpenGL
 
 		public void End()
 		{
-#if PROFILER_GPU
+#if LIME_PROFILER
 			profiler.FrameRenderFinished();
 #endif
 			for (var i = 0; i < MaxVertexAttributes; i++) {
@@ -373,7 +373,7 @@ namespace Lime.Graphics.Platform.OpenGL
 			}
 		}
 
-#if !PROFILER_GPU
+#if !LIME_PROFILER
 		public void Draw(int startVertex, int vertexCount)
 		{
 			PreDraw(0);

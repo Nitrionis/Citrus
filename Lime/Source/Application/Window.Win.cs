@@ -486,7 +486,7 @@ namespace Lime
 			}
 			active = Form.ActiveForm == form;
 
-#if PROFILER_GPU
+#if LIME_PROFILER
 			CpuProfiler.Initialize();
 #endif
 			if (options.UseTimer) {
@@ -843,7 +843,7 @@ namespace Lime
 			UnclampedDelta = (float)stopwatch.Elapsed.TotalSeconds;
 			float delta = Mathf.Clamp(UnclampedDelta, 0, Application.MaxDelta);
 			stopwatch.Restart();
-#if PROFILER_GPU
+#if LIME_PROFILER
 			CpuProfiler.UpdateStarted(Application.MainWindow == this);
 #endif
 			if (this == Application.MainWindow && Application.MainMenu != null) {
@@ -865,7 +865,7 @@ namespace Lime
 				Input.TextInput = null;
 			}
 			if (wasInvalidated || renderingState == RenderingState.RenderDeferred) {
-#if PROFILER_GPU
+#if LIME_PROFILER
 				if (!AsyncRendering) {
 					CpuProfiler.RenderingFencePassed(Application.MainWindow == this);
 				}
@@ -882,7 +882,7 @@ namespace Lime
 			}
 			renderingState = renderControl.CanRender ? RenderingState.Updated : RenderingState.Rendered;
 			WaitForRendering();
-#if PROFILER_GPU
+#if LIME_PROFILER
 			CpuProfiler.RenderingFencePassed(Application.MainWindow == this);
 #endif
 			if (renderControl.CanRender) {

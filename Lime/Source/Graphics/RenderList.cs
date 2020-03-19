@@ -31,7 +31,7 @@ namespace Lime
 				Batches.Add(typedLastBatch);
 				lastBatch = typedLastBatch;
 			}
-#if PROFILER_GPU
+#if LIME_PROFILER
 			typedLastBatch.ProcessNode(RenderObject.CurrentNode, RenderObject.CurrentManager);
 #endif
 			return typedLastBatch;

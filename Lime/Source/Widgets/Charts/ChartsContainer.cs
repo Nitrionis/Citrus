@@ -261,7 +261,7 @@ namespace Lime.Widgets.Charts
 				{
 					PrepareRenderState();
 					Renderer.DrawRect(Vector2.Zero, Charts.Size, Charts.BackgroundColor);
-#if PROFILER_GPU
+#if LIME_PROFILER
 					Renderer.MainRenderList.Flush();
 					if (Charts.isMeshUpdateRequired) {
 						Charts.RecalculateVertices();
