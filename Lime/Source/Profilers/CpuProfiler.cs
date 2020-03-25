@@ -25,6 +25,7 @@ namespace Lime.Profilers
 		private Item resultsBuffer;
 		private long expectedNextFrameIndex;
 		private long expectedNextUpdateIndex;
+		private bool isEnabled;
 
 		public Action Updating;
 
@@ -53,12 +54,15 @@ namespace Lime.Profilers
 
 		private void NextUpdateStarted()
 		{
-			resultsBuffer = AcquireResultsBuffer();
-			if (lastUnconfirmed != null) {
-				lastUnconfirmed.DeltaTime = (float)stopwatch.Elapsed.TotalMilliseconds;
+			isEnabled = GpuProfiler.Instance.IsEnabled || GpuProfiler.Instance.IsProfilingRequired;
+			if (isEnabled) {
+				resultsBuffer = AcquireResultsBuffer();
+				if (lastUnconfirmed != null) {
+					lastUnconfirmed.DeltaTime = (float)stopwatch.Elapsed.TotalMilliseconds;
+				}
+				lastUnconfirmed = resultsBuffer;
+				unconfirmedHistory.Enqueue(resultsBuffer);
 			}
-			lastUnconfirmed = resultsBuffer;
-			unconfirmedHistory.Enqueue(resultsBuffer);
 			stopwatch.Restart();
 			Updating?.Invoke();
 		}
