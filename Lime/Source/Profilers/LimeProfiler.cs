@@ -19,56 +19,56 @@ namespace Lime.Profilers
 		}
 
 		private static ProfilerContext nextContext;
-		private static ProfilerContext currentContext;
+		public static ProfilerContext CurrentContext { get; private set; }
 
 		public static Action ContextChanged;
 		public static Action LocalDeviceUpdateStarted;
 		public static Action LocalDeviceFrameRenderCompleted;
 
-		public static GpuHistory GpuHistory { get => currentContext.GpuHistory; }
-		public static CpuHistory CpuHistory { get => currentContext.CpuHistory; }
+		public static GpuHistory GpuHistory { get => CurrentContext.GpuHistory; }
+		public static CpuHistory CpuHistory { get => CurrentContext.CpuHistory; }
 
 		public static bool IsProfilingEnabled
 		{
-			get => currentContext.IsProfilingEnabled;
-			set => currentContext.IsProfilingEnabled = value;
+			get => CurrentContext.IsProfilingEnabled;
+			set => CurrentContext.IsProfilingEnabled = value;
 		}
 
 		public static bool IsDrawCallsRenderTimeEnabled
 		{
-			get => currentContext.IsDrawCallsRenderTimeEnabled;
-			set => currentContext.IsDrawCallsRenderTimeEnabled = value;
+			get => CurrentContext.IsDrawCallsRenderTimeEnabled;
+			set => CurrentContext.IsDrawCallsRenderTimeEnabled = value;
 		}
 
 		public static bool IsSceneOnlyDrawCallsRenderTime
 		{
-			get => currentContext.IsSceneOnlyDrawCallsRenderTime;
-			set => currentContext.IsSceneOnlyDrawCallsRenderTime = value;
+			get => CurrentContext.IsSceneOnlyDrawCallsRenderTime;
+			set => CurrentContext.IsSceneOnlyDrawCallsRenderTime = value;
 		}
 
 		private LimeProfiler()
 		{
-			currentContext = new LocalContext();
-			SetContext(currentContext);
+			CurrentContext = new LocalContext();
+			SetContext(CurrentContext);
 			CpuProfiler.Instance.Updating = OnLocalDeviceUpdateStarted;
-			GpuProfiler.Instance.FrameRenderCompleted = OnLocalDeviceFrameRenderCompleted;
+			GpuProfiler.Instance.FrameRenderCompleted += OnLocalDeviceFrameRenderCompleted;
 		}
 
 		public void OnLocalDeviceUpdateStarted()
 		{
 			if (nextContext != null) {
-				currentContext?.Completed();
-				currentContext = Interlocked.Exchange(ref nextContext, null);
-				currentContext.Activated();
+				CurrentContext?.Completed();
+				CurrentContext = Interlocked.Exchange(ref nextContext, null);
+				CurrentContext.Activated();
 				ContextChanged?.Invoke();
 			}
-			currentContext.LocalDeviceUpdateStarted();
+			CurrentContext.LocalDeviceUpdateStarted();
 			LocalDeviceUpdateStarted?.Invoke();
 		}
 
 		public void OnLocalDeviceFrameRenderCompleted()
 		{
-			currentContext.LocalDeviceFrameRenderCompleted();
+			CurrentContext.LocalDeviceFrameRenderCompleted();
 			LocalDeviceFrameRenderCompleted?.Invoke();
 		}
 

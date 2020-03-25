@@ -3,47 +3,41 @@ using System.Collections.Generic;
 
 namespace Tangerine.UI
 {
-	internal class IndexesStorage : IEnumerable<IndexesStorage.Item>
+	internal class IndexesStorage : IEnumerable<long>
 	{
-		public struct Item
-		{
-			public long FrameIndex;
-			public long UpdateIndex;
-		}
-
 		private int indexOfLast;
-		private Item[] history;
+		private long[] history;
 
 		public IndexesStorage(int historySize)
 		{
 			indexOfLast = historySize;
-			history = new Item[historySize];
+			history = new long[historySize];
 		}
 
 		/// <summary>
 		/// Considers the collection as fixed capacity queue.
 		/// </summary>
 		/// <param name="index">Item index from the beginning of the queue.</param>
-		public Item GetItem(int index) => history[(indexOfLast + index) % history.Length];
+		public long GetItem(int index) => history[(indexOfLast + index) % history.Length];
 
 		/// <summary>
 		/// Replaces the oldest element in history.
 		/// </summary>
-		public void Enqueue(Item item) => history[indexOfLast = (indexOfLast + 1) % history.Length] = item;
+		public void Enqueue(long index) => history[indexOfLast = (indexOfLast + 1) % history.Length] = index;
 
-		public IEnumerator<Item> GetEnumerator() => new Enumerator(this);
+		public IEnumerator<long> GetEnumerator() => new Enumerator(this);
 
 		IEnumerator IEnumerable.GetEnumerator() => new Enumerator(this);
 
-		public class Enumerator : IEnumerator<Item>
+		public class Enumerator : IEnumerator<long>
 		{
 			private int itemIndex = -1;
 			private int processedItemsCount = -1;
-			private Item[] history;
+			private long[] history;
 
-			private Item current;
+			private long current;
 
-			public Item Current => current;
+			public long Current => current;
 
 			object IEnumerator.Current => current;
 

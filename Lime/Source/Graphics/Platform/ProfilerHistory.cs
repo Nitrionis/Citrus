@@ -100,7 +100,7 @@ namespace Lime.Graphics.Platform
 			/// <summary>
 			/// Stores the results of all draw calls.
 			/// </summary>
-			[YuzuExclude]
+			[YuzuRequired]
 			public List<ProfilingResult> DrawCalls;
 
 

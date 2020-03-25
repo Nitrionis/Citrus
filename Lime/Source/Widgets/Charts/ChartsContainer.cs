@@ -15,6 +15,9 @@ namespace Lime.Widgets.Charts
 		public readonly int ControlPointsCount;
 
 		protected bool isMeshUpdateRequired = false;
+		protected float chartsMaxValue;
+
+		public float ChartsMaxValue => chartsMaxValue;
 
 		public Color4 BackgroundColor { get; set; }
 
@@ -26,14 +29,18 @@ namespace Lime.Widgets.Charts
 			/// Index of color in <see cref="colors"/>.
 			/// </summary>
 			public int ColorIndex;
+			public string Caption;
 			public Vector2 Start;
 			public Vector2 End;
+			public Vector2 FinalStartPosition;
 
-			public Line(Vector2 start, Vector2 end, int colorIndex)
+			public Line(Vector2 start, Vector2 end, int colorIndex, string caption)
 			{
 				Start = start;
 				End = end;
 				ColorIndex = colorIndex;
+				Caption = caption;
+				FinalStartPosition = Vector2.Zero;
 			}
 		}
 
@@ -207,10 +214,10 @@ namespace Lime.Widgets.Charts
 		/// </summary>
 		/// <param name="lineIndex">Line index. The number of lines is set in the ChartGroup constructor.</param>
 		/// <param name="colorIndex">Color index in <see cref="colors"/>.</param>
-		public void SetLinePos(int lineIndex, Vector2 start, Vector2 end, int colorIndex = 0)
+		public void SetLine(int lineIndex, Vector2 start, Vector2 end, int colorIndex = 0, string caption = null)
 		{
 			isMeshUpdateRequired = true;
-			userLines[lineIndex] = new Line(start, end, colorIndex);
+			userLines[lineIndex] = new Line(start, end, colorIndex, caption);
 		}
 
 		protected void UpdateUserLines(float scalingFactor)
@@ -232,6 +239,7 @@ namespace Lime.Widgets.Charts
 				mesh.Vertices[offset + 3] = new Vector3(s.X,     chartsHeight - s.Y,     colorIndex);
 				mesh.Vertices[offset + 4] = new Vector3(e.X + 1, chartsHeight - e.Y - 1, colorIndex);
 				mesh.Vertices[offset + 5] = new Vector3(e.X + 1, chartsHeight - s.Y,     colorIndex);
+				userLines[i].FinalStartPosition = s;
 			}
 		}
 
@@ -261,7 +269,6 @@ namespace Lime.Widgets.Charts
 				{
 					PrepareRenderState();
 					Renderer.DrawRect(Vector2.Zero, Charts.Size, Charts.BackgroundColor);
-#if LIME_PROFILER
 					Renderer.MainRenderList.Flush();
 					if (Charts.isMeshUpdateRequired) {
 						Charts.RecalculateVertices();
@@ -272,13 +279,34 @@ namespace Lime.Widgets.Charts
 					var profilingInfo = ProfilingInfo.Acquire(material, 0);
 					var mesh = Charts.mesh;
 					mesh.Topology = PrimitiveTopology.TriangleStrip;
+#if LIME_PROFILER
 					mesh.Draw(
 						startVertex: Line.VerticesCount * Charts.userLines.Length,
 						vertexCount: Charts.GetActiveChartsCount() * Charts.chartVerticesCount,
 						profilingInfo);
 					mesh.Topology = PrimitiveTopology.TriangleList;
 					mesh.Draw(0, Line.VerticesCount * Charts.userLines.Length, profilingInfo);
+#else
+					mesh.Draw(
+						startVertex: Line.VerticesCount * Charts.userLines.Length,
+						vertexCount: Charts.GetActiveChartsCount() * Charts.chartVerticesCount);
+					mesh.Topology = PrimitiveTopology.TriangleList;
+					mesh.Draw(0, Line.VerticesCount * Charts.userLines.Length);
 #endif
+					const float fontHeight = 14;
+					foreach (var line in Charts.userLines) {
+						if (line.Caption != null && line.FinalStartPosition.Y > fontHeight) {
+							var startPosition = line.FinalStartPosition;
+							startPosition.Y = Charts.Height - startPosition.Y;
+							var color = Charts.colors[line.ColorIndex];
+							Renderer.DrawTextLine(
+								startPosition,
+								line.Caption,
+								fontHeight,
+								color: Color4.FromFloats(color.X, color.Y, color.Z),
+								letterSpacing: 0);
+						}
+					}
 				}
 			}
 		}

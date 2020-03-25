@@ -45,7 +45,7 @@ namespace Lime.Profilers.Network
 							CheckReceived();
 							Sleep();
 						}
-						if (!isRemoteMemberClosed) {
+						if (!isRemoteMemberClosed && client != null) {
 							SerializeAndSend(new ServiceMessage { IsCloseRequested = true });
 						}
 					} catch (SocketException e) {
@@ -68,7 +68,7 @@ namespace Lime.Profilers.Network
 
 		private void WaitConnectionRequest()
 		{
-			while (!Listener.Pending() && !isCloseRequested) {
+			while (!isCloseRequested && !Listener.Pending()) {
 				Thread.Sleep(100);
 			}
 		}

@@ -85,7 +85,11 @@ namespace Lime.Profilers.Contexts
 			[YuzuMember]
 			public List<ProfilingResult> DrawCalls;
 
+			public Action OnSerializing;
 			public Action OnSerialized;
+
+			[YuzuBeforeSerialization]
+			private void Serializing() => OnSerializing?.Invoke();
 
 			[YuzuAfterSerialization]
 			private void Serialized() => OnSerialized?.Invoke();

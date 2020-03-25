@@ -80,10 +80,19 @@ namespace Tangerine.UI
 			var ipPresets = new ThemedDropDownList() {
 				MinMaxWidth = 160
 			};
+			int index = 0;
+			int selectedItemIndex = 0;
+			int minIpLength = int.MaxValue;
 			foreach (var ip in Dns.GetHostEntry(Dns.GetHostName()).AddressList) {
-				ipPresets.Items.Add(new CommonDropDownList.Item(ip.ToString()));
+				string ipStr = ip.ToString();
+				if (minIpLength > ipStr.Length) {
+					minIpLength = ipStr.Length;
+					selectedItemIndex = index;
+				}
+				ipPresets.Items.Add(new CommonDropDownList.Item(ipStr));
+				index += 1;
 			}
-			ipPresets.Index = 0;
+			ipPresets.Index = selectedItemIndex;
 			return ipPresets;
 		}
 

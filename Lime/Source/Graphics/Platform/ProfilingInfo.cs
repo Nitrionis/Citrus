@@ -64,7 +64,7 @@ namespace Lime.Graphics.Platform
 		[YuzuExclude]
 		internal int CurrentRenderPassIndex;
 
-		private ProfilingInfo() { }
+		public ProfilingInfo() { }
 
 		public static ProfilingInfo Acquire(object material = null, int passIndex = 0)
 		{

@@ -64,7 +64,7 @@ namespace Lime.Graphics.Platform
 		[YuzuRequired]
 		public uint FinishTime;
 
-		private ProfilingResult() { }
+		public ProfilingResult() { }
 
 		public static ProfilingResult Acquire() =>
 			freeInstances.Count > 0 ? freeInstances.Pop() : new ProfilingResult();

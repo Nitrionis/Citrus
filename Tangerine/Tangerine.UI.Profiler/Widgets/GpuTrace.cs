@@ -1,10 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using Lime;
 using DrawCallInfo = Lime.Graphics.Platform.ProfilingResult;
 using Tangerine.UI.Timeline;
-using System.Collections;
 
 namespace Tangerine.UI
 {
@@ -12,26 +11,21 @@ namespace Tangerine.UI
 	{
 		private const float FontHeight = 20;
 
-		private static readonly Color4 textColor = new Color4(204, 204, 204);
+		private static readonly Color4 textColor = ColorTheme.Current.Profiler.TimelineRulerAndText;
 
 		public readonly DrawCallsTimeline Timeline;
-
-		private readonly ColorCheckBox sceneFilter;
-		private readonly ThemedEditBox nodeFilter;
 		private readonly ThemedSimpleText ownersLabel;
+		private readonly CustomDropDownList ownersList;
 		private readonly ThemedSimpleText materialLabel;
 		private readonly ThemedSimpleText passIndexLabel;
 		private readonly ThemedSimpleText renderTimeLabel;
-		private readonly CustomDropDownList ownersList;
-
-		public Action NodeFilteringChanged;
+		private readonly ThemedSimpleText verticesCountLabel;
+		private readonly ThemedSimpleText trianglesCountLabel;
 
 		public GpuTrace()
 		{
-			Presenter = new WidgetFlatFillPresenter(ColorTheme.Current.Profiler.TimelineBackground);
 			Layout = new VBoxLayout();
 			Anchors = Anchors.LeftRight;
-			MinMaxHeight = 24;
 
 			Timeline = new DrawCallsTimeline {
 				DrawCallSelected = DrawCallSelected
@@ -47,52 +41,48 @@ namespace Tangerine.UI
 
 			var ownersListSize = new Vector2(160, 22);
 
+			var groupOffset = new Thickness(0, 16, 0);
+			var itemsOffset = new Thickness(6, 0);
+
 			AddNode(new Widget {
-				Layout = new HBoxLayout(),
 				Anchors = Anchors.LeftRight,
 				MinMaxHeight = 24,
+				Presenter = new WidgetFlatFillPresenter(
+					ColorTheme.Current.Profiler.TimelineHeaderBackground),
 				Nodes = {
-					CreateText("Scene only", new Thickness(6, 0)),
-					(sceneFilter = new ColorCheckBox(Color4.White) {
-						Padding = new Thickness(0, 16, 4, 4),
-						Checked = false
-					}),
-					CreateText("Node id", new Thickness(0, 6, 0)),
-					(nodeFilter = new ThemedEditBox {
-						MinMaxWidth = 160
-					}),
-					(ownersLabel = CreateText("Owners", new Thickness(16, 6, 0))),
-					new Widget { // ownersList background
-						Presenter = new WidgetFlatFillPresenter(new Color4(63, 63, 63)),
-						MinMaxSize = ownersListSize,
-						Padding = new Thickness(1),
-						Nodes = { (ownersList = new CustomDropDownList {
-							MinMaxSize = ownersListSize,
-							Size = ownersListSize,
-							Padding = new Thickness(6, 16, 0, 0),
-							Color = ColorTheme.Current.Profiler.LegendText
-						}) }
+					new Widget {
+						Layout = new HBoxLayout(),
+						Nodes = {
+							CreateText("Frame", new Thickness(16, 6, 0)),
+							CreateText("Draw Call", new Thickness(32, 6, 0)),
+							(ownersLabel = CreateText("Owners", new Thickness(16, 6, 0))),
+							new Widget { // ownersList background
+								Presenter = new WidgetFlatFillPresenter(
+									ColorTheme.Current.Profiler.TimelineBackground),
+								MinMaxSize = ownersListSize,
+								Padding = new Thickness(0,0,2,0),
+								Nodes = { (ownersList = new CustomDropDownList {
+									MinMaxSize = ownersListSize,
+									Size = ownersListSize,
+									Padding = new Thickness(6, 16, 0, 0),
+									Color = ColorTheme.Current.Profiler.TimelineRulerAndText
+								}) }
+							},
+							CreateText("Material", new Thickness(16, 0, 0)),
+							(materialLabel = CreateText("", itemsOffset)),
+							CreateText("Pass", itemsOffset),
+							(passIndexLabel = CreateText("", groupOffset)),
+							CreateText("Render time", itemsOffset),
+							(renderTimeLabel = CreateText("", groupOffset)),
+							CreateText("Vertices", itemsOffset),
+							(verticesCountLabel = CreateText("", groupOffset)),
+							CreateText("Triangles", itemsOffset),
+							(trianglesCountLabel = CreateText("", groupOffset)),
+						}
 					},
-					CreateText("Material", new Thickness(16, 0, 0)),
-					(materialLabel = CreateText("", new Thickness(6, 0))),
-					CreateText("Pass", new Thickness(6, 0)),
-					(passIndexLabel = CreateText("", new Thickness(0, 16, 0))),
-					CreateText("Render time", new Thickness(6, 0)),
-					(renderTimeLabel = CreateText("", new Thickness(0, 0))),
 				}
 			});
 			AddNode(Timeline);
-
-			nodeFilter.TextWidget.FontHeight = FontHeight;
-
-			nodeFilter.Submitted += (text) => {
-				Timeline.RegexNodeFilter = string.IsNullOrEmpty(text) ? null : new Regex(text);
-				NodeFilteringChanged?.Invoke();
-			};
-			sceneFilter.Changed += (e) => {
-				Timeline.IsSceneOnly = e.Value;
-				NodeFilteringChanged?.Invoke();
-			};
 		}
 
 		private void DrawCallSelected(DrawCallInfo drawCall)
@@ -121,15 +111,16 @@ namespace Tangerine.UI
 				} else {
 					ownersList.Items.Add(new DropDownList.Item(GetOwnerName(pi.Owners)));
 				}
-			}
-			else {
+			} else {
 				ownersList.Items.Add(new DropDownList.Item("Null"));
 			}
+			ownersLabel.Text = ownersText;
+			ownersList.Index = 0;
 			materialLabel.Text = pi.Material?.GetType().Name ?? "...";
 			passIndexLabel.Text = drawCall.RenderPassIndex < 0 ? "..." : drawCall.RenderPassIndex.ToString();
-			ownersLabel.Text = ownersText;
 			renderTimeLabel.Text = string.Format("{0} ms", (drawCall.Finish - drawCall.Start) / 1000f);
-			ownersList.Index = 0;
+			verticesCountLabel.Text = drawCall.VerticesCount.ToString();
+			trianglesCountLabel.Text = drawCall.TrianglesCount.ToString();
 		}
 
 		private string GetOwnerName(object owner)

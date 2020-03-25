@@ -18,10 +18,10 @@ namespace Lime.Profilers
 
 		private const int UnconfirmedHistorySize = 2;
 
+		private readonly Stopwatch stopwatch;
 		private readonly Queue<Item> freeItems;
 		private readonly Queue<Item> unconfirmedHistory;
 		private Item lastUnconfirmed;
-		private readonly Stopwatch stopwatch;
 		private Item resultsBuffer;
 		private long expectedNextFrameIndex;
 		private long expectedNextUpdateIndex;
@@ -30,12 +30,12 @@ namespace Lime.Profilers
 
 		public CpuProfiler()
 		{
+			stopwatch = new Stopwatch();
 			freeItems = new Queue<Item>(UnconfirmedHistorySize);
 			unconfirmedHistory = new Queue<Item>(UnconfirmedHistorySize);
 			for (int i = 0; i < UnconfirmedHistorySize; i++) {
 				freeItems.Enqueue(new Item());
 			}
-			stopwatch = new Stopwatch();
 			ProfiledUpdatesCount = 0;
 			expectedNextUpdateIndex = 0;
 			expectedNextFrameIndex = 0;
@@ -55,7 +55,7 @@ namespace Lime.Profilers
 		{
 			resultsBuffer = AcquireResultsBuffer();
 			if (lastUnconfirmed != null) {
-				lastUnconfirmed.DeltaTime = stopwatch.ElapsedMilliseconds;
+				lastUnconfirmed.DeltaTime = (float)stopwatch.Elapsed.TotalMilliseconds;
 			}
 			lastUnconfirmed = resultsBuffer;
 			unconfirmedHistory.Enqueue(resultsBuffer);
@@ -85,32 +85,16 @@ namespace Lime.Profilers
 		private void TryConfirmUpdate()
 		{
 			if (unconfirmedHistory.Count == 2) {
-				var update = unconfirmedHistory.Peek();
-				long profiledFramesCount;
-				// Since rendering can be performed in another thread,
-				// we use "lock" to ensure that the actual data is read.
-				lock (GpuProfiler.Instance.LockObject) {
-					profiledFramesCount = GpuProfiler.Instance.ProfiledFramesCount;
+				var update = unconfirmedHistory.Dequeue();
+				int index = (int)(ProfiledUpdatesCount++ % items.Length);
+				if (update.FrameIndex >= GpuProfiler.Instance.ProfiledFramesCount) {
+					update.FrameIndex = -1;
+					unconfirmedHistory.Peek().FrameIndex -= 1;
+					expectedNextFrameIndex -= 1;
 				}
-				if (update.FrameIndex < profiledFramesCount) {
-					int index = (int)(ProfiledUpdatesCount++ % items.Length);
-					freeItems.Enqueue(items[index].Reset());
-					items[index] = LastUpdate = unconfirmedHistory.Dequeue();
-				} else {
-					DropUnconfirmedUpdate();
-				}
+				freeItems.Enqueue(items[index].Reset());
+				items[index] = LastUpdate = update;
 			}
-		}
-
-		private void DropUnconfirmedUpdate()
-		{
-			freeItems.Enqueue(unconfirmedHistory.Dequeue());
-			// the only item in the queue
-			var update = unconfirmedHistory.Peek();
-			update.FrameIndex -= 1;
-			update.UpdateIndex -= 1;
-			expectedNextFrameIndex -= 1;
-			expectedNextUpdateIndex -= 1;
 		}
 	}
 }

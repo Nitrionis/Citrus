@@ -18,8 +18,6 @@ namespace Lime.Widgets.Charts
 		/// </summary>
 		private float[] maxValuePerChart;
 
-		private float chartsMaxValue = 1;
-
 		public new class Parameters : ChartsContainer.Parameters
 		{
 			public bool IsIndependentMode;
@@ -45,7 +43,6 @@ namespace Lime.Widgets.Charts
 		{
 			if (!isMeshUpdateRequired) return;
 			isMeshUpdateRequired = false;
-			UpdateUserLines(IsIndependentMode ? 1 : chartsHeight / chartsMaxValue);
 			int parity = 0;
 			int chartIndex = 0;
 			int vertexIndex = Line.VerticesCount * userLines.Length;
@@ -78,6 +75,7 @@ namespace Lime.Widgets.Charts
 				}
 				chartIndex++;
 			}
+			UpdateUserLines(IsIndependentMode ? 1 : chartsHeight / chartsMaxValue);
 			chartsMaxValue = newChartsMaxValue;
 			mesh.DirtyFlags |= MeshDirtyFlags.Vertices;
 		}

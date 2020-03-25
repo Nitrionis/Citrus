@@ -207,9 +207,9 @@ namespace Lime.Graphics.Platform.Vulkan
 							!frame.IsSceneOnlyDeepProfiling ||
 							dc.ProfilingInfo.IsPartOfScene;
 						if (isContainsRenderingTime) {
-							dc.StartTime              = CalculateDeltaTime(timestamps[0], timestamps[t++]);
-							dc.AllPreviousFinishTime  = CalculateDeltaTime(timestamps[0], timestamps[t++]);
-							dc.FinishTime             = CalculateDeltaTime(timestamps[0], timestamps[t++]);
+							dc.StartTime = CalculateDeltaTime(timestamps[0], timestamps[t++]);
+							dc.AllPreviousFinishTime = CalculateDeltaTime(timestamps[0], timestamps[t++]);
+							dc.FinishTime = CalculateDeltaTime(timestamps[0], timestamps[t++]);
 						}
 					}
 				}

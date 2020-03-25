@@ -2,7 +2,6 @@ namespace Lime.Widgets.Charts
 {
 	public class AreaCharts : ChartsContainer
 	{
-		private float chartsMaxValue;
 		private float[] accumulatedHeights;
 
 		public AreaCharts(Parameters parameters) : base(parameters) =>
@@ -20,7 +19,6 @@ namespace Lime.Widgets.Charts
 			float scaleCoefficient = ScaleCoefficient;
 			int offset = Line.VerticesCount * userLines.Length;
 			int parity = 0;
-			UpdateUserLines(scaleCoefficient);
 			foreach (var chart in Charts) {
 				if (chart.IsVisible) {
 					int step = parity == 0 ? 1 : -1;
@@ -39,11 +37,12 @@ namespace Lime.Widgets.Charts
 					parity = (parity + 1) % 2;
 				}
 			}
+			UpdateUserLines(scaleCoefficient);
 			mesh.DirtyFlags |= MeshDirtyFlags.Vertices;
 		}
 
 		protected override int CalculateSubmeshVerticesCount(int controlPointsCount) => 2 * controlPointsCount;
 
-		public float ScaleCoefficient { get => chartsHeight * 0.9f / Mathf.Max(chartsMaxValue, 1000f / 60f); }
+		public float ScaleCoefficient { get => chartsHeight * 0.9f / Mathf.Max(chartsMaxValue, 0.1f); }
 	}
 }

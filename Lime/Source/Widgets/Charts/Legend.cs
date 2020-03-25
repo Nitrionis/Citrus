@@ -33,6 +33,16 @@ namespace Lime.Widgets.Charts
 		protected readonly Widget labels;
 		protected readonly Widget values;
 
+		public Color4 TextColor
+		{
+			set {
+				foreach (var item in items) {
+					item.Label.TextWidget.Color = value;
+					item.Value.TextWidget.Color = value;
+				}
+			}
+		}
+
 		public Legend(ItemDescription[] items, Action<int, bool> OnChanged)
 		{
 			this.items = new Item[items.Length];

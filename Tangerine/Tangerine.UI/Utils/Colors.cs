@@ -300,7 +300,9 @@ namespace Tangerine.UI
 			[YuzuOptional]
 			public Color4 TimelineBackground { get; set; }
 			[YuzuOptional]
-			public Color4 TimelineRuler { get; set; }
+			public Color4 TimelineHeaderBackground { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineRulerAndText { get; set; }
 			[YuzuOptional]
 			public Color4 DrawCallUnknownOne { get; set; }
 			[YuzuOptional]
@@ -509,7 +511,8 @@ namespace Tangerine.UI
 				ChartFive = new Color4(0, 150, 136),
 				ChartSix = new Color4(165, 208, 97),
 				TimelineBackground = new Color4(33, 37, 43),
-				TimelineRuler = new Color4(204, 204, 204),
+				TimelineHeaderBackground = new Color4(33, 37, 43),
+				TimelineRulerAndText = new Color4(204, 204, 204),
 				DrawCallUnknownOne = new Color4(244, 67, 54),
 				DrawCallUnknownTwo = new Color4(254, 152, 0),
 				DrawCallSceneOne = new Color4(0, 150, 136),

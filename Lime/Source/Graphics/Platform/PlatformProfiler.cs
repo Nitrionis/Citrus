@@ -7,19 +7,12 @@ namespace Lime.Graphics.Platform
 		public static PlatformProfiler Instance { get; private set; }
 
 		/// <summary>
-		/// Used by lock during history update.
-		/// It is used only for reading current values,
-		/// and do not use to synchronize access to the code.
-		/// </summary>
-		public object LockObject = new object();
-
-		/// <summary>
 		/// Use to send a signal that the frame has been sent to the GPU.
 		/// </summary>
 		public Action FrameRenderCompleted;
 
 		protected bool isProfilingEnabled = true;
-		protected bool isProfilingRequired = true;
+		public bool IsProfilingRequired { get; private set; } = true;
 
 		/// <summary>
 		/// Completely stops profiling. Will be applied in the next frame.
@@ -27,7 +20,7 @@ namespace Lime.Graphics.Platform
 		public bool IsEnabled
 		{
 			get => isProfilingEnabled;
-			set => isProfilingRequired = value;
+			set => IsProfilingRequired = value;
 		}
 
 		/// <summary>
@@ -67,7 +60,6 @@ namespace Lime.Graphics.Platform
 			resultsBuffer = items[0].Reset();
 			resultsBuffer.FrameIndex = 0;
 			LastFrame = GetFrame(HistoryFramesCount - 1);
-			//resultsBuffer = AcquireResultsBuffer();
 		}
 
 		/// <summary>
@@ -76,7 +68,7 @@ namespace Lime.Graphics.Platform
 		internal virtual void FrameRenderStarted(bool isMainWindowTarget)
 		{
 			this.isMainWindowTarget = isMainWindowTarget;
-			isProfilingEnabled = isProfilingRequired && isMainWindowTarget;
+			isProfilingEnabled = IsProfilingRequired && isMainWindowTarget;
 			RenderBatchProfiler.Reset();
 		}
 
@@ -100,12 +92,9 @@ namespace Lime.Graphics.Platform
 
 		private Item AcquireResultsBuffer()
 		{
-			Item buffer;
-			lock (LockObject) {
-				LastFrame = GetFrame(ProfiledFramesCount + HistoryFramesCount);
-				buffer = SafeResetFrame(++ProfiledFramesCount);
-				buffer.FrameIndex = ProfiledFramesCount;
-			}
+			LastFrame = GetFrame(ProfiledFramesCount + HistoryFramesCount);
+			var buffer = SafeResetFrame(++ProfiledFramesCount);
+			buffer.FrameIndex = ProfiledFramesCount;
 			return buffer;
 		}
 

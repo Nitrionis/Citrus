@@ -8,13 +8,13 @@ namespace Tangerine.UI
 {
 	internal class ChartsPanel : Widget
 	{
-		private readonly Legend cpuLegend;
+		public readonly Legend CpuLegend;
 		public readonly AreaReplaceableCharts CpuCharts;
 
-		private readonly Legend gpuLegend;
+		public readonly Legend GpuLegend;
 		public readonly AreaReplaceableCharts GpuCharts;
 
-		private readonly Legend lineLegend;
+		public readonly Legend LineLegend;
 		public readonly LineCharts LineCharts;
 
 		private ChartsContainer.Slice cpuLastSlice;
@@ -47,7 +47,7 @@ namespace Tangerine.UI
 			// Create CPU charts.
 			var parameters = new AreaCharts.Parameters(GpuHistory.HistoryFramesCount, colors) {
 				Height = 64,
-				ChartsCount = 1,
+				ChartsCount = 2,
 				UserLinesCount = 4,
 				SliceSelected = OnSliceSelected
 			};
@@ -55,44 +55,45 @@ namespace Tangerine.UI
 				BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground
 			};
 			var targetWidth = (parameters.ControlPointsCount - 1) * parameters.ControlPointsSpacing;
-			// Horizontal line for 15 fps
-			CpuCharts.SetLinePos(0, new Vector2(0, 1000.0f / 15.0f), new Vector2(targetWidth, 1000.0f / 15.0f), 11);
+			// Horizontal line for lowest fps
+			float fpsHeight = Logarithm(1000.0f / 1.0f);
+			CpuCharts.SetLine(0, new Vector2(0, fpsHeight), new Vector2(targetWidth, fpsHeight), 10);
 			// Horizontal line for 30 fps
-			CpuCharts.SetLinePos(1, new Vector2(0, 1000.0f / 30.0f), new Vector2(targetWidth, 1000.0f / 30.0f), 10);
+			fpsHeight = Logarithm(1000.0f / 30.0f);
+			CpuCharts.SetLine(1, new Vector2(0, fpsHeight), new Vector2(targetWidth, fpsHeight), 3);
 			// Horizontal line for 60 fps
-			CpuCharts.SetLinePos(2, new Vector2(0, 1000.0f / 60.0f), new Vector2(targetWidth, 1000.0f / 60.0f), 9);
+			fpsHeight = Logarithm(1000.0f / 60.0f);
+			CpuCharts.SetLine(2, new Vector2(0, fpsHeight), new Vector2(targetWidth, fpsHeight), 9);
 			// Create legend for CPU charts.
 			var cpuLegendItems = new Legend.ItemDescription[] {
-				new Legend.ItemDescription { Color = colors[1], Name = "CPU", Format = "{0,6:0.00}" },
+				new Legend.ItemDescription { Color = colors[0], Name = "CPU",      Format = "{0,6:0.00}" },
+				new Legend.ItemDescription { Color = colors[1], Name = "Selected", Format = "{0,6:0.00}" },
 			};
-			cpuLegend = new Legend(cpuLegendItems, CpuCharts.SetActive) {
+			CpuLegend = new Legend(cpuLegendItems, CpuCharts.SetActive) {
 				MinMaxHeight = parameters.Height,
-				Height = parameters.Height
+				Height = parameters.Height,
+				TextColor = ColorTheme.Current.Profiler.LegendText
 			};
 			// Create GPU charts.
 			parameters = new AreaCharts.Parameters(GpuHistory.HistoryFramesCount, colors) {
 				Height = 64,
 				ChartsCount = 2,
-				UserLinesCount = 4,
+				UserLinesCount = 2,
 				SliceSelected = OnSliceSelected
 			};
 			GpuCharts = new AreaReplaceableCharts(parameters) {
 				BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground
 			};
-			// Horizontal line for 15 fps
-			GpuCharts.SetLinePos(0, new Vector2(0, 1000.0f / 15.0f), new Vector2(targetWidth, 1000.0f / 15.0f), 11);
-			// Horizontal line for 30 fps
-			GpuCharts.SetLinePos(1, new Vector2(0, 1000.0f / 30.0f), new Vector2(targetWidth, 1000.0f / 30.0f), 10);
-			// Horizontal line for 60 fps
-			GpuCharts.SetLinePos(2, new Vector2(0, 1000.0f / 60.0f), new Vector2(targetWidth, 1000.0f / 60.0f), 9);
+			GpuCharts.SetLine(0, new Vector2(0, 1), new Vector2(targetWidth, 1), 10, "10 ms");
 			// Create legend for GPU charts.
 			var gpuLegendItems = new Legend.ItemDescription[] {
 				new Legend.ItemDescription { Color = colors[0], Name = "GPU",      Format = "{0,6:0.00}" },
 				new Legend.ItemDescription { Color = colors[1], Name = "Selected", Format = "{0,6:0.00}" },
 			};
-			gpuLegend = new Legend(gpuLegendItems, GpuCharts.SetActive) {
+			GpuLegend = new Legend(gpuLegendItems, GpuCharts.SetActive) {
 				MinMaxHeight = parameters.Height,
-				Height = parameters.Height
+				Height = parameters.Height,
+				TextColor = ColorTheme.Current.Profiler.LegendText
 			};
 			// Create line chars.
 			parameters = new LineCharts.Parameters(GpuHistory.HistoryFramesCount, colors) {
@@ -115,14 +116,16 @@ namespace Tangerine.UI
 				new Legend.ItemDescription { Color = colors[2], Name = "Vertices",          Format = "{0,6}" },
 				new Legend.ItemDescription { Color = colors[3], Name = "Triangles",         Format = "{0,6}" },
 			};
-			lineLegend = new Legend(legendItems, LineCharts.SetActive);
+			LineLegend = new Legend(legendItems, LineCharts.SetActive) {
+				TextColor = ColorTheme.Current.Profiler.LegendText
+			};
 			Layout = new VBoxLayout();
 			AddNode(new Widget {
 				Layout = new HBoxLayout(),
 				Nodes = {
 					new Widget {
 						Layout = new VBoxLayout { Spacing = 6 },
-						Nodes = { cpuLegend, gpuLegend, lineLegend },
+						Nodes = { CpuLegend, GpuLegend, LineLegend },
 						Padding = new Thickness(6)
 					},
 					new Widget {
@@ -134,7 +137,7 @@ namespace Tangerine.UI
 			});
 		}
 
-		public void FrameCompleted(GpuHistory.Item frame, CpuHistory.Item update)
+		public void Enqueue(GpuHistory.Item frame, CpuHistory.Item update)
 		{
 			PushChartsSlice(frame, update);
 			UpdateActiveSliceIndicator();
@@ -149,43 +152,57 @@ namespace Tangerine.UI
 
 		public void SetCpuChartsPanelVisible(bool value)
 		{
-			cpuLegend.Visible = value;
+			CpuLegend.Visible = value;
 			CpuCharts.Visible = value;
 		}
 
 		public void SetGpuChartsPanelVisible(bool value)
 		{
-			gpuLegend.Visible = value;
+			GpuLegend.Visible = value;
 			GpuCharts.Visible = value;
 		}
 
 		public void SetLineChartsPanelVisible(bool value)
 		{
-			lineLegend.Visible = value;
+			LineLegend.Visible = value;
 			LineCharts.Visible = value;
 		}
 
 		private void PushChartsSlice(GpuHistory.Item frame, CpuHistory.Item update)
 		{
-			var points = new float[] {
-				update.DeltaTime,
-			};
+			// Push CPU charts data
+			var points = new float[] { Logarithm(update.DeltaTime), 0f };
+			float cpuMaxValue = CpuCharts.ChartsMaxValue;
+			float originalValue = AntiLogarithm(cpuMaxValue);
+			CpuCharts.SetLine(
+				lineIndex: 0,
+				start: new Vector2(0, cpuMaxValue),
+				end: new Vector2(CpuCharts.Width, cpuMaxValue),
+				colorIndex: 10,
+				caption: string.Format("{0:0.00} fps {1:0.00} ms", 1000f / originalValue, originalValue));
 			CpuCharts.PushSlice(points);
-			cpuLegend.SetValues(points);
-			points = new float[] {
-				(float)frame.FullGpuRenderTime,
-				0f,
-			};
+			// Push GPU charts data
+			points = frame == null ? new float[2] : new float[] { (float)frame.FullGpuRenderTime, 0f };
+			float gpuMaxValue = GpuCharts.ChartsMaxValue;
+			GpuCharts.SetLine(
+				lineIndex: 0,
+				start: new Vector2(0, gpuMaxValue),
+				end: new Vector2(GpuCharts.Width, gpuMaxValue),
+				colorIndex: 10,
+				caption: string.Format("{0:0.##} ms", gpuMaxValue));
 			GpuCharts.PushSlice(points);
-			gpuLegend.SetValues(points);
-			points = new float[] {
-				frame.SceneSavedByBatching,
-				frame.SceneDrawCallCount,
-				frame.SceneVerticesCount,
-				frame.SceneTrianglesCount
-			};
+			// Push LineCharts data
+			if (frame == null) {
+				points = new float[4];
+			} else {
+				points = new float[] {
+					frame.SceneSavedByBatching,
+					frame.SceneDrawCallCount,
+					frame.SceneVerticesCount,
+					frame.SceneTrianglesCount
+				};
+			}
 			LineCharts.PushSlice(points);
-			lineLegend.SetValues(points);
 		}
 
 		private void OnSliceSelected(ChartsContainer.Slice slice)
@@ -193,10 +210,7 @@ namespace Tangerine.UI
 			cpuLastSlice = CpuCharts.GetSlice(slice.Index);
 			gpuLastSlice = GpuCharts.GetSlice(slice.Index);
 			lineLastSlice = LineCharts.GetSlice(slice.Index);
-			cpuLegend.SetValues(cpuLastSlice.Points);
-			gpuLastSlice.Points[0] += gpuLastSlice.Points[1];
-			gpuLegend.SetValues(gpuLastSlice.Points);
-			lineLegend.SetValues(lineLastSlice.Points);
+
 			SetSlicePosition();
 			SliceSelected?.Invoke(slice.Index);
 		}
@@ -204,17 +218,17 @@ namespace Tangerine.UI
 		private void SetSlicePosition()
 		{
 			float x = cpuLastSlice.Index * CpuCharts.ControlPointsSpacing;
-			CpuCharts.SetLinePos(
+			CpuCharts.SetLine(
 				lineIndex: 3,
 				start: new Vector2(x, 0),
-				end: new Vector2(x, CpuCharts.Height * CpuCharts.ScaleCoefficient),
+				end: new Vector2(x, CpuCharts.Height * (1f / CpuCharts.ScaleCoefficient)),
 				colorIndex: 10);
-			GpuCharts.SetLinePos(
-				lineIndex: 3,
+			GpuCharts.SetLine(
+				lineIndex: 1,
 				start: new Vector2(x, 0),
-				end: new Vector2(x, GpuCharts.Height * GpuCharts.ScaleCoefficient),
+				end: new Vector2(x, GpuCharts.Height * (1f / GpuCharts.ScaleCoefficient)),
 				colorIndex: 10);
-			LineCharts.SetLinePos(
+			LineCharts.SetLine(
 				lineIndex: 0,
 				start: new Vector2(x, 0),
 				end: new Vector2(x, LineCharts.Height), // because IsIndependentMode
@@ -225,9 +239,9 @@ namespace Tangerine.UI
 		{
 			if (cpuLastSlice != null) {
 				if (cpuLastSlice.Index < 0) {
-					CpuCharts.SetLinePos(3, Vector2.Zero, Vector2.Zero, colorIndex: 10);
-					GpuCharts.SetLinePos(3, Vector2.Zero, Vector2.Zero, colorIndex: 10);
-					LineCharts.SetLinePos(0, Vector2.Zero, Vector2.Zero, colorIndex: 10);
+					CpuCharts.SetLine(3, Vector2.Zero, Vector2.Zero, colorIndex: 10);
+					GpuCharts.SetLine(3, Vector2.Zero, Vector2.Zero, colorIndex: 10);
+					LineCharts.SetLine(0, Vector2.Zero, Vector2.Zero, colorIndex: 10);
 				} else {
 					SetSlicePosition();
 					cpuLastSlice.Index -= 1;
@@ -236,5 +250,11 @@ namespace Tangerine.UI
 				}
 			}
 		}
+
+		private static float Logarithm(float value) => value <= 33.3f ? value :
+			33.3f + (float)Math.Log((value - 33.3) / 16.0 + 1.0, 2);
+
+		private static float AntiLogarithm(float value) => value <= 33.3f ? value :
+			33.3f + ((float)Math.Pow(2, value - 33.3) - 1f) * 16.0f;
 	}
 }

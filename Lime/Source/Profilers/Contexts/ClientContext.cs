@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Threading;
+using System.Collections;
 using GpuHistory = Lime.Graphics.Platform.ProfilerHistory;
 using GpuProfiler = Lime.Graphics.Platform.PlatformProfiler;
 using Lime.Graphics.Platform;
-using System.Threading;
 
 namespace Lime.Profilers.Contexts
 {
@@ -63,10 +64,8 @@ namespace Lime.Profilers.Contexts
 					var update = CpuHistory.GetUpdate(lastProcessedUpdateIndex);
 					var frame = GpuHistory.GetFrame(update.FrameIndex);
 					if (frame.IsCompleted) {
-						Debug.Write("Client frame.IsCompleted");
 						client.LazySerializeAndSend(
 							new FrameStatistics {
-								// todo there is no point in additional copying
 								GpuInfo = frame.LightweightClone(),
 								CpuInfo = update.LightweightClone(),
 								Response = ProcessRequest()
@@ -87,15 +86,14 @@ namespace Lime.Profilers.Contexts
 					);
 				}
 			}
-			for (int i = serializedResponsesCount; i > 0; i--) {
-				FinalizeResponse(unserializedResponses.Dequeue());
-			}
-			Interlocked.Add(ref serializedResponsesCount, -serializedResponsesCount);
 		}
 
 		public override void LocalDeviceFrameRenderCompleted()
 		{
-			
+			for (int i = serializedResponsesCount; i > 0; i--) {
+				FinalizeResponse(unserializedResponses.Dequeue());
+			}
+			Interlocked.Add(ref serializedResponsesCount, -serializedResponsesCount);
 		}
 
 		private void RemoteProfilerMessageReceived()
@@ -112,14 +110,14 @@ namespace Lime.Profilers.Contexts
 			}
 		}
 
-		private Response AcquireResponse() => new Response {
+		private ResponseWithBehavior AcquireResponse() => new ResponseWithBehavior {
 			OnSerialized = ResponseSerialized
 		};
 
 		private Response ProcessRequest()
 		{
 			Request request;
-			Response response = null;
+			ResponseWithBehavior response = null;
 			if (!requests.IsEmpty && requests.TryDequeue(out request)) {
 				if (request.Options != null) {
 					ChangeProfilerOptions(request.Options);
@@ -133,7 +131,7 @@ namespace Lime.Profilers.Contexts
 						drawCalls = frame.DrawCalls;
 						frame.DrawCalls = new List<ProfilingResult>();
 					}
-					response.DrawCalls = drawCalls;
+					response.NativeDrawCalls = drawCalls;
 				}
 				unserializedResponses.Enqueue(response);
 			}
@@ -168,13 +166,14 @@ namespace Lime.Profilers.Contexts
 			base.Completed();
 		}
 
-		private void FinalizeResponse(Response response) // data race
+		private void FinalizeResponse(Response response)
 		{
 			if (GpuHistory.IsFrameIndexValid(response.FrameIndex)) {
 				// restoring the state of history
-				if (response.DrawCalls != null) {
+				var responseWithBehavior = (ResponseWithBehavior)response;
+				if (responseWithBehavior.NativeDrawCalls != null) {
 					var frame = GpuHistory.GetFrame(response.FrameIndex);
-					frame.DrawCalls = response.DrawCalls;
+					frame.DrawCalls = responseWithBehavior.NativeDrawCalls;
 				}
 			}
 		}
@@ -184,5 +183,57 @@ namespace Lime.Profilers.Contexts
 			DrawCallsRenderTimeEnabled = ProfilerOptions.StateOf(GpuProfiler.Instance.IsDeepProfiling),
 			SceneOnlyDrawCallsRenderTime = ProfilerOptions.StateOf(GpuProfiler.Instance.IsSceneOnlyDeepProfiling),
 		};
+
+		private class ResponseWithBehavior : Response
+		{
+			public List<ProfilingResult> NativeDrawCalls;
+
+			public ResponseWithBehavior() => OnSerializing = BeforeSerialization;
+
+			private void BeforeSerialization()
+			{
+				if (NativeDrawCalls != null) {
+					DrawCalls = new List<ProfilingResult>(NativeDrawCalls.Count);
+					foreach (var drawCall in NativeDrawCalls) {
+						var pi = drawCall.ProfilingInfo;
+						var newDrawCall = new ProfilingResult {
+							ProfilingInfo = new ProfilingInfo {
+								IsPartOfScene  = pi.IsPartOfScene,
+								Material       = pi.Material.GetType().Name,
+								Owners         = GetOwners(pi.Owners)
+							},
+							RenderPassIndex        = drawCall.RenderPassIndex,
+							StartTime              = drawCall.StartTime,
+							AllPreviousFinishTime  = drawCall.AllPreviousFinishTime,
+							FinishTime             = drawCall.FinishTime,
+							TrianglesCount         = drawCall.TrianglesCount,
+							VerticesCount          = drawCall.VerticesCount
+						};
+						DrawCalls.Add(newDrawCall);
+					}
+				}
+			}
+
+			private object GetOwners(object nativeOwners)
+			{
+				if (nativeOwners == null) {
+					return null;
+				} else if (nativeOwners is IList list) {
+					var processedOwners = new List<object>(list.Count);
+					foreach (var item in list) {
+						if (item == null) {
+							processedOwners.Add(null);
+						} else {
+							var node = (Node)item;
+							processedOwners.Add(string.IsNullOrEmpty(node.Id) ? "Node id unset" : node.Id);
+						}
+					}
+					return processedOwners;
+				} else if (nativeOwners is Node node) {
+					return string.IsNullOrEmpty(node.Id) ? "Node id unset" : node.Id;
+				}
+				throw new InvalidOperationException();
+			}
+		}
 	}
 }

@@ -93,11 +93,11 @@ namespace Lime.Profilers.Contexts
 					if (frame.CpuInfo != null) {
 						sparsedCpuHistory.Enqueue(frame.CpuInfo);
 					}
-					Application.MainWindow.Invalidate();
 					UpdateProfilerOptions(frame);
 					if (frame.Response != null) {
 						ProcessResponse(frame.Response);
 					}
+					Application.MainWindow.Invalidate();
 				}
 			}
 			server.TryReceive();
@@ -129,7 +129,6 @@ namespace Lime.Profilers.Contexts
 		{
 			if (response.FrameIndex != -1 && response.DrawCalls != null) {
 				var frame = base.GpuHistory.GetFrame(response.FrameIndex);
-				frame.IsCompleted = true;
 				frame.DrawCalls = response.DrawCalls;
 			}
 			OnResponseReceived?.Invoke(response);

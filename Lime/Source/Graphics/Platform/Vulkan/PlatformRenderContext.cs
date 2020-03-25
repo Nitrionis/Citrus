@@ -345,7 +345,9 @@ namespace Lime.Graphics.Platform.Vulkan
 			swapchain.Present();
 			swapchain = null;
 #if LIME_PROFILER
-			profiler.FrameRenderFinished(submitInfos.Peek().FenceValue, lastCompletedFenceValue);
+			profiler.FrameRenderFinished(
+				frameCompletedFenceValue: submitInfos.Peek().FenceValue,
+				lastCompletedFenceValue: lastCompletedFenceValue);
 #endif
 		}
 
