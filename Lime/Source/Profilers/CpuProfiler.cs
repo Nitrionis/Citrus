@@ -54,7 +54,6 @@ namespace Lime.Profilers
 
 		private void NextUpdateStarted()
 		{
-			isEnabled = GpuProfiler.Instance.IsEnabled || GpuProfiler.Instance.IsProfilingRequired;
 			if (isEnabled) {
 				resultsBuffer = AcquireResultsBuffer();
 				if (lastUnconfirmed != null) {
@@ -74,6 +73,7 @@ namespace Lime.Profilers
 		public static void RenderingFencePassed(bool isMainWindow)
 		{
 			if (isMainWindow) {
+				Instance.isEnabled = GpuProfiler.Instance.IsEnabled;
 				Instance.TryConfirmUpdate();
 			}
 		}

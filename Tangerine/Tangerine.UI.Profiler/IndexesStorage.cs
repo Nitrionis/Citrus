@@ -10,7 +10,7 @@ namespace Tangerine.UI
 
 		public IndexesStorage(int historySize)
 		{
-			indexOfLast = historySize;
+			indexOfLast = - 1;
 			history = new long[historySize];
 		}
 
@@ -18,7 +18,7 @@ namespace Tangerine.UI
 		/// Considers the collection as fixed capacity queue.
 		/// </summary>
 		/// <param name="index">Item index from the beginning of the queue.</param>
-		public long GetItem(int index) => history[(indexOfLast + index) % history.Length];
+		public long GetItem(int index) => history[(indexOfLast + 1 + index) % history.Length]; // todo
 
 		/// <summary>
 		/// Replaces the oldest element in history.

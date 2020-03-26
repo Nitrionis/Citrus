@@ -204,36 +204,17 @@ namespace Tangerine.UI
 		{
 			mainControlPanel.ResetFilters();
 			var update = LimeProfiler.CpuHistory.GetUpdate(indexesStorage.GetItem(sliceIndex));
-			var frame = !LimeProfiler.GpuHistory.IsFrameIndexValid(update.FrameIndex) ?
-				null : LimeProfiler.GpuHistory.GetFrame(update.FrameIndex);
-			UpdateChartsLegends(sliceIndex, frame, update);
-			if (frame != null && LimeProfiler.GpuHistory.TryLockFrame(update.FrameIndex)) {
+			GpuHistory.Item frame = null;
+			if (LimeProfiler.GpuHistory.TryLockFrame(update.FrameIndex)) {
+				frame = LimeProfiler.GpuHistory.GetFrame(update.FrameIndex);
+				gpuTrace.Visible = frame.IsDeepProfilingEnabled;
+				gpuTraceMessagePanel.Visible = !frame.IsDeepProfilingEnabled;
 				if (frame.IsDeepProfilingEnabled) {
 					// todo create select request
 					gpuTrace.Timeline.Rebuild(frame);
 				}
 			}
-		}
-
-		private void UpdateChartsLegends(int sliceIndex, GpuHistory.Item frame, CpuHistory.Item update)
-		{
-			var cpuValues = new float[] {
-				update.DeltaTime,
-				0f
-			};
-			chartsPanel.CpuLegend.SetValues(cpuValues);
-			var gpuValues = new float[] {
-				(float)frame.FullGpuRenderTime,
-				0f
-			};
-			chartsPanel.GpuLegend.SetValues(gpuValues);
-			var lineValues = new float[] {
-				frame.SceneSavedByBatching,
-				frame.SceneDrawCallCount,
-				frame.SceneVerticesCount,
-				frame.SceneTrianglesCount
-			};
-			chartsPanel.LineLegend.SetValues(lineValues);
+			chartsPanel.UpdateChartsLegends(frame, update);
 		}
 
 		private void SelectRenderTime(bool isSceneOnly, Regex regexNodeFilter, float[] resultsBuffer)

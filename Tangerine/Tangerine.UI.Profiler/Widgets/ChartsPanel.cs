@@ -78,7 +78,7 @@ namespace Tangerine.UI
 			parameters = new AreaCharts.Parameters(GpuHistory.HistoryFramesCount, colors) {
 				Height = 64,
 				ChartsCount = 2,
-				UserLinesCount = 2,
+				UserLinesCount = 3,
 				SliceSelected = OnSliceSelected
 			};
 			GpuCharts = new AreaReplaceableCharts(parameters) {
@@ -171,38 +171,52 @@ namespace Tangerine.UI
 		private void PushChartsSlice(GpuHistory.Item frame, CpuHistory.Item update)
 		{
 			// Push CPU charts data
-			var points = new float[] { Logarithm(update.DeltaTime), 0f };
+			CpuCharts.PushSlice(new float[] { Logarithm(update.DeltaTime), 0f });
+			// Update CPU charts max value line
 			float cpuMaxValue = CpuCharts.ChartsMaxValue;
 			float originalValue = AntiLogarithm(cpuMaxValue);
 			CpuCharts.SetLine(
-				lineIndex: 0,
-				start: new Vector2(0, cpuMaxValue),
-				end: new Vector2(CpuCharts.Width, cpuMaxValue),
-				colorIndex: 10,
-				caption: string.Format("{0:0.00} fps {1:0.00} ms", 1000f / originalValue, originalValue));
-			CpuCharts.PushSlice(points);
+				lineIndex:   0,
+				start:       new Vector2(0, cpuMaxValue),
+				end:         new Vector2(CpuCharts.Width, cpuMaxValue),
+				colorIndex:  10,
+				caption:     string.Format("{0:0.00} fps {1:0.00} ms", 1000f / originalValue, originalValue));
 			// Push GPU charts data
-			points = frame == null ? new float[2] : new float[] { (float)frame.FullGpuRenderTime, 0f };
+			GpuCharts.PushSlice(frame == null ? new float[2] : new float[] { (float)frame.FullGpuRenderTime, 0f });
+			// Update GPU charts max value line
 			float gpuMaxValue = GpuCharts.ChartsMaxValue;
 			GpuCharts.SetLine(
-				lineIndex: 0,
-				start: new Vector2(0, gpuMaxValue),
-				end: new Vector2(GpuCharts.Width, gpuMaxValue),
-				colorIndex: 10,
-				caption: string.Format("{0:0.##} ms", gpuMaxValue));
-			GpuCharts.PushSlice(points);
+				lineIndex:   0,
+				start:       new Vector2(0, gpuMaxValue),
+				end:         new Vector2(GpuCharts.Width, gpuMaxValue),
+				colorIndex:  10,
+				caption:     string.Format("{0:0.##} ms", gpuMaxValue));
 			// Push LineCharts data
-			if (frame == null) {
-				points = new float[4];
-			} else {
-				points = new float[] {
+			var points = frame == null ?
+				new float[4] :
+				new float[] {
 					frame.SceneSavedByBatching,
 					frame.SceneDrawCallCount,
 					frame.SceneVerticesCount,
 					frame.SceneTrianglesCount
 				};
-			}
 			LineCharts.PushSlice(points);
+			UpdateChartsLegends(frame, update);
+		}
+
+		public void UpdateChartsLegends(GpuHistory.Item frame, CpuHistory.Item update)
+		{
+			CpuLegend.SetValues(new float[] { update.DeltaTime, 0f });
+			GpuLegend.SetValues(frame == null ? new float[2] : new float[] { (float)frame.FullGpuRenderTime, 0f });
+			var points = frame == null ?
+				new float[4] :
+				new float[] {
+					frame.SceneSavedByBatching,
+					frame.SceneDrawCallCount,
+					frame.SceneVerticesCount,
+					frame.SceneTrianglesCount
+				};
+			LineLegend.SetValues(points);
 		}
 
 		private void OnSliceSelected(ChartsContainer.Slice slice)
@@ -240,7 +254,7 @@ namespace Tangerine.UI
 			if (cpuLastSlice != null) {
 				if (cpuLastSlice.Index < 0) {
 					CpuCharts.SetLine(3, Vector2.Zero, Vector2.Zero, colorIndex: 10);
-					GpuCharts.SetLine(3, Vector2.Zero, Vector2.Zero, colorIndex: 10);
+					GpuCharts.SetLine(2, Vector2.Zero, Vector2.Zero, colorIndex: 10);
 					LineCharts.SetLine(0, Vector2.Zero, Vector2.Zero, colorIndex: 10);
 				} else {
 					SetSlicePosition();

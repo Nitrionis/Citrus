@@ -12,7 +12,7 @@ namespace Lime.Graphics.Platform
 		public Action FrameRenderCompleted;
 
 		protected bool isProfilingEnabled = true;
-		public bool IsProfilingRequired { get; private set; } = true;
+		protected bool isProfilingRequired = true;
 
 		/// <summary>
 		/// Completely stops profiling. Will be applied in the next frame.
@@ -20,7 +20,7 @@ namespace Lime.Graphics.Platform
 		public bool IsEnabled
 		{
 			get => isProfilingEnabled;
-			set => IsProfilingRequired = value;
+			set => isProfilingRequired = value;
 		}
 
 		/// <summary>
@@ -68,7 +68,7 @@ namespace Lime.Graphics.Platform
 		internal virtual void FrameRenderStarted(bool isMainWindowTarget)
 		{
 			this.isMainWindowTarget = isMainWindowTarget;
-			isProfilingEnabled = IsProfilingRequired && isMainWindowTarget;
+			isProfilingEnabled = isProfilingRequired && isMainWindowTarget;
 			RenderBatchProfiler.Reset();
 		}
 
