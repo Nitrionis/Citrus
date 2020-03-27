@@ -12,6 +12,7 @@ namespace Lime.Graphics.Platform
 
 		public uint Finish => FinishTime;
 
+		[YuzuRequired]
 		public ProfilingInfo ProfilingInfo;
 
 		/// <summary>

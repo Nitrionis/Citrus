@@ -116,7 +116,11 @@ namespace Tangerine.UI
 			}
 			ownersLabel.Text = ownersText;
 			ownersList.Index = 0;
-			materialLabel.Text = pi.Material?.GetType().Name ?? "...";
+			if (pi.Material is string materialName) {
+				materialLabel.Text = materialName;
+			} else {
+				materialLabel.Text = pi.Material?.GetType().Name ?? "...";
+			}
 			passIndexLabel.Text = drawCall.RenderPassIndex < 0 ? "..." : drawCall.RenderPassIndex.ToString();
 			renderTimeLabel.Text = string.Format("{0} ms", (drawCall.Finish - drawCall.Start) / 1000f);
 			verticesCountLabel.Text = drawCall.VerticesCount.ToString();

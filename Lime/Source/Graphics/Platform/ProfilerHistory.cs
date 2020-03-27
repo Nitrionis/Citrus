@@ -106,7 +106,7 @@ namespace Lime.Graphics.Platform
 
 			public Item()
 			{
-				DrawCalls = new List<ProfilingResult>(DrawCallBufferStartSize);
+				DrawCalls = new List<ProfilingResult>();
 			}
 
 			public Item Reset()

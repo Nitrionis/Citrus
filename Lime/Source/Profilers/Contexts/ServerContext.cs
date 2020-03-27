@@ -11,6 +11,8 @@ namespace Lime.Profilers.Contexts
 	{
 		private readonly Network.Server server;
 
+		public override bool IsConnected => server.IsConnected;
+
 		public IPEndPoint LocalEndpoint => (IPEndPoint)server.Listener.LocalEndpoint;
 
 		private class SparsedGpuHistory : Graphics.Platform.ProfilerHistory
@@ -52,7 +54,7 @@ namespace Lime.Profilers.Contexts
 		public override bool IsProfilingEnabled
 		{
 			get => isProfilingEnabled;
-			set => SetProfilingEnabled(value);
+			set => SendRequest(new ProfilerOptions { ProfilingEnabled = ProfilerOptions.StateOf(value) });
 		}
 
 		private bool isDrawCallsRenderTimeEnabled;
@@ -60,7 +62,7 @@ namespace Lime.Profilers.Contexts
 		public override bool IsDrawCallsRenderTimeEnabled
 		{
 			get => isDrawCallsRenderTimeEnabled;
-			set => SetDrawCallsRenderTimeEnabled(value);
+			set => SendRequest(new ProfilerOptions { DrawCallsRenderTimeEnabled = ProfilerOptions.StateOf(value) });
 		}
 
 		private bool isSceneOnlyDrawCallsRenderTime;
@@ -68,7 +70,7 @@ namespace Lime.Profilers.Contexts
 		public override bool IsSceneOnlyDrawCallsRenderTime
 		{
 			get => isSceneOnlyDrawCallsRenderTime;
-			set => SetSceneOnlyDrawCallsRenderTime(value);
+			set => SendRequest(new ProfilerOptions { SceneOnlyDrawCallsRenderTime = ProfilerOptions.StateOf(value) });
 		}
 
 		public ServerContext()
@@ -86,16 +88,16 @@ namespace Lime.Profilers.Contexts
 		{
 			Network.IItem item;
 			while (!server.Received.IsEmpty && server.Received.TryDequeue(out item)) {
-				if (item is FrameStatistics frame) {
-					if (frame.GpuInfo != null) {
-						sparsedGpuHistory.Enqueue(frame.GpuInfo);
+				if (item is Statistics statistics) {
+					if (statistics.Frame != null) {
+						sparsedGpuHistory.Enqueue(statistics.Frame);
 					}
-					if (frame.CpuInfo != null) {
-						sparsedCpuHistory.Enqueue(frame.CpuInfo);
+					if (statistics.Update != null) {
+						sparsedCpuHistory.Enqueue(statistics.Update);
 					}
-					UpdateProfilerOptions(frame);
-					if (frame.Response != null) {
-						ProcessResponse(frame.Response);
+					UpdateProfilerOptions(statistics);
+					if (statistics.Response != null) {
+						OnResponseReceived?.Invoke(statistics.Response);
 					}
 					Application.MainWindow.Invalidate();
 				}
@@ -108,30 +110,21 @@ namespace Lime.Profilers.Contexts
 			
 		}
 
-		private void UpdateProfilerOptions(FrameStatistics frame)
+		private void UpdateProfilerOptions(Statistics statistics)
 		{
-			if (frame.GpuInfo != null) {
+			if (statistics.Frame != null) {
 				isProfilingEnabled = true;
-				isDrawCallsRenderTimeEnabled = frame.GpuInfo.IsDeepProfilingEnabled;
-				isSceneOnlyDrawCallsRenderTime = frame.GpuInfo.IsSceneOnlyDeepProfiling;
+				isDrawCallsRenderTimeEnabled = statistics.Frame.IsDeepProfilingEnabled;
+				isSceneOnlyDrawCallsRenderTime = statistics.Frame.IsSceneOnlyDeepProfiling;
 			}
-			if (frame.Options != null) {
+			if (statistics.Options != null) {
 				isProfilingEnabled =
-					ProfilerOptions.StateToBool(frame.Options.ProfilingEnabled);
+					ProfilerOptions.StateToBool(statistics.Options.ProfilingEnabled);
 				isDrawCallsRenderTimeEnabled =
-					ProfilerOptions.StateToBool(frame.Options.DrawCallsRenderTimeEnabled);
+					ProfilerOptions.StateToBool(statistics.Options.DrawCallsRenderTimeEnabled);
 				isSceneOnlyDrawCallsRenderTime =
-					ProfilerOptions.StateToBool(frame.Options.SceneOnlyDrawCallsRenderTime);
+					ProfilerOptions.StateToBool(statistics.Options.SceneOnlyDrawCallsRenderTime);
 			}
-		}
-
-		private void ProcessResponse(Response response)
-		{
-			if (response.FrameIndex != -1 && response.DrawCalls != null) {
-				var frame = base.GpuHistory.GetFrame(response.FrameIndex);
-				frame.DrawCalls = response.DrawCalls;
-			}
-			OnResponseReceived?.Invoke(response);
 		}
 
 		public override void Completed()
@@ -139,15 +132,6 @@ namespace Lime.Profilers.Contexts
 			server.RequestClose();
 			base.Completed();
 		}
-
-		protected void SetProfilingEnabled(bool value) =>
-			SendRequest(new ProfilerOptions { ProfilingEnabled = ProfilerOptions.StateOf(value) });
-
-		protected void SetDrawCallsRenderTimeEnabled(bool value) =>
-			SendRequest(new ProfilerOptions { DrawCallsRenderTimeEnabled = ProfilerOptions.StateOf(value) });
-
-		protected void SetSceneOnlyDrawCallsRenderTime(bool value) =>
-			SendRequest(new ProfilerOptions { SceneOnlyDrawCallsRenderTime = ProfilerOptions.StateOf(value) });
 
 		private void SendRequest(ProfilerOptions options) =>
 			server.SerializeAndSend(new Request { Options = options });

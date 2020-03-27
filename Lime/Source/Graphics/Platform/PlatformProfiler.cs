@@ -60,6 +60,7 @@ namespace Lime.Graphics.Platform
 			resultsBuffer = items[0].Reset();
 			resultsBuffer.FrameIndex = 0;
 			LastFrame = GetFrame(HistoryFramesCount - 1);
+			CheckDrawCallsBufferCapacity();
 		}
 
 		/// <summary>

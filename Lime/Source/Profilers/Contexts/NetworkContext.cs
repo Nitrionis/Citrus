@@ -9,6 +9,8 @@ namespace Lime.Profilers.Contexts
 {
 	public abstract class NetworkContext : Context
 	{
+		public abstract bool IsConnected { get; }
+
 		public abstract bool TryLaunch(IPEndPoint ipEndPoint);
 
 		public class Message : Network.IItem
@@ -84,27 +86,18 @@ namespace Lime.Profilers.Contexts
 
 			[YuzuMember]
 			public List<ProfilingResult> DrawCalls;
-
-			public Action OnSerializing;
-			public Action OnSerialized;
-
-			[YuzuBeforeSerialization]
-			private void Serializing() => OnSerializing?.Invoke();
-
-			[YuzuAfterSerialization]
-			private void Serialized() => OnSerialized?.Invoke();
 		}
 
-		protected class FrameStatistics : Message
+		protected class Statistics : Message
 		{
 			[YuzuMember]
 			public ProfilerOptions Options;
 
 			[YuzuMember]
-			public GpuHistory.Item GpuInfo;
+			public GpuHistory.Item Frame;
 
 			[YuzuMember]
-			public CpuHistory.Item CpuInfo;
+			public CpuHistory.Item Update;
 
 			[YuzuMember]
 			public Response Response;
