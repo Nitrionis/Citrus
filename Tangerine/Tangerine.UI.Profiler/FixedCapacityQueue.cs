@@ -3,22 +3,21 @@ using System.Collections.Generic;
 
 namespace Tangerine.UI
 {
-	internal class IndexesStorage : IEnumerable<long>
+	internal class FixedCapacityQueue : IEnumerable<long>
 	{
 		private int indexOfLast;
 		private long[] history;
 
-		public IndexesStorage(int historySize)
+		public FixedCapacityQueue(int historySize)
 		{
 			indexOfLast = - 1;
 			history = new long[historySize];
 		}
 
 		/// <summary>
-		/// Considers the collection as fixed capacity queue.
+		/// Interprets the queue as an array, where the first element in the queue corresponds to index 0.
 		/// </summary>
-		/// <param name="index">Item index from the beginning of the queue.</param>
-		public long GetItem(int index) => history[(indexOfLast + 1 + index) % history.Length]; // todo
+		public long GetItem(int index) => history[(indexOfLast + 1 + index) % history.Length];
 
 		/// <summary>
 		/// Replaces the oldest element in history.
@@ -41,7 +40,7 @@ namespace Tangerine.UI
 
 			object IEnumerator.Current => current;
 
-			public Enumerator(IndexesStorage storage)
+			public Enumerator(FixedCapacityQueue storage)
 			{
 				history = storage.history;
 				itemIndex = storage.indexOfLast;

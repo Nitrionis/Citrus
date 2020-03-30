@@ -39,8 +39,8 @@ namespace Lime.Profilers.Network
 		protected BinaryDeserializer deserializer;
 
 		protected bool isCloseRequested = false;
-		protected bool isRemoteMemberClosed = false;
-		public Action OnClosed { get; set; }
+		protected bool isRemoteCloseRequest = false;
+		public Action Closed { get; set; }
 
 		protected NetworkMember()
 		{
@@ -53,8 +53,9 @@ namespace Lime.Profilers.Network
 
 		public void RequestClose()
 		{
+			IsConnected = false;
 			isCloseRequested = true;
-			isRemoteMemberClosed = false;
+			isRemoteCloseRequest = false;
 		}
 
 		public void SerializeAndSend(IItem item) => serializer.ToStream(item, stream);
@@ -63,9 +64,6 @@ namespace Lime.Profilers.Network
 
 		protected void CloseConnection()
 		{
-			if (stream != null) {
-				stream.Close();
-			}
 			if (client != null) {
 				client.Close();
 			}
@@ -78,7 +76,8 @@ namespace Lime.Profilers.Network
 				if (!item.IsEmpty) {
 					if (item.IsCloseRequested) {
 						isCloseRequested = true;
-						isRemoteMemberClosed = true;
+						isRemoteCloseRequest = true;
+						break;
 					} else {
 						Received.Enqueue(item);
 						OnReceived?.Invoke();

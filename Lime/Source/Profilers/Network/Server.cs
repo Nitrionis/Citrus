@@ -41,21 +41,27 @@ namespace Lime.Profilers.Network
 					try {
 						WaitConnectionRequest();
 						InitializeConnection();
-						while (!isCloseRequested) {
+						if (client != null) {
 							CheckReceived();
-							Sleep();
-						}
-						if (!isRemoteMemberClosed && client != null) {
-							SerializeAndSend(new ServiceMessage { IsCloseRequested = true });
+							do {
+								Sleep();
+								CheckReceived();
+							} while (!isCloseRequested);
+							if (!isRemoteCloseRequest) {
+								SerializeAndSend(new ServiceMessage {
+									IsCloseRequested = true
+								});
+							}
 						}
 					} catch (SocketException e) {
 						Debug.Write("{0}: {1}", MsgPrefix, e);
 					} catch (IOException e) {
 						Debug.Write("{0}: {1}", MsgPrefix, e);
 					} finally {
+						Debug.Write("Server Closed!");
 						CloseConnection();
 						IsConnected = false;
-						OnClosed?.Invoke();
+						Closed?.Invoke();
 					}
 				});
 				thread.Start();
@@ -101,7 +107,7 @@ namespace Lime.Profilers.Network
 			}
 			if (timeSinceLastReceive > NetworkMember.Timeout) {
 				isCloseRequested = true;
-				isRemoteMemberClosed = true;
+				isRemoteCloseRequest = true;
 			}
 		}
 	}

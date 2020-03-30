@@ -40,7 +40,7 @@ namespace Lime.Profilers.Network
 		/// <summary>
 		/// Invoked after the connection is closed.
 		/// </summary>
-		Action OnClosed { get; set; }
+		Action Closed { get; set; }
 
 		/// <summary>
 		/// Queue of received objects.

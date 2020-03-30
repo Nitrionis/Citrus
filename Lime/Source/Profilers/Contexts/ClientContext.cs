@@ -26,8 +26,6 @@ namespace Lime.Profilers.Contexts
 
 		private long lastProcessedUpdateIndex;
 
-		public override bool IsConnected => client.IsConnected;
-
 		public override bool IsProfilingEnabled
 		{
 			get => GpuProfiler.Instance.IsEnabled;
@@ -51,7 +49,7 @@ namespace Lime.Profilers.Contexts
 			GpuHistory = GpuProfiler.Instance;
 			CpuHistory = CpuProfiler.Instance;
 
-			client = new Network.Client();
+			networkMember = client = new Network.Client();
 			client.OnReceived = RemoteProfilerMessageReceived;
 
 			requests = new ConcurrentQueue<Request>();

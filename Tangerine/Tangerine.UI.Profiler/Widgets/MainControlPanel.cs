@@ -19,6 +19,7 @@ namespace Tangerine.UI
 
 		private bool isProfilingEnabled;
 		private bool isSceneFilterEnabled;
+		private volatile bool isConnectionClosed;
 
 		public Action<bool> SceneFilteringChanged;
 		public Action<Regex> NodeFilteringChanged;
@@ -94,6 +95,10 @@ namespace Tangerine.UI
 					isProfilingEnabled = LimeProfiler.IsProfilingEnabled;
 					pauseСontinueButton.Text = isProfilingEnabled ? "Pause" : "Сontinue";
 				}
+				if (isConnectionClosed) {
+					isConnectionClosed = false;
+					SetLocalContext();
+				}
 				yield return null;
 			}
 		}
@@ -102,30 +107,34 @@ namespace Tangerine.UI
 		{
 			if (args.ChangedByUser) {
 				if (args.Index == 0) {
-					LimeProfiler.SetContext(new LocalContext());
-					ipPortLabel.Visible = false;
+					SetLocalContext();
 				} else {
 					bool isSourceMode = args.Index == 2;
 					var endPointInfo = new IpDialog(isPortRequired: isSourceMode).Show();
-					if (endPointInfo.IP == null) {
-						LimeProfiler.SetContext(new LocalContext());
-						profilingMode.Index = 0;
-					} else {
+					if (endPointInfo.IP != null) {
 						var ipEndPoint = new IPEndPoint(endPointInfo.IP, endPointInfo.Port);
-						NetworkContext networkContext = isSourceMode ?
+						var networkContext = isSourceMode ?
 							(NetworkContext)new ClientContext() :
 							(NetworkContext)new ServerContext();
-						LimeProfiler.SetContext(networkContext);
-						if (!networkContext.TryLaunch(ipEndPoint)) {
-							LimeProfiler.SetContext(new LocalContext());
-						} else if (!isSourceMode) {
-							int port = ((ServerContext)networkContext).LocalEndpoint.Port;
-							ipPortLabel.Text = endPointInfo.IP.ToString() + ":" + port;
+						networkContext.Closed += () => isConnectionClosed = true;
+						if (networkContext.TryLaunch(ipEndPoint)) {
+							LimeProfiler.SetContext(networkContext);
+							if (!isSourceMode) {
+								int port = ((ServerContext)networkContext).LocalEndpoint.Port;
+								ipPortLabel.Text = endPointInfo.IP.ToString() + ":" + port;
+								ipPortLabel.Visible = true;
+							}
 						}
 					}
-					ipPortLabel.Visible = true;
 				}
 			}
+		}
+
+		private void SetLocalContext()
+		{
+			LimeProfiler.SetContext(new LocalContext());
+			ipPortLabel.Visible = false;
+			profilingMode.Index = 0;
 		}
 	}
 }

@@ -42,22 +42,28 @@ namespace Lime.Profilers.Network
 				thread = new Thread(() => {
 					Thread.CurrentThread.IsBackground = true;
 					try {
-						while (!isCloseRequested) {
-							CheckReceived();
-							SendAwaiting();
-							Sleep();
+						CheckReceived();
+						if (!isCloseRequested) {
+							do {
+								SendAwaiting();
+								Sleep();
+								CheckReceived();
+							} while (!isCloseRequested);
 						}
-						if (!isRemoteMemberClosed) {
-							SerializeAndSend(new ServiceMessage { IsCloseRequested = true });
+						if (!isRemoteCloseRequest) {
+							SerializeAndSend(new ServiceMessage {
+								IsCloseRequested = true
+							});
 						}
 					} catch (SocketException e) {
 						Debug.Write("{0}: {1}", MsgPrefix, e);
 					} catch (IOException e) {
 						Debug.Write("{0}: {1}", MsgPrefix, e);
 					} finally {
+						Debug.Write("Client Closed!");
 						CloseConnection();
 						IsConnected = false;
-						OnClosed?.Invoke();
+						Closed?.Invoke();
 					}
 				});
 				thread.Start();
@@ -73,20 +79,18 @@ namespace Lime.Profilers.Network
 
 		private void SendAwaiting()
 		{
-			if (!isCloseRequested) {
-				bool isSent = false;
-				while (awaitingSend.Count > 0) {
-					IItem item;
-					if (awaitingSend.TryDequeue(out item)) {
-						serializer.ToStream(item, stream);
-					} else {
-						throw new InvalidOperationException();
-					}
-					isSent = true;
+			bool isSent = false;
+			while (awaitingSend.Count > 0) {
+				IItem item;
+				if (awaitingSend.TryDequeue(out item)) {
+					serializer.ToStream(item, stream);
+				} else {
+					throw new InvalidOperationException();
 				}
-				if (!isSent) {
-					SerializeAndSend(new ServiceMessage { IsEmpty = true });
-				}
+				isSent = true;
+			}
+			if (!isSent) {
+				SerializeAndSend(new ServiceMessage { IsEmpty = true });
 			}
 		}
 

@@ -1,3 +1,4 @@
+using Lime;
 using Lime.Widgets.Charts;
 
 namespace Tangerine.UI
@@ -40,14 +41,14 @@ namespace Tangerine.UI
 		/// Subtracts values from graph points.
 		/// </summary>
 		/// <param name="restoreOriginalValues">Whether to restore the original values before subtraction.</param>
-		public void Subtract(int chartIndex, float[] values, bool restoreOriginalValues = true) =>
+		public void Subtract(int chartIndex, float[] values, bool restoreOriginalValues = false) =>
 			Add(chartIndex, values, restoreOriginalValues, -1f);
 
 		/// <summary>
 		/// Add values to graph points.
 		/// </summary>
 		/// <param name="restoreOriginalValues">Whether to restore the original values before addition.</param>
-		public void Add(int chartIndex, float[] values, bool restoreOriginalValues = true) =>
+		public void Add(int chartIndex, float[] values, bool restoreOriginalValues = false) =>
 			Add(chartIndex, values, restoreOriginalValues, 1f);
 
 		private void Add(int chartIndex, float[] values, bool restoreOriginalValues, float sgn)
@@ -55,7 +56,7 @@ namespace Tangerine.UI
 			var chart = Charts[chartIndex];
 			var chartOriginalPoints = originalPoints[chartIndex];
 			if (restoreOriginalValues) {
-				int pointIndex = (indexOfLast + ControlPointsCount - 1) % ControlPointsCount;
+				int pointIndex = (indexOfLast + 1) % ControlPointsCount;
 				for (int i = 0; i < chart.Points.Length; i++) {
 					chart.Points[i] = chartOriginalPoints[pointIndex] + sgn * values[i];
 					pointIndex = (pointIndex + 1) % chart.Points.Length;
@@ -65,6 +66,7 @@ namespace Tangerine.UI
 					chart.Points[i] += sgn * values[i];
 				}
 			}
+			isMeshUpdateRequired = true;
 		}
 
 		/// <summary>
@@ -74,11 +76,12 @@ namespace Tangerine.UI
 		{
 			var chart = Charts[chartIndex];
 			var chartOriginalPoints = originalPoints[chartIndex];
-			int pointIndex = (indexOfLast + ControlPointsCount - 1) % ControlPointsCount;
+			int pointIndex = (indexOfLast + 1) % ControlPointsCount;
 			for (int i = 0; i < chart.Points.Length; i++) {
 				chart.Points[i] = chartOriginalPoints[pointIndex];
 				pointIndex = (pointIndex + 1) % chart.Points.Length;
 			}
+			isMeshUpdateRequired = true;
 		}
 	}
 }

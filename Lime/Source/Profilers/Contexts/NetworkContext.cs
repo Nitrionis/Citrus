@@ -9,7 +9,15 @@ namespace Lime.Profilers.Contexts
 {
 	public abstract class NetworkContext : Context
 	{
-		public abstract bool IsConnected { get; }
+		internal Network.NetworkMember networkMember;
+
+		public bool IsConnected => networkMember.IsConnected;
+
+		public Action Closed
+		{
+			get => networkMember.Closed;
+			set => networkMember.Closed += value;
+		}
 
 		public abstract bool TryLaunch(IPEndPoint ipEndPoint);
 

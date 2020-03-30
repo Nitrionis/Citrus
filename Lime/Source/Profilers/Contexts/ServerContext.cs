@@ -11,8 +11,6 @@ namespace Lime.Profilers.Contexts
 	{
 		private readonly Network.Server server;
 
-		public override bool IsConnected => server.IsConnected;
-
 		public IPEndPoint LocalEndpoint => (IPEndPoint)server.Listener.LocalEndpoint;
 
 		private class SparsedGpuHistory : Graphics.Platform.ProfilerHistory
@@ -53,24 +51,42 @@ namespace Lime.Profilers.Contexts
 
 		public override bool IsProfilingEnabled
 		{
-			get => isProfilingEnabled;
-			set => SendRequest(new ProfilerOptions { ProfilingEnabled = ProfilerOptions.StateOf(value) });
+			get { return isProfilingEnabled; }
+			set {
+				if (IsConnected) {
+					SendRequest(new ProfilerOptions {
+						ProfilingEnabled = ProfilerOptions.StateOf(value)
+					});
+				}
+			}
 		}
 
 		private bool isDrawCallsRenderTimeEnabled;
 
 		public override bool IsDrawCallsRenderTimeEnabled
 		{
-			get => isDrawCallsRenderTimeEnabled;
-			set => SendRequest(new ProfilerOptions { DrawCallsRenderTimeEnabled = ProfilerOptions.StateOf(value) });
+			get { return isDrawCallsRenderTimeEnabled; }
+			set {
+				if (IsConnected) {
+					SendRequest(new ProfilerOptions {
+						DrawCallsRenderTimeEnabled = ProfilerOptions.StateOf(value)
+					});
+				}
+			}
 		}
 
 		private bool isSceneOnlyDrawCallsRenderTime;
 
 		public override bool IsSceneOnlyDrawCallsRenderTime
 		{
-			get => isSceneOnlyDrawCallsRenderTime;
-			set => SendRequest(new ProfilerOptions { SceneOnlyDrawCallsRenderTime = ProfilerOptions.StateOf(value) });
+			get { return isSceneOnlyDrawCallsRenderTime; }
+			set {
+				if (IsConnected) {
+					SendRequest(new ProfilerOptions {
+						SceneOnlyDrawCallsRenderTime = ProfilerOptions.StateOf(value)
+					});
+				}
+			}
 		}
 
 		public ServerContext()
@@ -79,7 +95,7 @@ namespace Lime.Profilers.Contexts
 			sparsedCpuHistory = new SparsedCpuHistory();
 			GpuHistory = sparsedGpuHistory;
 			CpuHistory = sparsedCpuHistory;
-			server = new Network.Server();
+			networkMember = server = new Network.Server();
 		}
 
 		public override bool TryLaunch(IPEndPoint ipEndPoint) => server.TryLaunch(ipEndPoint);

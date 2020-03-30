@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Net;
 using Lime.Profilers;
 using Lime.Profilers.Contexts;
@@ -9,7 +10,8 @@ namespace Lime
 	[TangerineVisualHintGroup("/All/Nodes/Profiler")]
 	public class ProfilerGameUI : Widget
 	{
-		private static ClientContext context;
+		private static ClientContext clientContext;
+		private static bool isLaunchSuccessful;
 
 		private SimpleText statusLabel;
 		private EditBox ipPortInput;
@@ -114,11 +116,7 @@ namespace Lime
 				Text = "Disconnect",
 				Visible = false,
 				BackgroundColor = componentsBackgroundColor,
-				Clicked = () => {
-					LimeProfiler.SetContext(new LocalContext());
-					backgroundPresenter.Color = BackgroundColor;
-					statusLabel.Text = "Not connected";
-				}
+				Clicked = () => Disconnect()
 			};
 			disconnectButton.Caption.FontHeight = fontHeight;
 
@@ -136,10 +134,19 @@ namespace Lime
 			});
 
 			UpdateWidgetsFontHeight();
+
+			Tasks.AddLoop(StateUpdateTask);
 		}
 
 		[YuzuAfterDeserialization]
 		private void Deserialized() => ((Widget)Nodes[0]).Size = Size;
+
+		private void StateUpdateTask()
+		{
+			if (clientContext != null && isLaunchSuccessful && !clientContext.IsConnected) {
+				Disconnect();
+			}
+		}
 
 		private void TryConnect()
 		{
@@ -150,12 +157,14 @@ namespace Lime
 			bool isIpValid = IPAddress.TryParse(values[0], out ip);
 			bool isPortValid = values.Length < 2 ? false : int.TryParse(values[1], out port);
 			if (isIpValid && isPortValid) {
-				context = new ClientContext();
-				LimeProfiler.SetContext(context);
-				if (!context.TryLaunch(new IPEndPoint(ip, port))) {
+				clientContext = new ClientContext();
+				LimeProfiler.SetContext(clientContext);
+				isLaunchSuccessful = clientContext.TryLaunch(new IPEndPoint(ip, port));
+				if (!isLaunchSuccessful) {
 					LimeProfiler.SetContext(new LocalContext());
 					statusLabel.Text = "Launch failed";
 					backgroundPresenter.Color = Color4.Red;
+					clientContext = null;
 				} else {
 					connectButton.Visible = false;
 					disconnectButton.Visible = true;
@@ -172,6 +181,16 @@ namespace Lime
 					(!isPortValid ?               "port" : "");
 				backgroundPresenter.Color = Color4.Red;
 			}
+		}
+
+		private void Disconnect()
+		{
+			LimeProfiler.SetContext(new LocalContext());
+			backgroundPresenter.Color = BackgroundColor;
+			statusLabel.Text = "Not connected";
+			disconnectButton.Visible = false;
+			connectButton.Visible = true;
+			clientContext = null;
 		}
 
 		private void UpdateWidgetsFontHeight()

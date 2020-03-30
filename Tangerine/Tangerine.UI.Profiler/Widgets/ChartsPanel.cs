@@ -201,13 +201,16 @@ namespace Tangerine.UI
 					frame.SceneTrianglesCount
 				};
 			LineCharts.PushSlice(points);
-			UpdateChartsLegends(frame, update);
+			UpdateChartsLegends(frame, update, selectedRenderTime: 0);
 		}
 
-		public void UpdateChartsLegends(GpuHistory.Item frame, CpuHistory.Item update)
+		public void UpdateChartsLegends(GpuHistory.Item frame, CpuHistory.Item update, float selectedRenderTime)
 		{
 			CpuLegend.SetValues(new float[] { update.DeltaTime, 0f });
-			GpuLegend.SetValues(frame == null ? new float[2] : new float[] { (float)frame.FullGpuRenderTime, 0f });
+			GpuLegend.SetValues(frame == null ? new float[2] : new float[] {
+				(float)frame.FullGpuRenderTime,
+				selectedRenderTime
+			});
 			var points = frame == null ?
 				new float[4] :
 				new float[] {

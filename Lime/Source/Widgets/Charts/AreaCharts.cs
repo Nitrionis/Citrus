@@ -39,6 +39,7 @@ namespace Lime.Widgets.Charts
 			}
 			UpdateUserLines(scaleCoefficient);
 			mesh.DirtyFlags |= MeshDirtyFlags.Vertices;
+			Window.Current?.Invalidate();
 		}
 
 		protected override int CalculateSubmeshVerticesCount(int controlPointsCount) => 2 * controlPointsCount;
