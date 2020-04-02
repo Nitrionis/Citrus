@@ -21,6 +21,8 @@ namespace Lime.Graphics.Platform
 		private object node;
 		private object manager;
 
+		public object Node => node;
+
 		/// <summary>
 		/// Must be called AFTER each <see cref="IPresenter.GetRenderObject(Node)"/>.
 		/// </summary>

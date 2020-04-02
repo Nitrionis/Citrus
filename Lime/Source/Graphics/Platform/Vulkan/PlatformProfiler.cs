@@ -158,8 +158,12 @@ namespace Lime.Graphics.Platform.Vulkan
 					resultsBuffer.DrawCalls.Add(profilingResult);
 					commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.TopOfPipe, currentPool.Handle, nextTimestampIndex++);
 					commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.BottomOfPipe, currentPool.Handle, nextTimestampIndex++);
+				} else {
+					profilingInfo.Free();
 				}
 				resultsBuffer.FullDrawCallCount++;
+			} else {
+				profilingInfo.Free();
 			}
 		}
 

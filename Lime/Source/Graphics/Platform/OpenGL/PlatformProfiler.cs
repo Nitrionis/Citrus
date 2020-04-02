@@ -24,6 +24,7 @@ namespace Lime.Graphics.Platform.OpenGL
 				}
 				resultsBuffer.FullDrawCallCount++;
 			}
+			profilingInfo.Free();
 		}
 
 		internal override void FrameRenderFinished()

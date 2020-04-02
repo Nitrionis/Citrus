@@ -1,4 +1,5 @@
 #if WIN
+using Lime.Graphics.Platform;
 using MFDecoder;
 using System;
 using System.Collections.Generic;

@@ -867,7 +867,7 @@ namespace Lime
 			if (wasInvalidated || renderingState == RenderingState.RenderDeferred) {
 #if LIME_PROFILER
 				if (!AsyncRendering) {
-					CpuProfiler.RenderingFencePassed(Application.MainWindow == this);
+					CpuProfiler.RenderingFencePassed();
 				}
 #endif
 				renderControl.Invalidate();
@@ -883,7 +883,7 @@ namespace Lime
 			renderingState = renderControl.CanRender ? RenderingState.Updated : RenderingState.Rendered;
 			WaitForRendering();
 #if LIME_PROFILER
-			CpuProfiler.RenderingFencePassed(Application.MainWindow == this);
+			CpuProfiler.RenderingFencePassed();
 #endif
 			if (renderControl.CanRender) {
 				RaiseSync();

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Lime.Profilers;
 
 namespace Lime
 {
@@ -44,7 +45,13 @@ namespace Lime
 		{
 			var ro = RenderObjectPool<RenderObject>.Acquire();
 			for (var i = Count - 1; i >= 0; i--) {
+#if LIME_PROFILER
+				var usage = CpuProfiler.NodeCpuUsageStarted(node, CpuUsage.UsageReason.RenderPreparation);
+#endif
 				var obj = this[i].GetRenderObject(node);
+#if LIME_PROFILER
+				CpuProfiler.NodeCpuUsageFinished(usage);
+#endif
 				if (obj != null) {
 #if LIME_PROFILER
 					obj.SetOwnersInfo(node, node.Manager);

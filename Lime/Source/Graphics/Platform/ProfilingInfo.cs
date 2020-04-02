@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Yuzu;
 
 namespace Lime.Graphics.Platform
@@ -23,12 +24,12 @@ namespace Lime.Graphics.Platform
 		/// The objects that created this draw call.
 		/// <list type="bullet">
 		/// <item><description>
-		/// If <see cref="ProfilingInfo"/> created on the local device.
-		/// This can be Node or List of Node or null.
+		/// If <see cref="ProfilingInfo"/> created on the local device,
+		/// this can be Node or List of Node or null.
 		/// </description></item>
 		/// <item><description>
-		/// If <see cref="ProfilingInfo"/> received from outside.
-		/// This can be Node.Id or List of Node.Id or null.
+		/// If <see cref="ProfilingInfo"/> received from outside,
+		/// this can be Node.Id or List of Node.Id or null.
 		/// </description></item>
 		/// </list>
 		/// </summary>
@@ -45,12 +46,10 @@ namespace Lime.Graphics.Platform
 		/// Material used during rendering.
 		/// <list type="bullet">
 		/// <item><description>
-		/// If <see cref="ProfilingInfo"/> created on the local device.
-		/// This is a link to the material.
+		/// This is a link to the material, if <see cref="ProfilingInfo"/> created on the local device.
 		/// </description></item>
 		/// <item><description>
-		/// If <see cref="ProfilingInfo"/> received from outside.
-		/// This is a string with the name of the material.
+		/// This is a string with the name of the material, if <see cref="ProfilingInfo"/> received from outside.
 		/// </description></item>
 		/// </list>
 		/// </summary>
@@ -66,6 +65,7 @@ namespace Lime.Graphics.Platform
 
 		public ProfilingInfo() { }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static ProfilingInfo Acquire(object material = null, int passIndex = 0)
 		{
 			bool isPartOfScene =
@@ -74,6 +74,7 @@ namespace Lime.Graphics.Platform
 			return Acquire(RenderObjectOwnersInfo.CurrentNode, isPartOfScene, material, passIndex);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static ProfilingInfo Acquire(object owners, bool isPartOfScene, object material, int passIndex)
 		{
 			var profilingInfo = freeInstances.Count > 0 ? freeInstances.Pop() : new ProfilingInfo();

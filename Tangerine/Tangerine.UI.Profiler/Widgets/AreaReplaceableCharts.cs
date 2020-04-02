@@ -1,4 +1,3 @@
-using Lime;
 using Lime.Widgets.Charts;
 
 namespace Tangerine.UI

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Lime.Profilers;
 
 namespace Lime
 {
@@ -119,10 +120,12 @@ namespace Lime
 			{
 #if LIME_PROFILER
 				SetGlobalProfilerData();
+				var usage = CpuProfiler.NodeRenderCpuUsageStarted(Node);
 #endif
 				Decoder?.UpdateTexture();
 				base.Render();
 #if LIME_PROFILER
+				CpuProfiler.NodeRenderCpuUsageFinished(usage);
 				ResetGlobalProfilerData();
 #endif
 			}

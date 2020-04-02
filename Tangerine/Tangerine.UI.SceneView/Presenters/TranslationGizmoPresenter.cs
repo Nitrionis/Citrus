@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Lime;
+using Lime.Graphics.Platform;
 using Tangerine.Core;
 using ProfilingInfo = Lime.Graphics.Platform.ProfilingInfo;
 

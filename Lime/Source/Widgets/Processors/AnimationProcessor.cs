@@ -1,3 +1,4 @@
+using Lime.Profilers;
 using System;
 using System.Collections.Generic;
 
@@ -116,8 +117,14 @@ namespace Lime
 		{
 			while (currQueue.Count > 0) {
 				var animation = currQueue.Dequeue().Value;
+#if LIME_PROFILER
+				var usage = CpuProfiler.NodeCpuUsageStarted(animation.Owner.Owner, CpuUsage.UsageReason.Animation);
+#endif
 				nextQueue.Enqueue(animation.Owner.Depth, animation.QueueNode);
 				animation.Advance(delta * animation.OwnerNode.EffectiveAnimationSpeed);
+#if LIME_PROFILER
+				CpuProfiler.NodeCpuUsageFinished(usage);
+#endif
 			}
 			Toolbox.Swap(ref currQueue, ref nextQueue);
 		}

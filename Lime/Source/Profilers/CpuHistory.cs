@@ -1,5 +1,4 @@
-using System;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using GpuHistory = Lime.Graphics.Platform.ProfilerHistory;
 using Yuzu;
 
@@ -18,9 +17,16 @@ namespace Lime.Profilers
 			[YuzuRequired]
 			public float DeltaTime;
 
+			[YuzuRequired]
+			public List<CpuUsage> NodesResults = new List<CpuUsage>();
+
 			public Item Reset()
 			{
 				DeltaTime = 0;
+				foreach (var r in NodesResults) {
+					r.Free();
+				}
+				NodesResults.Clear();
 				return this;
 			}
 
