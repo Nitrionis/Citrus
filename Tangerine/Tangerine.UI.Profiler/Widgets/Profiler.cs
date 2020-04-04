@@ -5,6 +5,7 @@ using Lime.Profilers;
 using Lime.Profilers.Contexts;
 using GpuHistory = Lime.Graphics.Platform.ProfilerHistory;
 using Tangerine.UI.Timeline;
+using System;
 
 namespace Tangerine.UI
 {
@@ -19,9 +20,11 @@ namespace Tangerine.UI
 		private ThemedCheckBox gpuDeepProfilingCheckBox;
 		private ThemedCheckBox gpuSceneOnlyDeepProfilingCheckBox;
 		private ThemedCheckBox gpuTraceCheckBox;
+		private ThemedCheckBox cpuTraceCheckBox;
 
 		private FixedCapacityQueue indexesStorage;
 		private ChartsPanel chartsPanel;
+		private CpuTrace cpuTrace;
 		private GpuTrace gpuTrace;
 		private Widget gpuTraceMessagePanel;
 		private SimpleText gpuTraceMessageLabel;
@@ -50,6 +53,7 @@ namespace Tangerine.UI
 			AddNode(settingsWidget);
 			InitializeChartsPanel();
 			InitializeGpuTracePanel();
+			InitializeCpuTracePanel();
 			selectedRenderTime = new float[GpuHistory.HistoryFramesCount];
 			outdatedSamplesCount = selectedRenderTime.Length;
 			Tasks.Add(StateUpdateTask);
@@ -61,11 +65,13 @@ namespace Tangerine.UI
 			mainControlPanel = new MainControlPanel(settingsWidget);
 			mainControlPanel.SceneFilteringChanged += (value) => {
 				gpuTrace.Timeline.IsSceneOnly = value;
+				cpuTrace.Timeline.IsSceneOnly = value;
 				isNodeFilteringChanged = true;
 				outdatedSamplesCount = 0;
 			};
 			mainControlPanel.NodeFilteringChanged += (value) => {
 				gpuTrace.Timeline.RegexNodeFilter = value;
+				cpuTrace.Timeline.RegexNodeFilter = value;
 				isNodeFilteringChanged = true;
 				outdatedSamplesCount = 0;
 			};
@@ -86,14 +92,23 @@ namespace Tangerine.UI
 			gpuTraceMessageLabel = new SimpleText {
 				Color = ColorTheme.Current.Profiler.TimelineRulerAndText,
 				Anchors = Anchors.LeftRight,
-				Text = "No data for frame.",
-				FontHeight = 64
+				Text = "No deep profiling data available for this frame.",
+				FontHeight = 48,
+				Padding = new Thickness(8)
 			};
 			AddNode(gpuTraceMessagePanel = new Widget {
 				Visible = false,
+				Height = 64,
+				MinMaxHeight = 64,
 				Presenter = new WidgetFlatFillPresenter(ColorTheme.Current.Profiler.TimelineHeaderBackground),
 				Nodes = { gpuTraceMessageLabel }
 			});
+		}
+
+		private void InitializeCpuTracePanel()
+		{
+			AddNode(cpuTrace = new CpuTrace() { MaxHeight = 400 });
+			cpuTrace.Timeline.MaxHeight = 300;
 		}
 
 		private void OnContextChanged()
@@ -137,6 +152,10 @@ namespace Tangerine.UI
 			gpuTraceCheckBox.Changed += (args) => {
 				gpuTrace.Visible = args.Value;
 			};
+			cpuTraceCheckBox = new ThemedCheckBox { Checked = true };
+			cpuTraceCheckBox.Changed += (args) => {
+				cpuTrace.Visible = args.Value;
+			};
 			gpuDeepProfilingCheckBox = new ThemedCheckBox { Checked = false };
 			gpuDeepProfilingCheckBox.Changed += (args) => {
 				if (args.ChangedByUser) {
@@ -169,6 +188,7 @@ namespace Tangerine.UI
 					HGroup(gpuInfoCheckBox, CreateLabel("GPU information")),
 					HGroup(geometryInfoCheckBox, CreateLabel("Geometry information")),
 					HGroup(gpuTraceCheckBox, CreateLabel("GPU trace timeline")),
+					HGroup(cpuTraceCheckBox, CreateLabel("CPU trace timeline")),
 					HGroup(gpuDeepProfilingCheckBox, CreateLabel("Deep profiling GPU")),
 					HGroup(gpuSceneOnlyDeepProfilingCheckBox, CreateLabel("Scene only GPU deep profiling"))
 				}
@@ -220,6 +240,7 @@ namespace Tangerine.UI
 				if (frame.IsDeepProfilingEnabled) {
 					gpuTrace.Timeline.Rebuild(frame);
 				}
+				cpuTrace.Timeline.Rebuild(update);
 			}
 			long srtIndex = sliceIndex + outdatedSamplesCount;
 			float srt = srtIndex >= selectedRenderTime.Length ? 0 : selectedRenderTime[srtIndex];
@@ -248,6 +269,11 @@ namespace Tangerine.UI
 				}
 				chartSliceIndex += 1;
 			}
+		}
+
+		private void SelectUpdateTime(bool isSceneOnly, Regex regexNodeFilter, float[] resultsBuffer)
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

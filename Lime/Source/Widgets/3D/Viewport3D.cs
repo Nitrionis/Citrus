@@ -274,7 +274,7 @@ namespace Lime
 						foreach (var obj in opaqueObjects) {
 #if LIME_PROFILER
 							obj.SetGlobalProfilerData();
-							var usage = CpuProfiler.NodeRenderCpuUsageStarted(obj.Node);
+							var usage = CpuProfiler.NodeRenderCpuUsageStarted(obj.Node, obj.Manager);
 #endif
 							obj.Render();
 #if LIME_PROFILER
@@ -287,7 +287,7 @@ namespace Lime
 						foreach (var obj in transparentObjects) {
 #if LIME_PROFILER
 							obj.SetGlobalProfilerData();
-							var usage = CpuProfiler.NodeRenderCpuUsageStarted(obj.Node);
+							var usage = CpuProfiler.NodeRenderCpuUsageStarted(obj.Node, obj.Manager);
 #endif
 							obj.Render();
 #if LIME_PROFILER

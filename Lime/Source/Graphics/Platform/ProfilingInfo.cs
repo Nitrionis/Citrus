@@ -4,6 +4,14 @@ using Yuzu;
 
 namespace Lime.Graphics.Platform
 {
+	public static class SceneProfilingInfo
+	{
+		/// <summary>
+		/// Node manager for scene objects.
+		/// </summary>
+		public static object NodeManager;
+	}
+
 	/// <summary>
 	/// Used to separate draw calls some objects
 	/// from others. Shared by multiple draw calls.
@@ -11,11 +19,6 @@ namespace Lime.Graphics.Platform
 	public class ProfilingInfo
 	{
 		private static Stack<ProfilingInfo> freeInstances = new Stack<ProfilingInfo>();
-
-		/// <summary>
-		/// Node manager for scene objects.
-		/// </summary>
-		public static object SceneNodeManager;
 
 		[YuzuExclude]
 		private bool isFree;
@@ -69,8 +72,9 @@ namespace Lime.Graphics.Platform
 		public static ProfilingInfo Acquire(object material = null, int passIndex = 0)
 		{
 			bool isPartOfScene =
+				SceneProfilingInfo.NodeManager == null ||
 				RenderObjectOwnersInfo.CurrentManager == null ||
-				ReferenceEquals(RenderObjectOwnersInfo.CurrentManager, SceneNodeManager);
+				ReferenceEquals(RenderObjectOwnersInfo.CurrentManager, SceneProfilingInfo.NodeManager);
 			return Acquire(RenderObjectOwnersInfo.CurrentNode, isPartOfScene, material, passIndex);
 		}
 

@@ -120,7 +120,7 @@ namespace Lime
 			{
 #if LIME_PROFILER
 				SetGlobalProfilerData();
-				var usage = CpuProfiler.NodeRenderCpuUsageStarted(Node);
+				var usage = CpuProfiler.NodeRenderCpuUsageStarted(Node, Manager);
 #endif
 				Decoder?.UpdateTexture();
 				base.Render();

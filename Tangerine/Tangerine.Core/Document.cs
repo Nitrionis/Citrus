@@ -393,7 +393,7 @@ namespace Tangerine.Core
 				DetachViews();
 				Current = doc;
 #if LIME_PROFILER
-				Lime.Graphics.Platform.ProfilingInfo.SceneNodeManager = doc?.Manager;
+				Lime.Graphics.Platform.SceneProfilingInfo.NodeManager = doc?.Manager;
 #endif
 				doc?.AttachViews();
 				if (doc != null) {

@@ -864,12 +864,12 @@ namespace Lime
 				Input.CopyKeysState();
 				Input.TextInput = null;
 			}
-			if (wasInvalidated || renderingState == RenderingState.RenderDeferred) {
 #if LIME_PROFILER
-				if (!AsyncRendering) {
-					CpuProfiler.RenderingFencePassed();
-				}
+			if (!AsyncRendering) {
+				CpuProfiler.RenderingFencePassed();
+			}
 #endif
+			if (wasInvalidated || renderingState == RenderingState.RenderDeferred) {
 				renderControl.Invalidate();
 			}
 			// We give one update cycle to handle files drop
@@ -883,7 +883,9 @@ namespace Lime
 			renderingState = renderControl.CanRender ? RenderingState.Updated : RenderingState.Rendered;
 			WaitForRendering();
 #if LIME_PROFILER
-			CpuProfiler.RenderingFencePassed();
+			if (AsyncRendering) {
+				CpuProfiler.RenderingFencePassed();
+			}
 #endif
 			if (renderControl.CanRender) {
 				RaiseSync();

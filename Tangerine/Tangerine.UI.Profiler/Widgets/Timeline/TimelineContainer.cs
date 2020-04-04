@@ -45,7 +45,7 @@ namespace Tangerine.UI.Timeline
 			};
 
 			container = new Widget {
-				MinMaxHeight = 64
+				//MinMaxHeight = 64
 			};
 
 			horizontalScrollView = new ThemedScrollView(ScrollDirection.Horizontal) {

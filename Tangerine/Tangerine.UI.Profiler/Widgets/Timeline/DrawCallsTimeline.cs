@@ -187,7 +187,7 @@ namespace Tangerine.UI.Timeline
 					Id = "DrawCallWidget second"
 				});
 				originalPresenterPair = GetColorTheme(drawCall);
-				TargetNodeChanged(regex: null);
+				DecorateWidget();
 			}
 
 			public void TargetNodeChanged(Regex regex)

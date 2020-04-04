@@ -24,8 +24,8 @@ namespace Lime.Graphics.Platform
 			drawCallsOwners.Add(node);
 			isPartOfScene |=
 				node == null ||
-				ProfilingInfo.SceneNodeManager == null || 
-				ReferenceEquals(ProfilingInfo.SceneNodeManager, manager);
+				SceneProfilingInfo.NodeManager == null || 
+				ReferenceEquals(SceneProfilingInfo.NodeManager, manager);
 		}
 	}
 }

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Lime.Profilers;
 
 namespace Lime
 {
@@ -35,6 +36,9 @@ namespace Lime
 		private void UpdateGestures(float delta)
 		{
 			foreach (var gesture in activeGestures) {
+#if LIME_PROFILER
+				var usage = CpuProfiler.NodeCpuUsageStarted(gesture.Owner, CpuUsage.UsageReason.Gesture);
+#endif
 				if (gesture is ClickGesture cg) {
 					cg.Deferred = false;
 					foreach (var g in activeGestures) {
@@ -68,6 +72,9 @@ namespace Lime
 						}
 					}
 				}
+#if LIME_PROFILER
+				CpuProfiler.NodeCpuUsageFinished(usage);
+#endif
 			}
 		}
 

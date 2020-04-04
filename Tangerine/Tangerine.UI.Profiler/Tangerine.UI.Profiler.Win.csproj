@@ -46,13 +46,14 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Widgets\AreaReplaceableCharts.cs" />
     <Compile Include="Widgets\ChartsPanel.cs" />
+    <Compile Include="Widgets\CpuTrace.cs" />
     <Compile Include="Widgets\GpuTrace.cs" />
     <Compile Include="Widgets\MainControlPanel.cs" />
     <Compile Include="Widgets\Profiler.cs" />
     <Compile Include="Widgets\Timeline\DrawCallsTimeline.cs" />
     <Compile Include="Widgets\Timeline\TimelineContainer.cs" />
     <Compile Include="Widgets\Timeline\TimelineRuler.cs" />
-    <Compile Include="Widgets\Timeline\UpdatesTimeline.cs" />
+    <Compile Include="Widgets\Timeline\CpuUsageTimeline.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Lime\Lime.Win.csproj">

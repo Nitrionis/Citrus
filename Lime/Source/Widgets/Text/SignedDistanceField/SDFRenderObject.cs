@@ -25,7 +25,7 @@ namespace Lime.SignedDistanceField
 			foreach (var ro in Objects) {
 #if LIME_PROFILER
 				ro.SetGlobalProfilerData();
-				var usage = CpuProfiler.NodeRenderCpuUsageStarted(ro.Node);
+				var usage = CpuProfiler.NodeRenderCpuUsageStarted(ro.Node, ro.Manager);
 #endif
 				ro.Render();
 #if LIME_PROFILER

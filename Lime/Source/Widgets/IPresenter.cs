@@ -176,6 +176,48 @@ namespace Lime
 		}
 	}
 
+	public class WidgetFlatFillHitTestPresenter : IPresenter
+	{
+		public Color4 Color { get; set; }
+		public bool IgnorePadding { get; set; }
+
+		public WidgetFlatFillHitTestPresenter(Color4 color)
+		{
+			Color = color;
+		}
+
+		public Lime.RenderObject GetRenderObject(Node node)
+		{
+			var widget = (Widget)node;
+			var ro = RenderObjectPool<RenderObject>.Acquire();
+			ro.CaptureRenderState(widget);
+			ro.Color = Color * widget.GlobalColor;
+			if (IgnorePadding) {
+				ro.Position = Vector2.Zero;
+				ro.Size = widget.Size;
+			} else {
+				ro.Position = widget.ContentPosition;
+				ro.Size = widget.ContentSize;
+			}
+			return ro;
+		}
+
+		public bool PartialHitTest(Node node, ref HitTestArgs args) => node.PartialHitTest(ref args);
+
+		private class RenderObject : WidgetRenderObject
+		{
+			public Vector2 Position;
+			public Vector2 Size;
+			public Color4 Color;
+
+			public override void Render()
+			{
+				PrepareRenderState();
+				Renderer.DrawRect(Position, Position + Size, Color);
+			}
+		}
+	}
+
 	public class CustomPresenter : IPresenter
 	{
 		public Lime.RenderObject GetRenderObject(Node node)

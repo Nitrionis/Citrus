@@ -319,6 +319,20 @@ namespace Tangerine.UI
 			public Color4 DrawCallUnselectedOne { get; set; }
 			[YuzuOptional]
 			public Color4 DrawCallUnselectedTwo { get; set; }
+			[YuzuOptional]
+			public Color4 CpuUsageUnselected { get; set; }
+			[YuzuOptional]
+			public Color4 CpuUsageAnimation { get; set; }
+			[YuzuOptional]
+			public Color4 CpuUsageUpdate { get; set; }
+			[YuzuOptional]
+			public Color4 CpuUsageGesture { get; set; }
+			[YuzuOptional]
+			public Color4 CpuUsageRenderPreparation { get; set; }
+			[YuzuOptional]
+			public Color4 CpuUsageRender { get; set; }
+			[YuzuOptional]
+			public Color4 CpuUsageOwnerUnknown { get; set; }
 		}
 
 		[YuzuOptional]
@@ -501,7 +515,7 @@ namespace Tangerine.UI
 				JointColor = Color4.Gray,
 			};
 			var profiler = new ProfilerColors {
-				Background = new Color4(40,44,52),
+				Background = new Color4(40, 44, 52),
 				ChartsBackground = new Color4(33, 37, 43),
 				LegendText = new Color4(204, 204, 204),
 				ChartOne = new Color4(76, 176, 80),
@@ -521,6 +535,13 @@ namespace Tangerine.UI
 				DrawCallUiTwo = new Color4(33, 150, 243),
 				DrawCallUnselectedOne = new Color4(60, 60, 60),
 				DrawCallUnselectedTwo = new Color4(60, 60, 60),
+				CpuUsageUnselected = new Color4(60, 60, 60),
+				CpuUsageAnimation = new Color4(103, 58, 183),
+				CpuUsageUpdate = new Color4(33, 150, 243),
+				CpuUsageGesture = new Color4(255, 193, 7),
+				CpuUsageRenderPreparation = new Color4(0, 150, 136),
+				CpuUsageRender = new Color4(76, 175, 80),
+				CpuUsageOwnerUnknown = new Color4(244, 67, 54)
 			};
 			return new ColorTheme {
 				IsDark = true,
@@ -677,6 +698,35 @@ namespace Tangerine.UI
 				MatchColor = Color4.Yellow.Transparentify(0.6f),
 				JointColor = Color4.Gray,
 			};
+			var profiler = new ProfilerColors {
+				Background = new Color4(40, 44, 52),
+				ChartsBackground = new Color4(33, 37, 43),
+				LegendText = new Color4(204, 204, 204),
+				ChartOne = new Color4(76, 176, 80),
+				ChartTwo = new Color4(33, 150, 243),
+				ChartThree = new Color4(254, 87, 34),
+				ChartFour = new Color4(255, 235, 60),
+				ChartFive = new Color4(0, 150, 136),
+				ChartSix = new Color4(165, 208, 97),
+				TimelineBackground = new Color4(33, 37, 43),
+				TimelineHeaderBackground = new Color4(33, 37, 43),
+				TimelineRulerAndText = new Color4(204, 204, 204),
+				DrawCallUnknownOne = new Color4(244, 67, 54),
+				DrawCallUnknownTwo = new Color4(254, 152, 0),
+				DrawCallSceneOne = new Color4(0, 150, 136),
+				DrawCallSceneTwo = new Color4(76, 176, 80),
+				DrawCallUiOne = new Color4(63, 81, 181),
+				DrawCallUiTwo = new Color4(33, 150, 243),
+				DrawCallUnselectedOne = new Color4(60, 60, 60),
+				DrawCallUnselectedTwo = new Color4(60, 60, 60),
+				CpuUsageUnselected = new Color4(60, 60, 60),
+				CpuUsageAnimation = new Color4(103, 58, 183),
+				CpuUsageUpdate = new Color4(33, 150, 243),
+				CpuUsageGesture = new Color4(255, 193, 7),
+				CpuUsageRenderPreparation = new Color4(0, 150, 136),
+				CpuUsageRender = new Color4(76, 175, 80),
+				CpuUsageOwnerUnknown = new Color4(244, 67, 54)
+			};
 			return new ColorTheme {
 				IsDark = false,
 				Toolbar = toolbar,
@@ -690,6 +740,7 @@ namespace Tangerine.UI
 				Inspector = inspector,
 				Keyboard = keyboard,
 				Hierarchy = hierarchy,
+				Profiler = profiler
 			};
 		}
 	}

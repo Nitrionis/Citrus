@@ -12,6 +12,7 @@ namespace Lime.Profilers
 		{
 			Animation,
 			Update,
+			Gesture,
 			RenderPreparation,
 			Render
 		}
@@ -30,6 +31,12 @@ namespace Lime.Profilers
 		/// </summary>
 		[YuzuRequired]
 		public object Owner;
+
+		/// <summary>
+		/// Indicates whether the owner is part of the scene.
+		/// </summary>
+		[YuzuRequired]
+		public bool IsPartOfScene;
 
 		/// <summary>
 		/// The timestamp of the start of the usage interval in microseconds from the start of the frame update.
