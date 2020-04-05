@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Net;
-using System.Threading;
 using System.Collections;
 using GpuHistory = Lime.Graphics.Platform.ProfilerHistory;
 using GpuProfiler = Lime.Graphics.Platform.PlatformProfiler;
@@ -21,7 +20,8 @@ namespace Lime.Profilers.Contexts
 		private readonly Network.Client client;
 
 		private readonly ConcurrentQueue<Request> requests;
-		private readonly ConcurrentQueue<StatisticsWrapper> awaitingFinalization;
+		private readonly ConcurrentQueue<StatisticsWrapper> framesAwaitingFinalization;
+		private readonly ConcurrentQueue<StatisticsWrapper> updatesAwaitingFinalization;
 		private readonly Action<StatisticsWrapper> Serialized;
 
 		private long lastProcessedUpdateIndex;
@@ -53,8 +53,12 @@ namespace Lime.Profilers.Contexts
 			client.OnReceived = RemoteProfilerMessageReceived;
 
 			requests = new ConcurrentQueue<Request>();
-			awaitingFinalization = new ConcurrentQueue<StatisticsWrapper>();
-			Serialized = statistics => awaitingFinalization.Enqueue(statistics);
+			framesAwaitingFinalization = new ConcurrentQueue<StatisticsWrapper>();
+			updatesAwaitingFinalization = new ConcurrentQueue<StatisticsWrapper>();
+			Serialized = statistics => {
+				updatesAwaitingFinalization.Enqueue(statistics);
+				framesAwaitingFinalization.Enqueue(statistics);
+			};
 
 			lastProcessedUpdateIndex = CpuHistory.ProfiledUpdatesCount;
 		}
@@ -63,31 +67,34 @@ namespace Lime.Profilers.Contexts
 
 		public override void LocalDeviceUpdateStarted()
 		{
+			StatisticsWrapper statistics = null;
 			if (IsActiveContext && client.IsConnected) {
-				bool isStatisticsSent = false;
 				while (lastProcessedUpdateIndex < CpuHistory.ProfiledUpdatesCount) {
 					var update = CpuHistory.GetUpdate(lastProcessedUpdateIndex);
 					var frame = !GpuHistory.IsFrameIndexValid(update.FrameIndex) ?
 						null : GpuHistory.GetFrame(update.FrameIndex);
 					if (frame == null || frame.IsCompleted) {
-						var statistics = new StatisticsWrapper() {
+						statistics = new StatisticsWrapper() {
 							Serialized       = Serialized,
 							Update           = update.LightweightClone(),
 							Frame            = frame?.LightweightClone(),
 							NativeDrawCalls  = frame?.DrawCalls,
+							NativeCpuUsages  = update.NodesResults,
 							Options          = GetCurrentOptions(),
 							Response         = ProcessRequest()
 						};
-						frame.DrawCalls = new List<ProfilingResult>();
+						if (frame != null) {
+							frame.DrawCalls = new List<ProfilingResult>();
+						}
+						update.NodesResults = new List<CpuUsage>();
 						client.LazySerializeAndSend(statistics);
-						isStatisticsSent = true;
 						lastProcessedUpdateIndex += 1;
 					} else {
 						break;
 					}
 				}
-				if (!isStatisticsSent) {
-					var statistics = new StatisticsWrapper() {
+				if (statistics == null) {
+					statistics = new StatisticsWrapper() {
 						Serialized  = Serialized,
 						Response    = ProcessRequest(),
 						Options     = GetCurrentOptions()
@@ -95,12 +102,15 @@ namespace Lime.Profilers.Contexts
 					client.LazySerializeAndSend(statistics);
 				}
 			}
+			while (!updatesAwaitingFinalization.IsEmpty && updatesAwaitingFinalization.TryDequeue(out statistics)) {
+				RestoreNativeUpdate(statistics);
+			}
 		}
 
 		public override void LocalDeviceFrameRenderCompleted()
 		{
 			StatisticsWrapper statistics;
-			while (!awaitingFinalization.IsEmpty && awaitingFinalization.TryDequeue(out statistics)) {
+			while (!framesAwaitingFinalization.IsEmpty && framesAwaitingFinalization.TryDequeue(out statistics)) {
 				RestoreNativeFrame(statistics);
 			}
 		}
@@ -172,6 +182,20 @@ namespace Lime.Profilers.Contexts
 			}
 		}
 
+		/// <remarks>At least in sync with rendering.</remarks>
+		private void RestoreNativeUpdate(StatisticsWrapper statistics)
+		{
+			// Try restore the state of history.
+			if (
+				statistics.Update != null &&
+				CpuHistory.IsUpdateIndexValid(statistics.Update.UpdateIndex)
+				)
+			{
+				var update = CpuHistory.GetUpdate(statistics.Update.UpdateIndex);
+				update.NodesResults = statistics.NativeCpuUsages;
+			}
+		}
+
 		private ProfilerOptions GetCurrentOptions() => new ProfilerOptions {
 			ProfilingEnabled = ProfilerOptions.StateOf(GpuProfiler.Instance.IsEnabled),
 			DrawCallsRenderTimeEnabled = ProfilerOptions.StateOf(GpuProfiler.Instance.IsDeepProfiling),
@@ -180,15 +204,12 @@ namespace Lime.Profilers.Contexts
 
 		private class StatisticsWrapper : Statistics
 		{
+			public List<CpuUsage> NativeCpuUsages;
 			public List<ProfilingResult> NativeDrawCalls;
 
 			public Action<StatisticsWrapper> Serialized;
 
-			/// <remarks>Asynchronous call.</remarks>
-			[YuzuAfterSerialization]
-			private void AfterSerialization() => Serialized?.Invoke(this);
-
-			/// <remarks>Asynchronous call.</remarks>
+			/// <remarks>Asynchronous with respect to updating and rendering.</remarks>
 			[YuzuBeforeSerialization]
 			private void BeforeSerialization()
 			{
@@ -198,22 +219,51 @@ namespace Lime.Profilers.Contexts
 					}
 					foreach (var drawCall in NativeDrawCalls) {
 						var pi = drawCall.ProfilingInfo;
-						var newDrawCall = new ProfilingResult {
-							ProfilingInfo = new ProfilingInfo {
-								IsPartOfScene  = pi.IsPartOfScene,
-								Material       = pi.Material.GetType().Name,
-								Owners         = ConvertOwnersToText(pi.Owners)
-							},
-							RenderPassIndex        = drawCall.RenderPassIndex,
-							StartTime              = drawCall.StartTime,
-							AllPreviousFinishTime  = drawCall.AllPreviousFinishTime,
-							FinishTime             = drawCall.FinishTime,
-							TrianglesCount         = drawCall.TrianglesCount,
-							VerticesCount          = drawCall.VerticesCount
-						};
-						Frame.DrawCalls.Add(newDrawCall);
+						var piCopy = MemoryManager<ProfilingInfo>.Acquire();
+						piCopy.IsPartOfScene  = pi.IsPartOfScene;
+						piCopy.Material       = pi.Material.GetType().Name;
+						piCopy.Owners         = ConvertOwnersToText(pi.Owners);
+						var prCopy = MemoryManager<ProfilingResult>.Acquire();
+						prCopy.ProfilingInfo          = piCopy;
+						prCopy.RenderPassIndex        = drawCall.RenderPassIndex;
+						prCopy.StartTime              = drawCall.StartTime;
+						prCopy.AllPreviousFinishTime  = drawCall.AllPreviousFinishTime;
+						prCopy.FinishTime             = drawCall.FinishTime;
+						prCopy.TrianglesCount         = drawCall.TrianglesCount;
+						prCopy.VerticesCount          = drawCall.VerticesCount;
+						Frame.DrawCalls.Add(prCopy);
 					}
 				}
+				if (Update != null) {
+					Update.NodesResults.Capacity = NativeCpuUsages.Count;
+					foreach (var usage in NativeCpuUsages) {
+						var usageCopy = MemoryManager<CpuUsage>.Acquire();
+						usageCopy.Reason         = usage.Reason;
+						usageCopy.Owner          = ((Node)usage.Owner).Id ?? "Node id unset";
+						usageCopy.IsPartOfScene  = usage.IsPartOfScene;
+						usageCopy.Start          = usage.Start;
+						usageCopy.Finish         = usage.Finish;
+						Update.NodesResults.Add(usageCopy);
+					}
+				}
+			}
+
+			/// <remarks>Asynchronous with respect to updating and rendering.</remarks>
+			[YuzuAfterSerialization]
+			private void AfterSerialization()
+			{
+				if (Frame != null) {
+					foreach (var drawCall in Frame.DrawCalls) {
+						MemoryManager<ProfilingInfo>.Free(drawCall.ProfilingInfo);
+						MemoryManager<ProfilingResult>.Free(drawCall);
+					}
+				}
+				if (Update != null) {
+					foreach (var usage in Update.NodesResults) {
+						MemoryManager<CpuUsage>.Free(usage);
+					}
+				}
+				Serialized?.Invoke(this);
 			}
 
 			private object ConvertOwnersToText(object nativeOwners)
@@ -235,6 +285,15 @@ namespace Lime.Profilers.Contexts
 					return string.IsNullOrEmpty(node.Id) ? "Node id unset" : node.Id;
 				}
 				throw new InvalidOperationException();
+			}
+
+			private class MemoryManager<T> where T : class, new()
+			{
+				private static readonly Stack<T> freeInstances = new Stack<T>();
+
+				public static T Acquire() => freeInstances.Count > 0 ? freeInstances.Pop() : new T();
+
+				public static void Free(T item) => freeInstances.Push(item);
 			}
 		}
 	}

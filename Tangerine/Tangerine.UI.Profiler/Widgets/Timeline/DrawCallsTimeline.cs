@@ -44,7 +44,13 @@ namespace Tangerine.UI.Timeline
 
 		public Action<DrawCallInfo> DrawCallSelected;
 
-		public DrawCallsTimeline() { }
+		public DrawCallsTimeline()
+		{
+			Id = "DrawCallsTimeline";
+			container.Id = "DrawCallsTimeline Container";
+			horizontalScrollView.Id = "DrawCallsTimeline HorizontalScrollView";
+			verticalScrollView.Id = "DrawCallsTimeline VerticalScrollView";
+		}
 
 		public void Rebuild(Frame frame)
 		{
@@ -54,9 +60,12 @@ namespace Tangerine.UI.Timeline
 				frame.SceneDrawCallCount : frame.FullDrawCallCount;
 			frame.DrawCalls.Sort(0, drawCallsCount, new TimePeriodComparer<DrawCallInfo>());
 			for (int i = 0; i < drawCallsCount; i++) {
-				Widget widget = new DrawCallWidget(frame.DrawCalls[i], DrawCallSelected);
-				widget.Visible = IsItemVisible(widget);
-				container.AddNode(widget);
+				var dc = frame.DrawCalls[i];
+				if (!CheckTargetNode(DrawCallWidget.SpecialIdRegex, dc)) {
+					var widget = new DrawCallWidget(dc, DrawCallSelected);
+					widget.Visible = IsItemVisible(widget);
+					container.AddNode(widget);
+				}
 			}
 			container.Width = CalculateHistoryWidth();
 			UpdateItemsPositions();
@@ -128,6 +137,9 @@ namespace Tangerine.UI.Timeline
 
 		private class DrawCallWidget : Widget
 		{
+			public static readonly string SpecialIdentifier = ",._";
+			public static readonly Regex SpecialIdRegex = new Regex(SpecialIdentifier, RegexOptions.Compiled);
+
 			public readonly DrawCallInfo DrawCallInfo;
 
 			private enum ColorPair
@@ -174,17 +186,17 @@ namespace Tangerine.UI.Timeline
 				Height = TimelineContainer.ItemHeight;
 				Visible = false;
 				HitTestTarget = true;
-				Id = "DrawCallWidget main";
+				Id = SpecialIdentifier;
 				Clicked += () => drawCallSelected?.Invoke(DrawCallInfo);
 				AddNode(new Widget {
 					Height = TimelineContainer.ItemHeight,
 					HitTestTarget = false,
-					Id = "DrawCallWidget first"
+					Id = SpecialIdentifier
 				});
 				AddNode(new Widget {
 					Height = TimelineContainer.ItemHeight,
 					HitTestTarget = false,
-					Id = "DrawCallWidget second"
+					Id = SpecialIdentifier
 				});
 				originalPresenterPair = GetColorTheme(drawCall);
 				DecorateWidget();

@@ -40,7 +40,13 @@ namespace Tangerine.UI.Timeline
 
 		public Action<CpuUsage> CpuUsageSelected;
 
-		public CpuUsageTimeline() { }
+		public CpuUsageTimeline()
+		{
+			Id = "CpuUsageTimeline";
+			container.Id = "CpuUsageTimeline Container";
+			horizontalScrollView.Id = "CpuUsageTimeline HorizontalScrollView";
+			verticalScrollView.Id = "CpuUsageTimeline VerticalScrollView";
+		}
 
 		public void Rebuild(CpuHistory.Item update)
 		{
@@ -49,7 +55,7 @@ namespace Tangerine.UI.Timeline
 			update.NodesResults.Sort(0, update.NodesResults.Count, new TimePeriodComparer<CpuUsage>());
 			for (int i = 0; i < update.NodesResults.Count; i++) {
 				var usage = update.NodesResults[i];
-				if (usage.Finish - usage.Start > 0) {
+				if (!CheckTargetNode(CpuUsageWidget.SpecialIdRegex, usage)) {
 					var widget = new CpuUsageWidget(usage, CpuUsageSelected);
 					widget.Visible = IsItemVisible(widget);
 					container.AddNode(widget);
@@ -73,7 +79,7 @@ namespace Tangerine.UI.Timeline
 			}
 			var period = new TimePeriod(usage.Start, usage.Start + length);
 			cpuUsageWidget.Position = AcquirePosition(period);
-			cpuUsageWidget.Width = length / MicrosecondsInPixel;
+			cpuUsageWidget.Width = Math.Max(1, length / MicrosecondsInPixel);
 		}
 
 		public static bool CheckTargetNode(Regex regex, CpuUsage cpuUsage)
@@ -91,6 +97,9 @@ namespace Tangerine.UI.Timeline
 
 		private class CpuUsageWidget : Widget
 		{
+			public static readonly string SpecialIdentifier = ",._";
+			public static readonly Regex SpecialIdRegex = new Regex(SpecialIdentifier, RegexOptions.Compiled);
+
 			public readonly CpuUsage CpuUsage;
 
 			private bool isSceneFilterPassed = true;
@@ -114,7 +123,7 @@ namespace Tangerine.UI.Timeline
 				Visible = false;
 				HitTestTarget = true;
 				Clicked += () => cpuUsageSelected?.Invoke(cpuUsage);
-				Id = "CpuUsageWidget";
+				Id = SpecialIdentifier;
 				Height = TimelineContainer.ItemHeight;
 				originalPresenter = GetColorTheme(cpuUsage);
 				DecorateWidget();

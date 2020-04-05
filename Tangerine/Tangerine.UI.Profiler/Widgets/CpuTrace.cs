@@ -17,6 +17,7 @@ namespace Tangerine.UI
 
 		public CpuTrace()
 		{
+			Id = "Profiler CpuTrace";
 			Layout = new VBoxLayout();
 			Anchors = Anchors.LeftRight;
 

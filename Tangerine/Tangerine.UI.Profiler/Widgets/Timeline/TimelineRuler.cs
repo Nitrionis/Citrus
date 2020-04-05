@@ -31,6 +31,7 @@ namespace Tangerine.UI.Timeline
 
 		public TimelineRuler(float smallStep, int smallStepsPerBig)
 		{
+			Id = "Profiler TimelineRuler";
 			SmallStep = smallStep;
 			SmallStepsPerBig = smallStepsPerBig;
 			Presenter = new RulerPresenter(this);

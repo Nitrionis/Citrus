@@ -24,6 +24,7 @@ namespace Tangerine.UI
 
 		public GpuTrace()
 		{
+			Id = "Profiler GpuTrace";
 			Layout = new VBoxLayout();
 			Anchors = Anchors.LeftRight;
 
