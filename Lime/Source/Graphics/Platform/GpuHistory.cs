@@ -3,7 +3,7 @@ using Yuzu;
 
 namespace Lime.Graphics.Platform
 {
-	public class ProfilerHistory
+	public class GpuHistory
 	{
 		/// <summary>
 		/// Frame statistics.
@@ -101,12 +101,12 @@ namespace Lime.Graphics.Platform
 			/// Stores the results of all draw calls.
 			/// </summary>
 			[YuzuRequired]
-			public List<ProfilingResult> DrawCalls;
+			public List<GpuUsage> DrawCalls;
 
 
 			public Item()
 			{
-				DrawCalls = new List<ProfilingResult>();
+				DrawCalls = new List<GpuUsage>();
 			}
 
 			public Item Reset()
@@ -176,7 +176,7 @@ namespace Lime.Graphics.Platform
 		private Item freeItem;
 		private long protectedIndex;
 
-		public ProfilerHistory()
+		public GpuHistory()
 		{
 			items = new Item[HistoryFramesCount];
 			for (int i = 0; i < items.Length; i++) {

@@ -1,6 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 using Lime;
+using Lime.Graphics.Platform;
 using Lime.Profilers;
 
 namespace Tangerine.UI.Timeline
@@ -42,10 +43,11 @@ namespace Tangerine.UI.Timeline
 
 		public CpuUsageTimeline()
 		{
-			Id = "CpuUsageTimeline";
-			container.Id = "CpuUsageTimeline Container";
-			horizontalScrollView.Id = "CpuUsageTimeline HorizontalScrollView";
-			verticalScrollView.Id = "CpuUsageTimeline VerticalScrollView";
+			Id = "CPU Timeline";
+			container.Id = "CPU Timeline Container";
+			verticalScrollView.Id = "CPU Timeline VerticalScrollView";
+			horizontalScrollView.Id = "CPU Timeline HorizontalScrollView";
+			ruler.Id = "CPU TimelineRuler";
 		}
 
 		public void Rebuild(CpuHistory.Item update)
@@ -53,6 +55,14 @@ namespace Tangerine.UI.Timeline
 			lastUpdate = update;
 			ResetContainer();
 			update.NodesResults.Sort(0, update.NodesResults.Count, new TimePeriodComparer<CpuUsage>());
+			//container.AddNode(new CpuUsageWidget(
+			//	new CpuUsage() {
+			//		Start = 0,
+			//		Finish = 1000,
+			//		Owner = null,
+			//		Reasons = CpuUsage.UsageReasons.Update
+			//	},
+			//	CpuUsageSelected));
 			for (int i = 0; i < update.NodesResults.Count; i++) {
 				var usage = update.NodesResults[i];
 				if (!CheckTargetNode(CpuUsageWidget.SpecialIdRegex, usage)) {
@@ -107,15 +117,20 @@ namespace Tangerine.UI.Timeline
 
 			private IPresenter originalPresenter;
 
-			private static readonly IPresenter[] presenters = new IPresenter[] {
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageUnselected),
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageAnimation),
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageUpdate),
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageGesture),
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageRenderPreparation),
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageRender),
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageOwnerUnknown)
-			};
+			private static readonly IPresenter unselectedPresenter =
+				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageUnselected);
+			private static readonly IPresenter animationPresenter =
+				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageAnimation);
+			private static readonly IPresenter updatePresenter =
+				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageUpdate);
+			private static readonly IPresenter gesturePresenter =
+				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageGesture);
+			private static readonly IPresenter preparationPresenter =
+				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageRenderPreparation);
+			private static readonly IPresenter nodeRenderPresenter =
+				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageNodeRender);
+			private static readonly IPresenter ownerUnknownPresenter =
+				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageOwnerUnknown);
 
 			public CpuUsageWidget(CpuUsage cpuUsage, Action<CpuUsage> cpuUsageSelected)
 			{
@@ -142,21 +157,22 @@ namespace Tangerine.UI.Timeline
 			}
 
 			private void DecorateWidget() =>
-				Presenter = isSceneFilterPassed && isContainsTargetNode ? originalPresenter : presenters[0];
+				Presenter = isSceneFilterPassed && isContainsTargetNode ? originalPresenter : unselectedPresenter;
 
 			private static IPresenter GetColorTheme(CpuUsage cpuUsage)
 			{
-				if (cpuUsage.Owner != null) {
-					switch (cpuUsage.Reason) {
-						case CpuUsage.UsageReason.Animation:          return presenters[1];
-						case CpuUsage.UsageReason.Update:             return presenters[2];
-						case CpuUsage.UsageReason.Gesture:            return presenters[3];
-						case CpuUsage.UsageReason.RenderPreparation:  return presenters[4];
-						case CpuUsage.UsageReason.Render:             return presenters[5];
+				if (cpuUsage.Owner != null || (cpuUsage.Reasons & CpuUsage.UsageReasons.NoOwnerFlag) != 0) {
+					switch (cpuUsage.Reasons) {
+						case CpuUsage.UsageReasons.Animation:          return animationPresenter;
+						case CpuUsage.UsageReasons.Update:             return updatePresenter;
+						case CpuUsage.UsageReasons.Gesture:            return gesturePresenter;
+						case CpuUsage.UsageReasons.RenderPreparation:  return preparationPresenter;
+						case CpuUsage.UsageReasons.NodeRender:         return nodeRenderPresenter;
+						case CpuUsage.UsageReasons.BatchRender:        return nodeRenderPresenter;
 						default: throw new NotImplementedException();
 					}
 				} else {
-					return presenters[6];
+					return ownerUnknownPresenter;
 				}
 			}
 		}

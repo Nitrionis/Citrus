@@ -48,8 +48,8 @@ namespace Lime.Graphics.Platform
 		void Draw(int startVertex, int vertexCount);
 		void DrawIndexed(int startIndex, int indexCount, int baseVertex);
 #else
-		void Draw(int startVertex, int vertexCount, ProfilingInfo profilingInfo);
-		void DrawIndexed(int startIndex, int indexCount, int baseVertex, ProfilingInfo profilingInfo);
+		void Draw(int startVertex, int vertexCount, GpuCallInfo profilingInfo);
+		void DrawIndexed(int startIndex, int indexCount, int baseVertex, GpuCallInfo profilingInfo);
 #endif
 		byte[] GetPipelineCacheData();
 		bool SetPipelineCacheData(byte[] data);

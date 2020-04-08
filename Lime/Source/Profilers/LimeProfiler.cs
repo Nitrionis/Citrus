@@ -2,8 +2,8 @@ using System;
 using System.Threading;
 using Lime.Profilers.Contexts;
 using ProfilerContext = Lime.Profilers.Contexts.Context;
-using GpuHistory = Lime.Graphics.Platform.ProfilerHistory;
-using GpuProfiler = Lime.Graphics.Platform.PlatformProfiler;
+using GpuHistory = Lime.Graphics.Platform.GpuHistory;
+using GpuProfiler = Lime.Graphics.Platform.RenderGpuProfiler;
 
 namespace Lime.Profilers
 {

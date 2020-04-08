@@ -1,4 +1,4 @@
-using GpuHistory = Lime.Graphics.Platform.ProfilerHistory;
+using GpuHistory = Lime.Graphics.Platform.GpuHistory;
 
 namespace Lime.Profilers.Contexts
 {

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Lime.Graphics.Platform;
 using Lime.Profilers;
 
 namespace Lime
@@ -70,7 +71,7 @@ namespace Lime
 				for (var j = layer.Count - 1; j >= 0; j--) {
 					var item = layer[j];
 #if LIME_PROFILER
-					var usage = CpuProfiler.NodeCpuUsageStarted(item.Node, CpuUsage.UsageReason.RenderPreparation);
+					var usage = CpuProfiler.NodeCpuUsageStarted(item.Node, CpuUsage.UsageReasons.RenderPreparation);
 #endif
 					var ro = item.Presenter.GetRenderObject(item.Node);
 #if LIME_PROFILER

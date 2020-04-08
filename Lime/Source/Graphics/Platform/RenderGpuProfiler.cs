@@ -3,9 +3,9 @@ using System.Runtime.CompilerServices;
 
 namespace Lime.Graphics.Platform
 {
-	internal abstract class PlatformProfiler : ProfilerHistory
+	internal abstract class RenderGpuProfiler : GpuHistory
 	{
-		public static PlatformProfiler Instance { get; private set; }
+		public static RenderGpuProfiler Instance { get; private set; }
 
 		/// <summary>
 		/// Use to send a signal that the frame has been sent to the GPU.
@@ -42,7 +42,7 @@ namespace Lime.Graphics.Platform
 			set => isSceneOnlyDeepProfilingRequired = value;
 		}
 
-		protected ProfilerHistory.Item resultsBuffer;
+		protected GpuHistory.Item resultsBuffer;
 
 		/// <summary>
 		/// Profiler processes only the main window.
@@ -51,7 +51,7 @@ namespace Lime.Graphics.Platform
 
 		protected int maxDrawCallsCount { get; private set; } = DrawCallBufferStartSize;
 
-		protected PlatformProfiler()
+		protected RenderGpuProfiler()
 		{
 			if (Instance != null) {
 				throw new InvalidOperationException();

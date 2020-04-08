@@ -29,7 +29,7 @@ namespace Lime.Graphics.Platform.Vulkan
 		private ulong lastCompletedFenceValue;
 		private Swapchain swapchain;
 		private Scheduler scheduler;
-		private PlatformProfiler profiler;
+		private RenderGpuProfiler profiler;
 		private SharpVulkan.RenderPass activeRenderPass;
 		private SharpVulkan.Format activeColorFormat;
 		private SharpVulkan.Format activeDepthStencilFormat;
@@ -119,7 +119,7 @@ namespace Lime.Graphics.Platform.Vulkan
 			placeholderTexture.SetData(0, new[] { Color4.Black });
 			ResetState();
 #if LIME_PROFILER
-			profiler = new PlatformProfiler(device, physicalDeviceLimits, physicalDevice.QueueFamilyProperties[queueFamilyIndex]);
+			profiler = new RenderGpuProfiler(device, physicalDeviceLimits, physicalDevice.QueueFamilyProperties[queueFamilyIndex]);
 #endif
 		}
 
@@ -437,7 +437,7 @@ namespace Lime.Graphics.Platform.Vulkan
 			commandBuffer.DrawIndexed((uint)indexCount, 1, (uint)startIndex, baseVertex, 0);
 		}
 #else
-		public void Draw(int startVertex, int vertexCount, ProfilingInfo profilingInfo)
+		public void Draw(int startVertex, int vertexCount, GpuCallInfo profilingInfo)
 		{
 			profiler.DrawCallStart(profilingInfo, vertexCount, primitiveTopology);
 			PreDraw();
@@ -445,7 +445,7 @@ namespace Lime.Graphics.Platform.Vulkan
 			profiler.DrawCallEnd();
 		}
 
-		public void DrawIndexed(int startIndex, int indexCount, int baseVertex, ProfilingInfo profilingInfo)
+		public void DrawIndexed(int startIndex, int indexCount, int baseVertex, GpuCallInfo profilingInfo)
 		{
 			profiler.DrawCallStart(profilingInfo, indexCount, primitiveTopology);
 			PreDraw();
@@ -980,7 +980,7 @@ namespace Lime.Graphics.Platform.Vulkan
 #if !LIME_PROFILER
 				Draw(0, clearVertices.Length);
 #else
-				Draw(0, clearVertices.Length, ProfilingInfo.Acquire(ProfilingInfo.ClearMaterial.Instance));
+				Draw(0, clearVertices.Length, GpuCallInfo.Acquire(GpuCallInfo.ClearMaterial.Instance));
 #endif
 			} finally {
 				SetViewport(oldViewport);

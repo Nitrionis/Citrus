@@ -66,7 +66,7 @@ namespace Lime
 				0 : (drawCallsOwners.Count - 1) * Material.PassCount;
 			FullSavedByBatching += savedByBatching;
 			SceneSavedByBatching += isPartOfScene ? savedByBatching : 0;
-			var profilingInfo = ProfilingInfo.Acquire(drawCallsOwners, isPartOfScene, Material, 0);
+			var profilingInfo = GpuCallInfo.Acquire(drawCallsOwners, isPartOfScene, Material, 0);
 #endif
 			PlatformRenderer.SetTexture(0, Texture1);
 			PlatformRenderer.SetTexture(1, Texture2);

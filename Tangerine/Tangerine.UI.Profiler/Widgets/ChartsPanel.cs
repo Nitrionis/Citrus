@@ -2,7 +2,7 @@ using System;
 using Lime;
 using Lime.Widgets.Charts;
 using Lime.Profilers;
-using GpuHistory = Lime.Graphics.Platform.ProfilerHistory;
+using GpuHistory = Lime.Graphics.Platform.GpuHistory;
 
 namespace Tangerine.UI
 {
@@ -30,6 +30,8 @@ namespace Tangerine.UI
 
 		public ChartsPanel()
 		{
+			Id = "ChartsPanel";
+
 			var colors = new Color4[] {
 				ColorTheme.Current.Profiler.ChartOne,
 				ColorTheme.Current.Profiler.ChartTwo,
@@ -52,6 +54,7 @@ namespace Tangerine.UI
 				SliceSelected = OnSliceSelected
 			};
 			CpuCharts = new AreaReplaceableCharts(parameters) {
+				Id = "CPU Charts",
 				BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground
 			};
 			var targetWidth = (parameters.ControlPointsCount - 1) * parameters.ControlPointsSpacing;
@@ -82,6 +85,7 @@ namespace Tangerine.UI
 				SliceSelected = OnSliceSelected
 			};
 			GpuCharts = new AreaReplaceableCharts(parameters) {
+				Id = "GPU Charts",
 				BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground
 			};
 			GpuCharts.SetLine(0, new Vector2(0, 1), new Vector2(targetWidth, 1), 10, "10 ms");
@@ -103,6 +107,7 @@ namespace Tangerine.UI
 				SliceSelected = OnSliceSelected
 			};
 			LineCharts = new LineCharts((LineCharts.Parameters)parameters) {
+				Id = "GPU LineCharts",
 				BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground
 			};
 			LineCharts.CustomChartScales[0] = 1.0f;

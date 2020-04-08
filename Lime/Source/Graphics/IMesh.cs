@@ -1,6 +1,6 @@
 using System;
 using Yuzu;
-using ProfilingInfo = Lime.Graphics.Platform.ProfilingInfo;
+using GpuCallInfo = Lime.Graphics.Platform.GpuCallInfo;
 
 namespace Lime
 {
@@ -11,8 +11,8 @@ namespace Lime
 		void Draw(int startVertex, int vertexCount);
 		void DrawIndexed(int startIndex, int indexCount, int baseVertex = 0);
 #else
-		void Draw(int startVertex, int vertexCount, ProfilingInfo profilingInfo);
-		void DrawIndexed(int startIndex, int indexCount, int baseVertex, ProfilingInfo profilingInfo);
+		void Draw(int startVertex, int vertexCount, GpuCallInfo profilingInfo);
+		void DrawIndexed(int startIndex, int indexCount, int baseVertex, GpuCallInfo profilingInfo);
 #endif
 	}
 

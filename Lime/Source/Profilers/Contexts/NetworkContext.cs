@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using IPEndPoint = System.Net.IPEndPoint;
 using Lime.Graphics.Platform;
-using GpuHistory = Lime.Graphics.Platform.ProfilerHistory;
+using GpuHistory = Lime.Graphics.Platform.GpuHistory;
 using Yuzu;
 
 namespace Lime.Profilers.Contexts
@@ -93,7 +93,7 @@ namespace Lime.Profilers.Contexts
 			public long FrameIndex;
 
 			[YuzuMember]
-			public List<ProfilingResult> DrawCalls;
+			public List<GpuUsage> DrawCalls;
 		}
 
 		protected class Statistics : Message

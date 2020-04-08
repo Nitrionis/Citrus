@@ -1,27 +1,37 @@
+using System;
 using System.Collections.Generic;
+using Lime.Profilers;
 using Yuzu;
 
-namespace Lime.Profilers
+namespace Lime.Graphics.Platform
 {
 	public class CpuUsage : ITimePeriod
 	{
 		private static Stack<CpuUsage> updatePool = new Stack<CpuUsage>();
 		private static Stack<CpuUsage> renderPool = new Stack<CpuUsage>();
 
-		public enum UsageReason
+		/// <remarks>
+		/// Order is important!
+		/// </remarks>
+		[Flags]
+		public enum UsageReasons : int
 		{
-			Animation,
-			Update,
-			Gesture,
-			RenderPreparation,
-			Render
+			NoOwnerFlag       = 1 << 0,
+			UpdateThreadFlag  = 1 << 1,
+			RenderThreadFlag  = 1 << 2,
+			Animation         = 1 << 3 | UpdateThreadFlag,
+			Update            = 1 << 4 | UpdateThreadFlag,
+			Gesture           = 1 << 5 | UpdateThreadFlag,
+			RenderPreparation = 1 << 6 | UpdateThreadFlag,
+			NodeRender        = 1 << 7 | RenderThreadFlag,
+			BatchRender       = 1 << 8 | RenderThreadFlag | NoOwnerFlag,
 		}
 
 		/// <summary>
 		/// Reason for using a processor.
 		/// </summary>
 		[YuzuRequired]
-		public UsageReason Reason;
+		public UsageReasons Reasons;
 
 		/// <summary>
 		/// <list type="bullet">
@@ -51,25 +61,24 @@ namespace Lime.Profilers
 		public uint Finish { get; set; }
 
 		/// <summary>
-		/// Not fully thread safe.
+		/// Acquire CpuUsage from a pool. Not fully thread safe.
 		/// </summary>
-		public static CpuUsage Acquire(UsageReason reason)
+		public static CpuUsage Acquire(UsageReasons reason)
 		{
-			// Rendering thread can run in parallel with update thread.
-			if (reason == UsageReason.Render) {
-				return renderPool.Count > 0 ? renderPool.Pop() : new CpuUsage();
-			} else {
-				return updatePool.Count > 0 ? updatePool.Pop() : new CpuUsage();
-			}
+			var usage = ((reason & UsageReasons.RenderThreadFlag) != 0)
+				? renderPool.Count > 0 ? renderPool.Pop() : new CpuUsage()
+				: updatePool.Count > 0 ? updatePool.Pop() : new CpuUsage();
+			usage.Reasons = reason;
+			return usage;
 		}
 
 		/// <summary>
-		/// Not fully thread safe.
+		/// Puts CpuUsage in the corresponding pool for reuse. Not fully thread safe.
 		/// </summary>
 		public void Free()
 		{
 			Owner = null;
-			if (Reason == UsageReason.Render) {
+			if ((Reasons & UsageReasons.RenderThreadFlag) != 0) {
 				renderPool.Push(this);
 			} else {
 				updatePool.Push(this);

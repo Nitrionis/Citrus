@@ -4,16 +4,16 @@ using Lime.Profilers;
 
 namespace Lime.Graphics.Platform
 {
-	public class ProfilingResult : ITimePeriod
+	public class GpuUsage : ITimePeriod
 	{
-		private static readonly Stack<ProfilingResult> freeInstances = new Stack<ProfilingResult>();
+		private static readonly Stack<GpuUsage> freeInstances = new Stack<GpuUsage>();
 
 		public uint Start => StartTime;
 
 		public uint Finish => FinishTime;
 
 		[YuzuRequired]
-		public ProfilingInfo ProfilingInfo;
+		public GpuCallInfo GpuCallInfo;
 
 		/// <summary>
 		/// Render Pass index of the material.
@@ -65,14 +65,14 @@ namespace Lime.Graphics.Platform
 		[YuzuRequired]
 		public uint FinishTime;
 
-		public ProfilingResult() { }
+		public GpuUsage() { }
 
-		public static ProfilingResult Acquire() =>
-			freeInstances.Count > 0 ? freeInstances.Pop() : new ProfilingResult();
+		public static GpuUsage Acquire() =>
+			freeInstances.Count > 0 ? freeInstances.Pop() : new GpuUsage();
 
 		public void Free()
 		{
-			ProfilingInfo?.Free();
+			GpuCallInfo?.Free();
 			freeInstances.Push(this);
 		}
 	}

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Yuzu;
-using ProfilingInfo = Lime.Graphics.Platform.ProfilingInfo;
+using GpuCallInfo = Lime.Graphics.Platform.GpuCallInfo;
 
 namespace Lime
 {
@@ -366,7 +366,7 @@ namespace Lime
 			public override void Render()
 			{
 #if LIME_PROFILER
-				var profilingInfo = ProfilingInfo.Acquire();
+				var profilingInfo = GpuCallInfo.Acquire();
 #endif
 				Renderer.PushState(
 					RenderState.World |

@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Lime;
-using DrawCallInfo = Lime.Graphics.Platform.ProfilingResult;
+using DrawCallInfo = Lime.Graphics.Platform.GpuUsage;
 using Tangerine.UI.Timeline;
 
 namespace Tangerine.UI
@@ -90,7 +90,7 @@ namespace Tangerine.UI
 		{
 			string ownersText = "Owners";
 			ownersList.Items.Clear();
-			var pi = drawCall.ProfilingInfo;
+			var pi = drawCall.GpuCallInfo;
 			if (pi.Owners != null) {
 				if (pi.Owners is IList list) {
 					int ownersCount = 0;

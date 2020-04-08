@@ -7,7 +7,7 @@ namespace Tangerine.UI.Timeline
 		/// <summary>
 		/// Use to scale.
 		/// </summary>
-		public float RulerScale = 1.0f; // todo
+		public float RulerScale = 1.0f;
 
 		/// <summary>
 		/// Pixel spacing for small marks for <see cref="RulerScale"/> = 1.0
@@ -31,7 +31,6 @@ namespace Tangerine.UI.Timeline
 
 		public TimelineRuler(float smallStep, int smallStepsPerBig)
 		{
-			Id = "Profiler TimelineRuler";
 			SmallStep = smallStep;
 			SmallStepsPerBig = smallStepsPerBig;
 			Presenter = new RulerPresenter(this);

@@ -13,7 +13,7 @@ namespace Lime.Profilers.Contexts
 
 		public IPEndPoint LocalEndpoint => (IPEndPoint)server.Listener.LocalEndpoint;
 
-		private class SparsedGpuHistory : Graphics.Platform.ProfilerHistory
+		private class SparsedGpuHistory : Graphics.Platform.GpuHistory
 		{
 			public void Enqueue(Item item)
 			{

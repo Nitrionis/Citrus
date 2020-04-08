@@ -276,7 +276,7 @@ namespace Lime.Widgets.Charts
 					var material = Charts.material;
 					material.Matrix = Renderer.FixupWVP((Matrix44)LocalToWorldTransform * Renderer.ViewProjection);
 					material.Apply(0);
-					var profilingInfo = ProfilingInfo.Acquire(material, 0);
+					var profilingInfo = GpuCallInfo.Acquire(material, 0);
 					var mesh = Charts.mesh;
 					mesh.Topology = PrimitiveTopology.TriangleStrip;
 #if LIME_PROFILER

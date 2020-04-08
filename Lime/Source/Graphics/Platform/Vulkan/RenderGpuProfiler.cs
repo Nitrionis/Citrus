@@ -4,9 +4,9 @@ using System.Collections.Generic;
 namespace Lime.Graphics.Platform.Vulkan
 {
 	/// <summary>
-	/// PlatformProfiler implementation for Vulkan.
+	/// RenderGpuProfiler implementation for Vulkan.
 	/// </summary>
-	internal unsafe class PlatformProfiler : Platform.PlatformProfiler
+	internal unsafe class RenderGpuProfiler : Platform.RenderGpuProfiler
 	{
 		/// <summary>
 		/// Reserved place for the start and end timestamp of the frame.
@@ -57,7 +57,7 @@ namespace Lime.Graphics.Platform.Vulkan
 
 		private bool isDrawCallDeepProfilingStarted;
 
-		public PlatformProfiler(
+		public RenderGpuProfiler(
 				SharpVulkan.Device device,
 				SharpVulkan.PhysicalDeviceLimits limits,
 				SharpVulkan.QueueFamilyProperties queueFamilyProperties
@@ -134,7 +134,7 @@ namespace Lime.Graphics.Platform.Vulkan
 			}
 		}
 
-		public void DrawCallStart(ProfilingInfo profilingInfo, int vertexCount, PrimitiveTopology topology)
+		public void DrawCallStart(GpuCallInfo profilingInfo, int vertexCount, PrimitiveTopology topology)
 		{
 			if (isProfilingEnabled) {
 				resultsBuffer.FullVerticesCount += vertexCount;
@@ -150,8 +150,8 @@ namespace Lime.Graphics.Platform.Vulkan
 					(!isSceneOnlyDeepProfiling || profilingInfo.IsPartOfScene) &&
 					nextTimestampIndex < timestamps.Length - TimestampsPerDrawCall;
 				if (isDrawCallDeepProfilingStarted) {
-					var profilingResult = ProfilingResult.Acquire();
-					profilingResult.ProfilingInfo = profilingInfo;
+					var profilingResult = GpuUsage.Acquire();
+					profilingResult.GpuCallInfo = profilingInfo;
 					profilingResult.VerticesCount = vertexCount;
 					profilingResult.TrianglesCount = trianglesCount;
 					profilingResult.RenderPassIndex = profilingInfo.CurrentRenderPassIndex;
@@ -209,7 +209,7 @@ namespace Lime.Graphics.Platform.Vulkan
 						var dc = frame.DrawCalls[i];
 						bool isContainsRenderingTime =
 							!frame.IsSceneOnlyDeepProfiling ||
-							dc.ProfilingInfo.IsPartOfScene;
+							dc.GpuCallInfo.IsPartOfScene;
 						if (isContainsRenderingTime) {
 							dc.StartTime = CalculateDeltaTime(timestamps[0], timestamps[t++]);
 							dc.AllPreviousFinishTime = CalculateDeltaTime(timestamps[0], timestamps[t++]);

@@ -1,11 +1,9 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Lime;
-using Lime.Profilers;
-using DrawCallInfo = Lime.Graphics.Platform.ProfilingResult;
-using Frame = Lime.Graphics.Platform.ProfilerHistory.Item;
+using DrawCallInfo = Lime.Graphics.Platform.GpuUsage;
+using Frame = Lime.Graphics.Platform.GpuHistory.Item;
 
 namespace Tangerine.UI.Timeline
 {
@@ -46,10 +44,11 @@ namespace Tangerine.UI.Timeline
 
 		public DrawCallsTimeline()
 		{
-			Id = "DrawCallsTimeline";
-			container.Id = "DrawCallsTimeline Container";
-			horizontalScrollView.Id = "DrawCallsTimeline HorizontalScrollView";
-			verticalScrollView.Id = "DrawCallsTimeline VerticalScrollView";
+			Id = "GPU Timeline";
+			container.Id = "GPU Timeline Container";
+			verticalScrollView.Id = "GPU Timeline VerticalScrollView";
+			horizontalScrollView.Id = "GPU Timeline HorizontalScrollView";
+			ruler.Id = "GPU TimelineRuler";
 		}
 
 		public void Rebuild(Frame frame)
@@ -110,7 +109,7 @@ namespace Tangerine.UI.Timeline
 			if (regex == null) {
 				return true;
 			}
-			var pi = drawCallInfo.ProfilingInfo;
+			var pi = drawCallInfo.GpuCallInfo;
 			if (pi.Owners is IList list) {
 				foreach (var item in list) {
 					if (item != null) {
@@ -210,7 +209,7 @@ namespace Tangerine.UI.Timeline
 
 			public void SceneFilterChanged(bool value)
 			{
-				var pi = DrawCallInfo.ProfilingInfo;
+				var pi = DrawCallInfo.GpuCallInfo;
 				isSceneFilterPassed = !value || pi.IsPartOfScene;
 				DecorateWidget();
 			}
@@ -226,7 +225,7 @@ namespace Tangerine.UI.Timeline
 			private static PresenterPair GetColorTheme(DrawCallInfo drawCall)
 			{
 				var presenterPair = presenters[(int)ColorPair.Unknown];
-				var pi = drawCall.ProfilingInfo;
+				var pi = drawCall.GpuCallInfo;
 				if (pi.Owners != null) {
 					if (pi.IsPartOfScene) {
 						presenterPair = presenters[(int)ColorPair.Scene];

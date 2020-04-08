@@ -1,5 +1,5 @@
 using Lime;
-using Lime.Profilers;
+using Lime.Graphics.Platform;
 using Tangerine.UI.Timeline;
 
 namespace Tangerine.UI
@@ -61,7 +61,7 @@ namespace Tangerine.UI
 
 		private void OnCpuUsageSelected(CpuUsage usage)
 		{
-			usageReasonLabel.Text = usage.Reason.ToString();
+			usageReasonLabel.Text = usage.Reasons.ToString();
 			updateTimeLabel.Text = string.Format("{0} ms", (usage.Finish - usage.Start) / 1000f);
 			if (usage.Owner is Node node) {
 				ownerLabel.Text = node.Id ?? "Node id unset";

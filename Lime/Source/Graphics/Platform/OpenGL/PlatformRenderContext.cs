@@ -32,7 +32,7 @@ namespace Lime.Graphics.Platform.OpenGL
 		private int indexOffset;
 		private IndexFormat indexFormat;
 		private PlatformRenderTexture2D renderTarget;
-		private PlatformProfiler profiler;
+		private RenderGpuProfiler profiler;
 
 		private bool blendStateDirty;
 		private bool depthStateDirty;
@@ -87,7 +87,7 @@ namespace Lime.Graphics.Platform.OpenGL
 			vertexBuffers = new PlatformBuffer[MaxVertexBufferSlots];
 			vertexOffsets = new int[MaxVertexBufferSlots];
 #if LIME_PROFILER
-			profiler = new PlatformProfiler();
+			profiler = new RenderGpuProfiler();
 #endif
 		}
 
@@ -391,7 +391,7 @@ namespace Lime.Graphics.Platform.OpenGL
 			GLHelper.CheckGLErrors();
 		}
 #else
-		public void Draw(int startVertex, int vertexCount, ProfilingInfo profilingInfo)
+		public void Draw(int startVertex, int vertexCount, GpuCallInfo profilingInfo)
 		{
 			profiler.DrawCall(profilingInfo, vertexCount, primitiveTopology);
 			PreDraw(0);
@@ -399,7 +399,7 @@ namespace Lime.Graphics.Platform.OpenGL
 			GLHelper.CheckGLErrors();
 		}
 
-		public void DrawIndexed(int startIndex, int indexCount, int baseVertex, ProfilingInfo profilingInfo)
+		public void DrawIndexed(int startIndex, int indexCount, int baseVertex, GpuCallInfo profilingInfo)
 		{
 			profiler.DrawCall(profilingInfo, indexCount, primitiveTopology);
 			PreDraw(baseVertex);

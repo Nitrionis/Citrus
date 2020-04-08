@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Collections;
-using GpuHistory = Lime.Graphics.Platform.ProfilerHistory;
-using GpuProfiler = Lime.Graphics.Platform.PlatformProfiler;
+using GpuHistory = Lime.Graphics.Platform.GpuHistory;
+using GpuProfiler = Lime.Graphics.Platform.RenderGpuProfiler;
 using Lime.Graphics.Platform;
 using Yuzu;
 
@@ -84,7 +84,7 @@ namespace Lime.Profilers.Contexts
 							Response         = ProcessRequest()
 						};
 						if (frame != null) {
-							frame.DrawCalls = new List<ProfilingResult>();
+							frame.DrawCalls = new List<GpuUsage>();
 						}
 						update.NodesResults = new List<CpuUsage>();
 						client.LazySerializeAndSend(statistics);
@@ -205,7 +205,7 @@ namespace Lime.Profilers.Contexts
 		private class StatisticsWrapper : Statistics
 		{
 			public List<CpuUsage> NativeCpuUsages;
-			public List<ProfilingResult> NativeDrawCalls;
+			public List<GpuUsage> NativeDrawCalls;
 
 			public Action<StatisticsWrapper> Serialized;
 
@@ -218,13 +218,13 @@ namespace Lime.Profilers.Contexts
 						Frame.DrawCalls.Capacity = NativeDrawCalls.Count;
 					}
 					foreach (var drawCall in NativeDrawCalls) {
-						var pi = drawCall.ProfilingInfo;
-						var piCopy = MemoryManager<ProfilingInfo>.Acquire();
+						var pi = drawCall.GpuCallInfo;
+						var piCopy = MemoryManager<GpuCallInfo>.Acquire();
 						piCopy.IsPartOfScene  = pi.IsPartOfScene;
 						piCopy.Material       = pi.Material.GetType().Name;
 						piCopy.Owners         = ConvertOwnersToText(pi.Owners);
-						var prCopy = MemoryManager<ProfilingResult>.Acquire();
-						prCopy.ProfilingInfo          = piCopy;
+						var prCopy = MemoryManager<GpuUsage>.Acquire();
+						prCopy.GpuCallInfo          = piCopy;
 						prCopy.RenderPassIndex        = drawCall.RenderPassIndex;
 						prCopy.StartTime              = drawCall.StartTime;
 						prCopy.AllPreviousFinishTime  = drawCall.AllPreviousFinishTime;
@@ -238,7 +238,7 @@ namespace Lime.Profilers.Contexts
 					Update.NodesResults.Capacity = NativeCpuUsages.Count;
 					foreach (var usage in NativeCpuUsages) {
 						var usageCopy = MemoryManager<CpuUsage>.Acquire();
-						usageCopy.Reason         = usage.Reason;
+						usageCopy.Reasons         = usage.Reasons;
 						usageCopy.Owner          = ((Node)usage.Owner).Id ?? "Node id unset";
 						usageCopy.IsPartOfScene  = usage.IsPartOfScene;
 						usageCopy.Start          = usage.Start;
@@ -254,8 +254,8 @@ namespace Lime.Profilers.Contexts
 			{
 				if (Frame != null) {
 					foreach (var drawCall in Frame.DrawCalls) {
-						MemoryManager<ProfilingInfo>.Free(drawCall.ProfilingInfo);
-						MemoryManager<ProfilingResult>.Free(drawCall);
+						MemoryManager<GpuCallInfo>.Free(drawCall.GpuCallInfo);
+						MemoryManager<GpuUsage>.Free(drawCall);
 					}
 				}
 				if (Update != null) {

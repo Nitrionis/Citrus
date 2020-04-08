@@ -2,16 +2,16 @@
 namespace Lime.Graphics.Platform.OpenGL
 {
 	/// <summary>
-	/// PlatformProfiler implementation for OpenGL.
+	/// RenderGpuProfiler implementation for OpenGL.
 	/// </summary>
 	/// <remarks>
 	/// Unable to get render call detail for OpenGL ES 2.0.
 	/// </remarks>
-	internal class PlatformProfiler : Platform.PlatformProfiler
+	internal class RenderGpuProfiler : Platform.RenderGpuProfiler
 	{
 		public override bool IsDeepProfiling { get => false; set { } }
 
-		public void DrawCall(ProfilingInfo profilingInfo, int vertexCount, PrimitiveTopology topology)
+		public void DrawCall(GpuCallInfo profilingInfo, int vertexCount, PrimitiveTopology topology)
 		{
 			if (isProfilingEnabled) {
 				resultsBuffer.FullVerticesCount += vertexCount;

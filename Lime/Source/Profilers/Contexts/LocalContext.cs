@@ -1,4 +1,4 @@
-using GpuProfiler = Lime.Graphics.Platform.PlatformProfiler;
+using GpuProfiler = Lime.Graphics.Platform.RenderGpuProfiler;
 
 namespace Lime.Profilers.Contexts
 {

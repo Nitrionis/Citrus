@@ -288,6 +288,7 @@
     <Compile Include="Source\Graphics\OgvDecoder.cs" />
     <Compile Include="Source\Graphics\OpacityMask.cs" />
     <Compile Include="Source\Graphics\PlatformRenderer.cs" />
+    <Compile Include="Source\Graphics\Platform\CpuUsage.cs" />
     <Compile Include="Source\Graphics\Platform\IPlatformBuffer.cs" />
     <Compile Include="Source\Graphics\Platform\IPlatformRenderContext.cs" />
     <Compile Include="Source\Graphics\Platform\IPlatformRenderTexture2D.cs" />
@@ -301,15 +302,16 @@
     <Compile Include="Source\Graphics\Platform\OpenGL\ES20Functions.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\GLHelper.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\PlatformBuffer.cs" />
-    <Compile Include="Source\Graphics\Platform\OpenGL\PlatformProfiler.cs" />
+    <Compile Include="Source\Graphics\Platform\OpenGL\RenderGpuProfiler.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\PlatformRenderContext.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\PlatformRenderTexture2D.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\PlatformShader.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\PlatformShaderProgram.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\PlatformTexture2D.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\PlatformVertexInputLayout.cs" />
-    <Compile Include="Source\Graphics\Platform\PlatformProfiler.cs" />
-    <Compile Include="Source\Graphics\Platform\ProfilerHistory.cs" />
+    <Compile Include="Source\Graphics\Platform\RenderCpuProfiler.cs" />
+    <Compile Include="Source\Graphics\Platform\RenderGpuProfiler.cs" />
+    <Compile Include="Source\Graphics\Platform\GpuHistory.cs" />
     <Compile Include="Source\Graphics\Platform\RenderBatchProfiler.cs" />
     <Compile Include="Source\Graphics\Platform\RenderObjectOwnersInfo.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\BackingBuffer.cs" />
@@ -318,7 +320,7 @@
     <Compile Include="Source\Graphics\Platform\Vulkan\MemoryAllocator.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\PipelineCache.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\PlatformBuffer.cs" />
-    <Compile Include="Source\Graphics\Platform\Vulkan\PlatformProfiler.cs" />
+    <Compile Include="Source\Graphics\Platform\Vulkan\RenderGpuProfiler.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\PlatformRenderContext.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\PlatformRenderTexture2D.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\PlatformShader.cs" />
@@ -371,8 +373,8 @@
     <Compile Include="Source\Optimizations\RenderOptimizerHelpers.cs" />
     <Compile Include="Source\Optimizations\ViewProjector.cs" />
     <Compile Include="Source\Persistence.cs" />
-    <Compile Include="Source\Graphics\Platform\ProfilingInfo.cs" />
-    <Compile Include="Source\Graphics\Platform\ProfilingResult.cs" />
+    <Compile Include="Source\Graphics\Platform\GpuCallInfo.cs" />
+    <Compile Include="Source\Graphics\Platform\GpuUsage.cs" />
     <Compile Include="Source\Profilers\Contexts\ClientContext.cs" />
     <Compile Include="Source\Profilers\Contexts\Context.cs" />
     <Compile Include="Source\Profilers\Contexts\LocalContext.cs" />
@@ -380,7 +382,6 @@
     <Compile Include="Source\Profilers\Contexts\ServerContext.cs" />
     <Compile Include="Source\Profilers\CpuHistory.cs" />
     <Compile Include="Source\Profilers\CpuProfiler.cs" />
-    <Compile Include="Source\Profilers\CpuUsage.cs" />
     <Compile Include="Source\Profilers\ITimePeriod.cs" />
     <Compile Include="Source\Profilers\Network\Client.cs" />
     <Compile Include="Source\Profilers\Network\IConnection.cs" />

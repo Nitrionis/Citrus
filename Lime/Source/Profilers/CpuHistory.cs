@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using GpuHistory = Lime.Graphics.Platform.ProfilerHistory;
+using Lime.Graphics.Platform;
 using Yuzu;
 
 namespace Lime.Profilers

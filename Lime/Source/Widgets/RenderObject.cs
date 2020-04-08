@@ -1,6 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
-using Lime.Profilers;
+using Lime.Graphics.Platform;
 using RenderObjectOwnersInfo = Lime.Graphics.Platform.RenderObjectOwnersInfo;
 
 namespace Lime
@@ -54,11 +54,11 @@ namespace Lime
 			foreach (var ro in objects) {
 #if LIME_PROFILER
 				ro.SetGlobalProfilerData();
-				var usage = CpuProfiler.NodeRenderCpuUsageStarted(ro.Node, ro.Manager);
+				var usage = RenderCpuProfiler.NodeCpuUsageStarted(ro.Node, ro.Manager);
 #endif
 				ro.Render();
 #if LIME_PROFILER
-				CpuProfiler.NodeRenderCpuUsageFinished(usage);
+				RenderCpuProfiler.NodeCpuUsageFinished(usage);
 				ro.ResetGlobalProfilerData();
 #endif
 			}

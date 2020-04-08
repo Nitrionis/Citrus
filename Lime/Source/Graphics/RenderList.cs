@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Lime.Graphics.Platform;
 
 namespace Lime
 {
@@ -32,16 +33,22 @@ namespace Lime
 				lastBatch = typedLastBatch;
 			}
 #if LIME_PROFILER
-			typedLastBatch.ProcessNode(RenderObject.CurrentNode, RenderObject.CurrentManager);
+			typedLastBatch.ProcessNode(RenderObjectOwnersInfo.CurrentNode, RenderObjectOwnersInfo.CurrentManager);
 #endif
 			return typedLastBatch;
 		}
 
 		public void Render()
 		{
+#if LIME_PROFILER
+			var usage = RenderCpuProfiler.BatchCpuUsageStarted();
+#endif
 			foreach (var batch in Batches) {
 				batch.Render();
 			}
+#if LIME_PROFILER
+			RenderCpuProfiler.BatchCpuUsageFinished(usage);
+#endif
 		}
 
 		public void Clear()

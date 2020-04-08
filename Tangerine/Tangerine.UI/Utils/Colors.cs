@@ -330,7 +330,7 @@ namespace Tangerine.UI
 			[YuzuOptional]
 			public Color4 CpuUsageRenderPreparation { get; set; }
 			[YuzuOptional]
-			public Color4 CpuUsageRender { get; set; }
+			public Color4 CpuUsageNodeRender { get; set; }
 			[YuzuOptional]
 			public Color4 CpuUsageOwnerUnknown { get; set; }
 		}
@@ -540,7 +540,7 @@ namespace Tangerine.UI
 				CpuUsageUpdate = new Color4(33, 150, 243),
 				CpuUsageGesture = new Color4(255, 193, 7),
 				CpuUsageRenderPreparation = new Color4(0, 150, 136),
-				CpuUsageRender = new Color4(76, 175, 80),
+				CpuUsageNodeRender = new Color4(76, 175, 80),
 				CpuUsageOwnerUnknown = new Color4(244, 67, 54)
 			};
 			return new ColorTheme {
@@ -724,7 +724,7 @@ namespace Tangerine.UI
 				CpuUsageUpdate = new Color4(33, 150, 243),
 				CpuUsageGesture = new Color4(255, 193, 7),
 				CpuUsageRenderPreparation = new Color4(0, 150, 136),
-				CpuUsageRender = new Color4(76, 175, 80),
+				CpuUsageNodeRender = new Color4(76, 175, 80),
 				CpuUsageOwnerUnknown = new Color4(244, 67, 54)
 			};
 			return new ColorTheme {

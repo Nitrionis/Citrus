@@ -2,10 +2,8 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Lime;
 using Lime.Profilers;
-using Lime.Profilers.Contexts;
-using GpuHistory = Lime.Graphics.Platform.ProfilerHistory;
+using GpuHistory = Lime.Graphics.Platform.GpuHistory;
 using Tangerine.UI.Timeline;
-using System;
 
 namespace Tangerine.UI
 {
@@ -265,7 +263,7 @@ namespace Tangerine.UI
 					var frame = LimeProfiler.GpuHistory.GetFrame(frameIndex);
 					float renderTimeOfSelected = 0f;
 					foreach (var dc in frame.DrawCalls) {
-						var pi = dc.ProfilingInfo;
+						var pi = dc.GpuCallInfo;
 						bool isContainsTargetNode =
 							regexNodeFilter != null &&
 							DrawCallsTimeline.CheckTargetNode(regexNodeFilter, dc);
