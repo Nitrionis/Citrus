@@ -8,11 +8,19 @@ namespace Lime.Graphics.Platform
 	{
 		private static readonly Stack<GpuUsage> freeInstances = new Stack<GpuUsage>();
 
-		public uint Start => StartTime;
+		public uint Start
+		{
+			get => StartTime;
+			set => StartTime = value;
+		}
 
-		public uint Finish => FinishTime;
+		public uint Finish
+		{
+			get => FinishTime;
+			set => FinishTime = value;
+		}
 
-		[YuzuRequired]
+	[YuzuRequired]
 		public GpuCallInfo GpuCallInfo;
 
 		/// <summary>

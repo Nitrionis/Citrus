@@ -262,14 +262,22 @@ namespace Tangerine.UI
 				if (LimeProfiler.GpuHistory.IsFrameIndexValid(frameIndex)) {
 					var frame = LimeProfiler.GpuHistory.GetFrame(frameIndex);
 					float renderTimeOfSelected = 0f;
+					uint endOfInterval = 0;
 					foreach (var dc in frame.DrawCalls) {
 						var pi = dc.GpuCallInfo;
 						bool isContainsTargetNode =
 							regexNodeFilter != null &&
-							DrawCallsTimeline.CheckTargetNode(regexNodeFilter, dc);
+							GpuUsageTimeline.CheckTargetNode(regexNodeFilter, dc);
 						bool isSceneFilterPassed = !isSceneOnly || pi.IsPartOfScene;
 						bool isFilteringPassed = isContainsTargetNode && isSceneFilterPassed;
-						renderTimeOfSelected += isFilteringPassed ? (dc.Finish - dc.Start) / 1000f : 0f;
+						if (isFilteringPassed) {
+							if (endOfInterval < dc.Start) {
+								endOfInterval = dc.Start;
+								renderTimeOfSelected += (dc.Finish - dc.Start) / 1000f;
+							} else {
+								renderTimeOfSelected += (dc.Finish - endOfInterval) / 1000f;
+							}
+						}
 					}
 					resultsBuffer[chartSliceIndex] = renderTimeOfSelected;
 				}
@@ -284,13 +292,21 @@ namespace Tangerine.UI
 				resultsBuffer[chartSliceIndex] = 0;
 				var update = LimeProfiler.CpuHistory.GetUpdate(index);
 				float cpuUsageTimeOfSelected = 0f;
+				uint endOfInterval = 0;
 				foreach (var usage in update.NodesResults) {
 					bool isContainsTargetNode =
 						regexNodeFilter != null &&
 						CpuUsageTimeline.CheckTargetNode(regexNodeFilter, usage);
 					bool isSceneFilterPassed = !isSceneOnly || usage.IsPartOfScene;
 					bool isFilteringPassed = isContainsTargetNode && isSceneFilterPassed;
-					cpuUsageTimeOfSelected += isFilteringPassed ? (usage.Finish - usage.Start) / 1000f : 0f;
+					if (isFilteringPassed) {
+						if (endOfInterval < usage.Start) {
+							endOfInterval = usage.Start;
+							cpuUsageTimeOfSelected += (usage.Finish - usage.Start) / 1000f;
+						} else {
+							cpuUsageTimeOfSelected += (usage.Finish - endOfInterval) / 1000f;
+						}
+					}
 				}
 				resultsBuffer[chartSliceIndex] = cpuUsageTimeOfSelected;
 				chartSliceIndex += 1;

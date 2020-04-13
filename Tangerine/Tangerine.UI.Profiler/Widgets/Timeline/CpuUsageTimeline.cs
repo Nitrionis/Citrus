@@ -9,45 +9,20 @@ namespace Tangerine.UI.Timeline
 	/// <summary>
 	/// Shows the application’s CPU-side activity.
 	/// </summary>
-	internal class CpuUsageTimeline : TimelineContainer
+	internal class CpuUsageTimeline : TimelineContainer<CpuUsageTimeline.CpuUsageRect>
 	{
 		private CpuHistory.Item lastUpdate;
-
-		private bool isSceneOnly;
-
-		public bool IsSceneOnly
-		{
-			get { return isSceneOnly; }
-			set {
-				isSceneOnly = value;
-				foreach (var node in container.Nodes) {
-					((CpuUsageWidget)node).SceneFilterChanged(value);
-				}
-			}
-		}
-
-		private Regex regexNodeFilter;
-
-		public Regex RegexNodeFilter
-		{
-			get { return regexNodeFilter; }
-			set {
-				regexNodeFilter = value;
-				foreach (var node in container.Nodes) {
-					((CpuUsageWidget)node).TargetNodeChanged(value);
-				}
-			}
-		}
 
 		public Action<CpuUsage> CpuUsageSelected;
 
 		public CpuUsageTimeline()
 		{
 			Id = "CPU Timeline";
+			ruler.Id = "CPU TimelineRuler";
 			container.Id = "CPU Timeline Container";
 			verticalScrollView.Id = "CPU Timeline VerticalScrollView";
 			horizontalScrollView.Id = "CPU Timeline HorizontalScrollView";
-			ruler.Id = "CPU TimelineRuler";
+			TimePeriodSelected = arg => CpuUsageSelected?.Invoke(arg.CpuUsage);
 		}
 
 		public void Rebuild(CpuHistory.Item update)
@@ -55,42 +30,20 @@ namespace Tangerine.UI.Timeline
 			lastUpdate = update;
 			ResetContainer();
 			update.NodesResults.Sort(0, update.NodesResults.Count, new TimePeriodComparer<CpuUsage>());
-			//container.AddNode(new CpuUsageWidget(
-			//	new CpuUsage() {
-			//		Start = 0,
-			//		Finish = 1000,
-			//		Owner = null,
-			//		Reasons = CpuUsage.UsageReasons.Update
-			//	},
-			//	CpuUsageSelected));
+			mesh.Vertices = new TimelineMaterial.Vertex[update.NodesResults.Count * Rectangle.VertexCount];
+			mesh.Indices = new ushort[update.NodesResults.Count * Rectangle.IndexCount];
+			items.Clear();
 			for (int i = 0; i < update.NodesResults.Count; i++) {
-				var usage = update.NodesResults[i];
-				if (!CheckTargetNode(CpuUsageWidget.SpecialIdRegex, usage)) {
-					var widget = new CpuUsageWidget(usage, CpuUsageSelected);
-					widget.Visible = IsItemVisible(widget);
-					container.AddNode(widget);
-				}
+				items.Add(new CpuUsageRect(this, i, update.NodesResults[i]));
 			}
-			container.Width = CalculateHistoryWidth();
-			UpdateItemsPositions();
+			UpdateHistorySize();
+			RebuildVertexBuffer();
+			RecheckItemVisibility();
 		}
 
 		protected override float CalculateHistoryWidth() =>
 			lastUpdate == null ? 5000 :
-			lastUpdate.DeltaTime * 1000 / MicrosecondsInPixel;
-
-		protected override void UpdateItemTransform(Node widget)
-		{
-			var cpuUsageWidget = (CpuUsageWidget)widget;
-			var usage = cpuUsageWidget.CpuUsage;
-			uint length = usage.Finish - usage.Start;
-			if (length < MicrosecondsInPixel) {
-				length = (uint)MicrosecondsInPixel;
-			}
-			var period = new TimePeriod(usage.Start, usage.Start + length);
-			cpuUsageWidget.Position = AcquirePosition(period);
-			cpuUsageWidget.Width = Math.Max(1, length / MicrosecondsInPixel);
-		}
+			lastUpdate.DeltaTime * 1000 / MicrosecondsPerPixel;
 
 		public static bool CheckTargetNode(Regex regex, CpuUsage cpuUsage)
 		{
@@ -105,75 +58,89 @@ namespace Tangerine.UI.Timeline
 			return false;
 		}
 
-		private class CpuUsageWidget : Widget
+		internal class CpuUsageRect : IItem
 		{
-			public static readonly string SpecialIdentifier = ",._";
-			public static readonly Regex SpecialIdRegex = new Regex(SpecialIdentifier, RegexOptions.Compiled);
+			public const int RectsCount = 1;
 
+			private readonly CpuUsageTimeline timeline;
 			public readonly CpuUsage CpuUsage;
 
 			private bool isSceneFilterPassed = true;
 			private bool isContainsTargetNode = true;
 
-			private IPresenter originalPresenter;
+			private int vertexBufferOffset;
 
-			private static readonly IPresenter unselectedPresenter =
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageUnselected);
-			private static readonly IPresenter animationPresenter =
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageAnimation);
-			private static readonly IPresenter updatePresenter =
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageUpdate);
-			private static readonly IPresenter gesturePresenter =
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageGesture);
-			private static readonly IPresenter preparationPresenter =
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageRenderPreparation);
-			private static readonly IPresenter nodeRenderPresenter =
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageNodeRender);
-			private static readonly IPresenter ownerUnknownPresenter =
-				new WidgetFlatFillHitTestPresenter(ColorTheme.Current.Profiler.CpuUsageOwnerUnknown);
+			public ITimePeriod TimePeriod { get; private set; }
+			public Vector2 Position { get; private set; }
 
-			public CpuUsageWidget(CpuUsage cpuUsage, Action<CpuUsage> cpuUsageSelected)
+			public int VertexCount { get; }
+			public int IndexCount { get; }
+
+			private Color4 originalColor;
+
+			private static readonly Color4 unselectedColor    = ColorTheme.Current.Profiler.CpuUsageUnselected;
+			private static readonly Color4 animationColor     = ColorTheme.Current.Profiler.CpuUsageAnimation;
+			private static readonly Color4 updateColor        = ColorTheme.Current.Profiler.CpuUsageUpdate;
+			private static readonly Color4 gestureColor       = ColorTheme.Current.Profiler.CpuUsageGesture;
+			private static readonly Color4 preparationColor   = ColorTheme.Current.Profiler.CpuUsageRenderPreparation;
+			private static readonly Color4 nodeRenderColor    = ColorTheme.Current.Profiler.CpuUsageNodeRender;
+			private static readonly Color4 ownerUnknownColor  = ColorTheme.Current.Profiler.CpuUsageOwnerUnknown;
+
+			public CpuUsageRect(CpuUsageTimeline timeline, int selfIndex, CpuUsage cpuUsage)
 			{
+				this.timeline = timeline;
+				vertexBufferOffset = selfIndex * RectsCount * Rectangle.VertexCount;
 				CpuUsage = cpuUsage;
-				Visible = false;
-				HitTestTarget = true;
-				Clicked += () => cpuUsageSelected?.Invoke(cpuUsage);
-				Id = SpecialIdentifier;
-				Height = TimelineContainer.ItemHeight;
-				originalPresenter = GetColorTheme(cpuUsage);
-				DecorateWidget();
+				TimePeriod = new TimePeriod(cpuUsage.Start, cpuUsage.Finish);
+				VertexCount = RectsCount * Rectangle.VertexCount;
+				IndexCount = RectsCount * Rectangle.IndexCount;
+				originalColor = GetColorTheme(cpuUsage);
+				UpdateMeshColorsSelfSegment();
 			}
 
 			public void TargetNodeChanged(Regex regex)
 			{
 				isContainsTargetNode = CheckTargetNode(regex, CpuUsage);
-				DecorateWidget();
+				UpdateMeshColorsSelfSegment();
 			}
 
 			public void SceneFilterChanged(bool value)
 			{
 				isSceneFilterPassed = !value || CpuUsage.IsPartOfScene;
-				DecorateWidget();
+				UpdateMeshColorsSelfSegment();
 			}
 
-			private void DecorateWidget() =>
-				Presenter = isSceneFilterPassed && isContainsTargetNode ? originalPresenter : unselectedPresenter;
+			public void UpdateMeshPositionsSelfSegment()
+			{
+				uint length = Math.Max((uint)timeline.MicrosecondsPerPixel, CpuUsage.Finish - CpuUsage.Start);
+				TimePeriod.Finish = CpuUsage.Start + length;
+				Position = timeline.AcquirePosition(TimePeriod);
+				float width = Math.Max(1, length / timeline.MicrosecondsPerPixel);
+				Rectangle.WriteVerticesTo(timeline.mesh, vertexBufferOffset, Position, new Vector2(width, ItemHeight));
+			}
 
-			private static IPresenter GetColorTheme(CpuUsage cpuUsage)
+			private void UpdateMeshColorsSelfSegment()
+			{
+				var color = isSceneFilterPassed && isContainsTargetNode ? originalColor : unselectedColor;
+				Rectangle.WriteColorsTo(timeline.mesh, vertexBufferOffset, color);
+			}
+
+			public void RebuildMeshIndicesSelfSegment(int dstOffset) =>
+				Rectangle.WriteIndicesTo(timeline.mesh, dstOffset, vertexBufferOffset);
+
+			private static Color4 GetColorTheme(CpuUsage cpuUsage)
 			{
 				if (cpuUsage.Owner != null || (cpuUsage.Reasons & CpuUsage.UsageReasons.NoOwnerFlag) != 0) {
 					switch (cpuUsage.Reasons) {
-						case CpuUsage.UsageReasons.Animation:          return animationPresenter;
-						case CpuUsage.UsageReasons.Update:             return updatePresenter;
-						case CpuUsage.UsageReasons.Gesture:            return gesturePresenter;
-						case CpuUsage.UsageReasons.RenderPreparation:  return preparationPresenter;
-						case CpuUsage.UsageReasons.NodeRender:         return nodeRenderPresenter;
-						case CpuUsage.UsageReasons.BatchRender:        return nodeRenderPresenter;
+						case CpuUsage.UsageReasons.Animation:          return animationColor;
+						case CpuUsage.UsageReasons.Update:             return updateColor;
+						case CpuUsage.UsageReasons.Gesture:            return gestureColor;
+						case CpuUsage.UsageReasons.RenderPreparation:  return preparationColor;
+						case CpuUsage.UsageReasons.NodeRender:         return nodeRenderColor;
+						case CpuUsage.UsageReasons.BatchRender:        return nodeRenderColor;
 						default: throw new NotImplementedException();
 					}
-				} else {
-					return ownerUnknownPresenter;
-				}
+				} else return ownerUnknownColor;
 			}
 		}
 	}

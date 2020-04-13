@@ -13,7 +13,7 @@ namespace Tangerine.UI
 
 		private static readonly Color4 textColor = ColorTheme.Current.Profiler.TimelineRulerAndText;
 
-		public readonly DrawCallsTimeline Timeline;
+		public readonly GpuUsageTimeline Timeline;
 		private readonly ThemedSimpleText ownersLabel;
 		private readonly CustomDropDownList ownersList;
 		private readonly ThemedSimpleText materialLabel;
@@ -28,8 +28,8 @@ namespace Tangerine.UI
 			Layout = new VBoxLayout();
 			Anchors = Anchors.LeftRight;
 
-			Timeline = new DrawCallsTimeline {
-				DrawCallSelected = DrawCallSelected
+			Timeline = new GpuUsageTimeline {
+				GpuUsageSelected = DrawCallSelected
 			};
 
 			ThemedSimpleText CreateText(string text, Thickness padding) =>

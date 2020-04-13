@@ -7,7 +7,7 @@ namespace Lime.Widgets.Charts
 		public AreaCharts(Parameters parameters) : base(parameters) =>
 			accumulatedHeights = new float[ControlPointsCount];
 
-		protected override void RecalculateVertices()
+		protected override void RecalculateMesh()
 		{
 			if (!isMeshUpdateRequired) return;
 			isMeshUpdateRequired = false;
@@ -37,9 +37,8 @@ namespace Lime.Widgets.Charts
 					parity = (parity + 1) % 2;
 				}
 			}
-			UpdateUserLines(scaleCoefficient);
+			RecalculateUserLinesMesh(scaleCoefficient);
 			mesh.DirtyFlags |= MeshDirtyFlags.Vertices;
-			Window.Current?.Invalidate();
 		}
 
 		protected override int CalculateSubmeshVerticesCount(int controlPointsCount) => 2 * controlPointsCount;

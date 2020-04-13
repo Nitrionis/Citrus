@@ -6,11 +6,11 @@ namespace Lime.Profilers
 		/// <summary>
 		/// Timestamp in microseconds.
 		/// </summary>
-		uint Start { get; }
+		uint Start { get; set; }
 
 		/// <summary>
 		/// Timestamp in microseconds.
 		/// </summary>
-		uint Finish { get; }
+		uint Finish { get; set; }
 	}
 }

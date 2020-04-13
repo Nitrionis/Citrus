@@ -18,7 +18,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;LIME_PROFILER</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -50,7 +50,8 @@
     <Compile Include="Widgets\GpuTrace.cs" />
     <Compile Include="Widgets\MainControlPanel.cs" />
     <Compile Include="Widgets\Profiler.cs" />
-    <Compile Include="Widgets\Timeline\DrawCallsTimeline.cs" />
+    <Compile Include="Widgets\Timeline\GpuUsageTimeline.cs" />
+    <Compile Include="Widgets\Timeline\TimelineMaterial.cs" />
     <Compile Include="Widgets\Timeline\TimelineContainer.cs" />
     <Compile Include="Widgets\Timeline\TimelineRuler.cs" />
     <Compile Include="Widgets\Timeline\CpuUsageTimeline.cs" />

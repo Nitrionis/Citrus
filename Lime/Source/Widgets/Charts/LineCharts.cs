@@ -14,7 +14,7 @@ namespace Lime.Widgets.Charts
 		public readonly bool IsIndependentMode;
 
 		/// <summary>
-		/// Stores the maximum value for each chart calculated in the previous <see cref="RecalculateVertices"/>.
+		/// Stores the maximum value for each chart calculated in the previous <see cref="RecalculateMesh"/>.
 		/// </summary>
 		private float[] maxValuePerChart;
 
@@ -39,7 +39,7 @@ namespace Lime.Widgets.Charts
 
 		private Vector2 GetNormal(Vector2 v) => new Vector2(-v.Y, v.X);
 
-		protected override void RecalculateVertices()
+		protected override void RecalculateMesh()
 		{
 			if (!isMeshUpdateRequired) return;
 			isMeshUpdateRequired = false;
@@ -75,7 +75,7 @@ namespace Lime.Widgets.Charts
 				}
 				chartIndex++;
 			}
-			UpdateUserLines(IsIndependentMode ? 1 : chartsHeight / chartsMaxValue);
+			RecalculateUserLinesMesh(IsIndependentMode ? 1 : chartsHeight / chartsMaxValue);
 			chartsMaxValue = newChartsMaxValue;
 			mesh.DirtyFlags |= MeshDirtyFlags.Vertices;
 		}

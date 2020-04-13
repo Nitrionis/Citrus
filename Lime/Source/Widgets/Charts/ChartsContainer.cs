@@ -21,7 +21,7 @@ namespace Lime.Widgets.Charts
 
 		public Color4 BackgroundColor { get; set; }
 
-		protected struct Line
+		public class Line
 		{
 			public const int VerticesCount = 6;
 
@@ -151,6 +151,9 @@ namespace Lime.Widgets.Charts
 				}
 			}
 			userLines = new Line[parameters.UserLinesCount];
+			for (int i = 0; i < userLines.Length; i++) {
+				userLines[i] = new Line(Vector2.Zero, Vector2.Zero, 0, null);
+			}
 		}
 
 		/// <summary>
@@ -193,7 +196,7 @@ namespace Lime.Widgets.Charts
 			}
 		}
 
-		protected abstract void RecalculateVertices();
+		protected abstract void RecalculateMesh();
 
 		protected abstract int CalculateSubmeshVerticesCount(int controlPointsCount);
 
@@ -213,14 +216,13 @@ namespace Lime.Widgets.Charts
 		/// Add custom horizontal or vertical line.
 		/// </summary>
 		/// <param name="lineIndex">Line index. The number of lines is set in the ChartGroup constructor.</param>
-		/// <param name="colorIndex">Color index in <see cref="colors"/>.</param>
-		public void SetLine(int lineIndex, Vector2 start, Vector2 end, int colorIndex = 0, string caption = null)
+		public void SetLine(int lineIndex, Line line)
 		{
 			isMeshUpdateRequired = true;
-			userLines[lineIndex] = new Line(start, end, colorIndex, caption);
+			userLines[lineIndex] = line;
 		}
 
-		protected void UpdateUserLines(float scalingFactor)
+		protected void RecalculateUserLinesMesh(float scalingFactor)
 		{
 			for (int i = 0; i < userLines.Length; i++) {
 				int offset = i * Line.VerticesCount;
@@ -271,25 +273,22 @@ namespace Lime.Widgets.Charts
 					Renderer.DrawRect(Vector2.Zero, Charts.Size, Charts.BackgroundColor);
 					Renderer.MainRenderList.Flush();
 					if (Charts.isMeshUpdateRequired) {
-						Charts.RecalculateVertices();
+						Charts.RecalculateMesh();
 					}
 					var material = Charts.material;
 					material.Matrix = Renderer.FixupWVP((Matrix44)LocalToWorldTransform * Renderer.ViewProjection);
 					material.Apply(0);
 					var profilingInfo = GpuCallInfo.Acquire(material, 0);
+					int startVertex = Line.VerticesCount * Charts.userLines.Length;
+					int vertexCount = Charts.GetActiveChartsCount() * Charts.chartVerticesCount;
 					var mesh = Charts.mesh;
 					mesh.Topology = PrimitiveTopology.TriangleStrip;
 #if LIME_PROFILER
-					mesh.Draw(
-						startVertex: Line.VerticesCount * Charts.userLines.Length,
-						vertexCount: Charts.GetActiveChartsCount() * Charts.chartVerticesCount,
-						profilingInfo);
+					mesh.Draw(startVertex, vertexCount, profilingInfo);
 					mesh.Topology = PrimitiveTopology.TriangleList;
 					mesh.Draw(0, Line.VerticesCount * Charts.userLines.Length, profilingInfo);
 #else
-					mesh.Draw(
-						startVertex: Line.VerticesCount * Charts.userLines.Length,
-						vertexCount: Charts.GetActiveChartsCount() * Charts.chartVerticesCount);
+					mesh.Draw(startVertex, vertexCount);
 					mesh.Topology = PrimitiveTopology.TriangleList;
 					mesh.Draw(0, Line.VerticesCount * Charts.userLines.Length);
 #endif

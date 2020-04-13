@@ -60,13 +60,16 @@ namespace Tangerine.UI
 			var targetWidth = (parameters.ControlPointsCount - 1) * parameters.ControlPointsSpacing;
 			// Horizontal line for lowest fps
 			float fpsHeight = Logarithm(1000.0f / 1.0f);
-			CpuCharts.SetLine(0, new Vector2(0, fpsHeight), new Vector2(targetWidth, fpsHeight), 10);
+			CpuCharts.SetLine(0, new ChartsContainer.Line(
+				new Vector2(0, fpsHeight), new Vector2(targetWidth, fpsHeight), 10, null));
 			// Horizontal line for 30 fps
 			fpsHeight = Logarithm(1000.0f / 30.0f);
-			CpuCharts.SetLine(1, new Vector2(0, fpsHeight), new Vector2(targetWidth, fpsHeight), 3);
+			CpuCharts.SetLine(1, new ChartsContainer.Line(
+				new Vector2(0, fpsHeight), new Vector2(targetWidth, fpsHeight), 3, null));
 			// Horizontal line for 60 fps
 			fpsHeight = Logarithm(1000.0f / 60.0f);
-			CpuCharts.SetLine(2, new Vector2(0, fpsHeight), new Vector2(targetWidth, fpsHeight), 9);
+			CpuCharts.SetLine(2, new ChartsContainer.Line(
+				new Vector2(0, fpsHeight), new Vector2(targetWidth, fpsHeight), 9, null));
 			// Create legend for CPU charts.
 			var cpuLegendItems = new Legend.ItemDescription[] {
 				new Legend.ItemDescription { Color = colors[0], Name = "CPU",      Format = "{0,6:0.00}" },
@@ -88,7 +91,8 @@ namespace Tangerine.UI
 				Id = "GPU Charts",
 				BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground
 			};
-			GpuCharts.SetLine(0, new Vector2(0, 1), new Vector2(targetWidth, 1), 10, "10 ms");
+			GpuCharts.SetLine(0, new ChartsContainer.Line(
+				new Vector2(0, 1), new Vector2(targetWidth, 1), 10, "10 ms"));
 			// Create legend for GPU charts.
 			var gpuLegendItems = new Legend.ItemDescription[] {
 				new Legend.ItemDescription { Color = colors[0], Name = "GPU",      Format = "{0,6:0.00}" },
@@ -180,22 +184,20 @@ namespace Tangerine.UI
 			// Update CPU charts max value line
 			float cpuMaxValue = CpuCharts.ChartsMaxValue;
 			float originalValue = AntiLogarithm(cpuMaxValue);
-			CpuCharts.SetLine(
-				lineIndex:   0,
+			CpuCharts.SetLine(lineIndex: 0, new ChartsContainer.Line(
 				start:       new Vector2(0, cpuMaxValue),
 				end:         new Vector2(CpuCharts.Width, cpuMaxValue),
 				colorIndex:  10,
-				caption:     string.Format("{0:0.00} fps {1:0.00} ms", 1000f / originalValue, originalValue));
+				caption:     string.Format("{0:0.00} fps {1:0.00} ms", 1000f / originalValue, originalValue)));
 			// Push GPU charts data
 			GpuCharts.PushSlice(frame == null ? new float[2] : new float[] { (float)frame.FullGpuRenderTime, 0f });
 			// Update GPU charts max value line
 			float gpuMaxValue = GpuCharts.ChartsMaxValue;
-			GpuCharts.SetLine(
-				lineIndex:   0,
+			GpuCharts.SetLine(lineIndex: 0, new ChartsContainer.Line(
 				start:       new Vector2(0, gpuMaxValue),
 				end:         new Vector2(GpuCharts.Width, gpuMaxValue),
 				colorIndex:  10,
-				caption:     string.Format("{0:0.##} ms", gpuMaxValue));
+				caption:     string.Format("{0:0.##} ms", gpuMaxValue)));
 			// Push LineCharts data
 			var points = frame == null ?
 				new float[4] :
@@ -240,30 +242,33 @@ namespace Tangerine.UI
 		private void SetSlicePosition()
 		{
 			float x = cpuLastSlice.Index * CpuCharts.ControlPointsSpacing;
-			CpuCharts.SetLine(
-				lineIndex: 3,
+			CpuCharts.SetLine(lineIndex: 3, new ChartsContainer.Line(
 				start: new Vector2(x, 0),
 				end: new Vector2(x, CpuCharts.Height * (1f / CpuCharts.ScaleCoefficient)),
-				colorIndex: 10);
-			GpuCharts.SetLine(
-				lineIndex: 1,
+				colorIndex: 10,
+				caption: null));
+			GpuCharts.SetLine(lineIndex: 1, new ChartsContainer.Line(
 				start: new Vector2(x, 0),
 				end: new Vector2(x, GpuCharts.Height * (1f / GpuCharts.ScaleCoefficient)),
-				colorIndex: 10);
-			LineCharts.SetLine(
-				lineIndex: 0,
+				colorIndex: 10,
+				caption: null));
+			LineCharts.SetLine(lineIndex: 0, new ChartsContainer.Line(
 				start: new Vector2(x, 0),
 				end: new Vector2(x, LineCharts.Height), // because IsIndependentMode
-				colorIndex: 10);
+				colorIndex: 10,
+				caption: null));
 		}
 
 		private void UpdateActiveSliceIndicator()
 		{
 			if (cpuLastSlice != null) {
 				if (cpuLastSlice.Index < 0) {
-					CpuCharts.SetLine(3, Vector2.Zero, Vector2.Zero, colorIndex: 10);
-					GpuCharts.SetLine(2, Vector2.Zero, Vector2.Zero, colorIndex: 10);
-					LineCharts.SetLine(0, Vector2.Zero, Vector2.Zero, colorIndex: 10);
+					CpuCharts.SetLine(3, new ChartsContainer.Line(
+						Vector2.Zero, Vector2.Zero, colorIndex: 10, caption: null));
+					GpuCharts.SetLine(2, new ChartsContainer.Line(
+						Vector2.Zero, Vector2.Zero, colorIndex: 10, caption: null));
+					LineCharts.SetLine(0, new ChartsContainer.Line(
+						Vector2.Zero, Vector2.Zero, colorIndex: 10, caption: null));
 				} else {
 					SetSlicePosition();
 					cpuLastSlice.Index -= 1;
