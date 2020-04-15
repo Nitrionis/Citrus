@@ -149,11 +149,15 @@ namespace Tangerine.UI.Timeline
 			public void UpdateMeshPositionsSelfSegment()
 			{
 				var dc = GpuUsage;
-				uint firstLength = Math.Max((uint)timeline.MicrosecondsPerPixel, dc.AllPreviousFinishTime - dc.StartTime);
-				uint secondLength = Math.Max((uint)timeline.MicrosecondsPerPixel, dc.FinishTime - dc.AllPreviousFinishTime);
-				TimePeriod.Finish = dc.Start + firstLength + secondLength;
-				float firstWidth = Math.Max(1, firstLength / timeline.MicrosecondsPerPixel);
-				float secondWidth = Math.Max(1, secondLength / timeline.MicrosecondsPerPixel);
+				uint minLength = (uint)(2 * timeline.MicrosecondsPerPixel);
+				uint length = Math.Max(minLength, dc.Finish - dc.Start);
+				float firstWidth = (dc.AllPreviousFinishTime - dc.StartTime) / timeline.MicrosecondsPerPixel;
+				float secondWidth = (dc.FinishTime - dc.AllPreviousFinishTime) / timeline.MicrosecondsPerPixel;
+				if (minLength == length) {
+					firstWidth = 0;
+					secondWidth = Math.Max(1, firstWidth + secondWidth);
+				}
+				TimePeriod.Finish = dc.Start + length;
 				Position = timeline.AcquirePosition(TimePeriod);
 				var secondPosition = new Vector2(Position.X + firstWidth, Position.Y);
 				Rectangle.WriteVerticesTo(

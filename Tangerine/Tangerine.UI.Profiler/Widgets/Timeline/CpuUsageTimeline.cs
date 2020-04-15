@@ -112,10 +112,10 @@ namespace Tangerine.UI.Timeline
 
 			public void UpdateMeshPositionsSelfSegment()
 			{
-				uint length = Math.Max((uint)timeline.MicrosecondsPerPixel, CpuUsage.Finish - CpuUsage.Start);
-				TimePeriod.Finish = CpuUsage.Start + length;
+				uint length = Math.Max((uint)(2 * timeline.MicrosecondsPerPixel), CpuUsage.Finish - CpuUsage.Start);
+				float width = Math.Max(1, (CpuUsage.Finish - CpuUsage.Start) / timeline.MicrosecondsPerPixel);
+				TimePeriod.Finish = TimePeriod.Start + length;
 				Position = timeline.AcquirePosition(TimePeriod);
-				float width = Math.Max(1, length / timeline.MicrosecondsPerPixel);
 				Rectangle.WriteVerticesTo(timeline.mesh, vertexBufferOffset, Position, new Vector2(width, ItemHeight));
 			}
 

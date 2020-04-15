@@ -77,14 +77,13 @@ namespace Lime.Profilers
 
 		private void NextRenderingFencePassed()
 		{
-			Stopwatch stopwatch = null;
 			if (isMainWindow) {
 				isEnabled = RenderGpuProfiler.Instance.IsEnabled;
 				TryConfirmUpdate();
-				stopwatch = this.stopwatch;
+				Stopwatch stopwatch = this.stopwatch;
 				this.stopwatch = RenderCpuProfiler.Stopwatch;
+				RenderCpuProfiler.PrepareForRender(stopwatch, isMainWindow && isEnabled);
 			}
-			RenderCpuProfiler.PrepareForRender(stopwatch, isMainWindow && isEnabled);
 		}
 
 		private Item AcquireResultsBuffer()
