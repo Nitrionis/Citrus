@@ -3,54 +3,52 @@ using System.Collections.Generic;
 
 namespace Tangerine.UI
 {
-	internal class FixedCapacityQueue : IEnumerable<long>
+	internal class FixedCapacityQueue<T> : IEnumerable<T>
 	{
 		private int indexOfLast;
-		private long[] history;
+		private T[] data;
 
 		public FixedCapacityQueue(int historySize)
 		{
 			indexOfLast = - 1;
-			history = new long[historySize];
+			data = new T[historySize];
 		}
 
 		/// <summary>
 		/// Interprets the queue as an array, where the first element in the queue corresponds to index 0.
 		/// </summary>
-		public long GetItem(int index) => history[(indexOfLast + 1 + index) % history.Length];
+		public T GetItem(int index) => data[(indexOfLast + 1 + index) % data.Length];
 
 		/// <summary>
 		/// Replaces the oldest element in history.
 		/// </summary>
-		public void Enqueue(long index) => history[indexOfLast = (indexOfLast + 1) % history.Length] = index;
+		public void Enqueue(T item) => data[indexOfLast = (indexOfLast + 1) % data.Length] = item;
 
-		public IEnumerator<long> GetEnumerator() => new Enumerator(this);
+		public IEnumerator<T> GetEnumerator() => new Enumerator<T>(this);
 
-		IEnumerator IEnumerable.GetEnumerator() => new Enumerator(this);
+		IEnumerator IEnumerable.GetEnumerator() => new Enumerator<T>(this);
 
-		public class Enumerator : IEnumerator<long>
+		public class Enumerator<T> : IEnumerator<T>
 		{
 			private int itemIndex = -1;
 			private int processedItemsCount = -1;
-			private long[] history;
+			private T[] data;
+			private T current;
 
-			private long current;
-
-			public long Current => current;
-
+			public T Current => current;
 			object IEnumerator.Current => current;
 
-			public Enumerator(FixedCapacityQueue storage)
+			public Enumerator(FixedCapacityQueue<T> storage)
 			{
-				history = storage.history;
+				data = storage.data;
 				itemIndex = storage.indexOfLast;
 			}
 
 			public bool MoveNext()
 			{
-				itemIndex = (itemIndex + 1) % history.Length;
-				current = history[itemIndex];
-				return ++processedItemsCount < history.Length;
+				itemIndex = (itemIndex + 1) % data.Length;
+				current = data[itemIndex];
+				return ++processedItemsCount < data.Length;
 			}
 
 			public void Reset() => itemIndex = -1;
