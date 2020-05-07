@@ -29,7 +29,7 @@ namespace Tangerine.UI
 			Anchors = Anchors.LeftRight;
 
 			Timeline = new GpuUsageTimeline {
-				GpuUsageSelected = DrawCallSelected
+				GpuUsageSelected = OnDrawCallSelected
 			};
 
 			ThemedSimpleText CreateText(string text, Thickness padding) =>
@@ -41,7 +41,6 @@ namespace Tangerine.UI
 				};
 
 			var ownersListSize = new Vector2(160, 22);
-
 			var groupOffset = new Thickness(0, 16, 0);
 			var itemsOffset = new Thickness(6, 0);
 
@@ -86,19 +85,21 @@ namespace Tangerine.UI
 			AddNode(Timeline);
 		}
 
-		private void DrawCallSelected(DrawCallInfo drawCall)
+		private void OnDrawCallSelected(DrawCallInfo drawCall)
 		{
-			string ownersText = "Owners";
+			string ownersLabelText = "Owners";
 			ownersList.Items.Clear();
-			var pi = drawCall.GpuCallInfo;
-			if (pi.Owners != null) {
-				if (pi.Owners is IList list) {
+			switch (drawCall.GpuCallInfo.Owners) {
+				case null: ownersList.Items.Add(new DropDownList.Item("Null")); break;
+				case string id: ownersList.Items.Add(new DropDownList.Item(id)); break;
+				case Node node: ownersList.Items.Add(new DropDownList.Item(node.Id ?? "Node id unset")); break;
+				case IList list:
 					int ownersCount = 0;
-					ownersText = "Owners batch ";
+					ownersLabelText = "Owners batch ";
 					var dictionary = new Dictionary<string, int>();
 					foreach (var item in list) {
 						ownersCount++;
-						string owner = GetOwnerName(item);
+						string owner = GetOwnerId(item);
 						if (dictionary.ContainsKey(owner)) {
 							dictionary[owner]++;
 						} else {
@@ -108,15 +109,13 @@ namespace Tangerine.UI
 					foreach (var v in dictionary) {
 						ownersList.Items.Add(new DropDownList.Item(v.Key + " " + v.Value));
 					}
-					ownersText += ownersCount;
-				} else {
-					ownersList.Items.Add(new DropDownList.Item(GetOwnerName(pi.Owners)));
-				}
-			} else {
-				ownersList.Items.Add(new DropDownList.Item("Null"));
+					ownersLabelText += ownersCount;
+					break;
+				default: throw new InvalidOperationException();
 			}
-			ownersLabel.Text = ownersText;
+			ownersLabel.Text = ownersLabelText;
 			ownersList.Index = 0;
+			var pi = drawCall.GpuCallInfo;
 			if (pi.Material is string materialName) {
 				materialLabel.Text = materialName;
 			} else {
@@ -128,19 +127,14 @@ namespace Tangerine.UI
 			trianglesCountLabel.Text = drawCall.TrianglesCount.ToString();
 		}
 
-		private string GetOwnerName(object owner)
+		private string GetOwnerId(object owner)
 		{
-			string name;
-			if (owner == null) {
-				name = "Null";
-			} else if (owner is Node node) {
-				name = node.Id ?? "Node id unset";
-			} else if (owner is string str) {
-				name = str;
-			} else {
-				throw new InvalidOperationException();
+			switch (owner) {
+				case null: return "Null";
+				case Node node: return node.Id ?? "Node id unset";
+				case string str: return str;
+				default: throw new InvalidOperationException();
 			}
-			return name;
 		}
 
 		private class CustomDropDownList : DropDownList

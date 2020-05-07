@@ -12,8 +12,7 @@ namespace Lime.Profilers.Contexts
 {
 	/// <summary>
 	/// The client is a data source for profiling.
-	/// The client can be an instance of the engine or a game.
-	/// Compiled game instance is always client.
+	/// The client can only be an instance of the game.
 	/// </summary>
 	public class ClientContext : NetworkContext
 	{
@@ -94,12 +93,10 @@ namespace Lime.Profilers.Contexts
 					}
 				}
 				if (statistics == null) {
-					statistics = new StatisticsWrapper() {
-						Serialized  = Serialized,
-						Response    = ProcessRequest(),
-						Options     = GetCurrentOptions()
-					};
-					client.LazySerializeAndSend(statistics);
+					client.LazySerializeAndSend(new Statistics() {
+						Response = ProcessRequest(),
+						Options = GetCurrentOptions()
+					});
 				}
 			}
 			while (!updatesAwaitingFinalization.IsEmpty && updatesAwaitingFinalization.TryDequeue(out statistics)) {
@@ -213,37 +210,43 @@ namespace Lime.Profilers.Contexts
 			[YuzuBeforeSerialization]
 			private void BeforeSerialization()
 			{
+				if (Update.NodesResults.Capacity < NativeCpuUsages.Count) {
+					Update.NodesResults.Capacity = NativeCpuUsages.Count;
+				}
 				if (Frame != null) {
 					if (Frame.DrawCalls.Capacity < NativeDrawCalls.Count) {
 						Frame.DrawCalls.Capacity = NativeDrawCalls.Count;
 					}
-					foreach (var drawCall in NativeDrawCalls) {
-						var pi = drawCall.GpuCallInfo;
-						var piCopy = MemoryManager<GpuCallInfo>.Acquire();
-						piCopy.IsPartOfScene  = pi.IsPartOfScene;
-						piCopy.Material       = pi.Material.GetType().Name;
-						piCopy.Owners         = ConvertOwnersToText(pi.Owners);
-						var prCopy = MemoryManager<GpuUsage>.Acquire();
-						prCopy.GpuCallInfo          = piCopy;
-						prCopy.RenderPassIndex        = drawCall.RenderPassIndex;
-						prCopy.StartTime              = drawCall.StartTime;
-						prCopy.AllPreviousFinishTime  = drawCall.AllPreviousFinishTime;
-						prCopy.FinishTime             = drawCall.FinishTime;
-						prCopy.TrianglesCount         = drawCall.TrianglesCount;
-						prCopy.VerticesCount          = drawCall.VerticesCount;
-						Frame.DrawCalls.Add(prCopy);
-					}
-				}
-				if (Update != null) {
-					Update.NodesResults.Capacity = NativeCpuUsages.Count;
 					foreach (var usage in NativeCpuUsages) {
 						var usageCopy = MemoryManager<CpuUsage>.Acquire();
-						usageCopy.Reasons         = usage.Reasons;
-						usageCopy.Owner          = ((Node)usage.Owner).Id ?? "Node id unset";
+						usageCopy.Reasons        = usage.Reasons;
 						usageCopy.IsPartOfScene  = usage.IsPartOfScene;
 						usageCopy.Start          = usage.Start;
 						usageCopy.Finish         = usage.Finish;
+						usageCopy.Owners         = null;
+						if (usage.Reasons.Include(CpuUsage.UsageReasons.BatchRender)) {
+							while (Frame.DrawCalls.Count < NativeDrawCalls.Count) {
+								var dc = NativeDrawCalls[Frame.DrawCalls.Count];
+								if (dc.GpuCallInfo.Owners == usage.Owners) {
+									usageCopy.Owners = Frame.DrawCalls.Count;
+									break;
+								}
+								Frame.DrawCalls.Add(CopyGpuUsage(dc));
+							}
+							if (usageCopy.Owners == null) {
+								usageCopy.Owners = ConvertOwnersListToText((IList)usage.Owners);
+							}
+						} else {
+							usageCopy.Owners = ((Node)usage.Owners).Id ?? "Node id unset";
+						}
+						while (Frame.DrawCalls.Count < NativeDrawCalls.Count) {
+							Frame.DrawCalls.Add(CopyGpuUsage(NativeDrawCalls[Frame.DrawCalls.Count]));
+						}
 						Update.NodesResults.Add(usageCopy);
+					}
+				} else {
+					foreach (var usage in NativeCpuUsages) {
+						Update.NodesResults.Add(CopyCpuUsage(usage));
 					}
 				}
 			}
@@ -266,25 +269,70 @@ namespace Lime.Profilers.Contexts
 				Serialized?.Invoke(this);
 			}
 
-			private object ConvertOwnersToText(object nativeOwners)
+			/// <remarks>Asynchronous with respect to updating and rendering.</remarks>
+			[YuzuAfterDeserialization]
+			private void AfterDeserialization()
 			{
-				if (nativeOwners == null) {
-					return null;
-				} else if (nativeOwners is IList list) {
-					var processedOwners = new List<object>(list.Count);
-					foreach (var item in list) {
-						if (item == null) {
-							processedOwners.Add(null);
-						} else {
-							var node = (Node)item;
-							processedOwners.Add(string.IsNullOrEmpty(node.Id) ? "Node id unset" : node.Id);
+				if (Frame != null) {
+					foreach (var usage in Update.NodesResults) {
+						if (usage.Reasons.Include(CpuUsage.UsageReasons.BatchRender) && usage.Owners is int index) {
+							usage.Owners = Frame.DrawCalls[index].GpuCallInfo.Owners;
 						}
 					}
-					return processedOwners;
-				} else if (nativeOwners is Node node) {
-					return string.IsNullOrEmpty(node.Id) ? "Node id unset" : node.Id;
 				}
-				throw new InvalidOperationException();
+			}
+
+			private GpuUsage CopyGpuUsage(GpuUsage usage)
+			{
+				var info = usage.GpuCallInfo;
+				var infoCopy = MemoryManager<GpuCallInfo>.Acquire();
+				infoCopy.IsPartOfScene  = info.IsPartOfScene;
+				infoCopy.Material       = info.Material.GetType().Name;
+				infoCopy.Owners         = ConvertOwnersToText(info.Owners);
+				var usageCopy = MemoryManager<GpuUsage>.Acquire();
+				usageCopy.GpuCallInfo            = infoCopy;
+				usageCopy.RenderPassIndex        = usage.RenderPassIndex;
+				usageCopy.StartTime              = usage.StartTime;
+				usageCopy.AllPreviousFinishTime  = usage.AllPreviousFinishTime;
+				usageCopy.FinishTime             = usage.FinishTime;
+				usageCopy.TrianglesCount         = usage.TrianglesCount;
+				usageCopy.VerticesCount          = usage.VerticesCount;
+				return usageCopy;
+			}
+
+			private CpuUsage CopyCpuUsage(CpuUsage usage)
+			{
+				var usageCopy = MemoryManager<CpuUsage>.Acquire();
+				usageCopy.Reasons        = usage.Reasons;
+				usageCopy.Owners         = ConvertOwnersToText(usage.Owners);
+				usageCopy.IsPartOfScene  = usage.IsPartOfScene;
+				usageCopy.Start          = usage.Start;
+				usageCopy.Finish         = usage.Finish;
+				return usageCopy;
+			}
+
+			private object ConvertOwnersToText(object nativeOwners)
+			{
+				switch (nativeOwners) {
+					case null: return null;
+					case Node node: return string.IsNullOrEmpty(node.Id) ? "Node id unset" : node.Id;
+					case IList list: return ConvertOwnersListToText(list);
+					default: throw new InvalidOperationException();
+				}
+			}
+
+			private object ConvertOwnersListToText(IList owners)
+			{
+				var processedOwners = new List<object>(owners.Count);
+				foreach (var item in owners) {
+					if (item == null) {
+						processedOwners.Add(null);
+					} else {
+						var node = (Node)item;
+						processedOwners.Add(string.IsNullOrEmpty(node.Id) ? "Node id unset" : node.Id);
+					}
+				}
+				return processedOwners;
 			}
 
 			private class MemoryManager<T> where T : class, new()

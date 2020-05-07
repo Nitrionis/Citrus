@@ -178,6 +178,8 @@ namespace Lime.Graphics.Platform
 
 		public GpuHistory()
 		{
+			freeItem = new Item();
+			protectedIndex = -1;
 			items = new Item[HistoryFramesCount];
 			for (int i = 0; i < items.Length; i++) {
 				items[i] = new Item();
@@ -194,7 +196,7 @@ namespace Lime.Graphics.Platform
 		public bool TryLockFrame(long frameIndex)
 		{
 			if (IsFrameIndexValid(frameIndex)) {
-				protectedIndex = frameIndex;
+				protectedIndex = frameIndex % items.Length;
 				return true;
 			} else {
 				return false;
@@ -208,6 +210,7 @@ namespace Lime.Graphics.Platform
 				var protectedFrame = items[itemIndex];
 				items[itemIndex] = freeItem.Reset();
 				freeItem = protectedFrame;
+				protectedIndex = -1;
 			}
 			return items[itemIndex].Reset();
 		}

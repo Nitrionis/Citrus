@@ -462,10 +462,6 @@
     <Compile Include="Source\Widgets\Bone.cs" />
     <Compile Include="Source\Widgets\BoneArray.cs" />
     <Compile Include="Source\Widgets\Button.cs" />
-    <Compile Include="Source\Widgets\Charts\AreaCharts.cs" />
-    <Compile Include="Source\Widgets\Charts\ChartsContainer.cs" />
-    <Compile Include="Source\Widgets\Charts\Legend.cs" />
-    <Compile Include="Source\Widgets\Charts\LineCharts.cs" />
     <Compile Include="Source\Widgets\CheckBox.cs" />
     <Compile Include="Source\Widgets\ColorCheckBox.cs" />
     <Compile Include="Source\Widgets\DistortionMesh.cs" />
@@ -515,7 +511,6 @@
     <Compile Include="Source\Widgets\Materials\AlphaIntensityMaterial.cs" />
     <Compile Include="Source\Widgets\Materials\BloomMaterial.cs" />
     <Compile Include="Source\Widgets\Materials\BlurMaterial.cs" />
-    <Compile Include="Source\Widgets\Materials\ChartMaterial.cs" />
     <Compile Include="Source\Widgets\Materials\ColorCorrectionMaterial.cs" />
     <Compile Include="Source\Widgets\Materials\DissolveComponent.cs" />
     <Compile Include="Source\Widgets\Materials\DissolveMaterial.cs" />

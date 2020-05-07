@@ -1,36 +1,30 @@
-using Lime.Widgets.Charts;
-
-namespace Tangerine.UI
+namespace Tangerine.UI.Charts
 {
 	internal class AreaReplaceableCharts : AreaCharts
 	{
-		private int indexOfLast;
-		private float[][] originalPoints;
+		private FixedCapacityQueue<float>[] originalData;
 
 		public AreaReplaceableCharts(Parameters parameters) : base(parameters)
 		{
-			indexOfLast = parameters.ControlPointsCount;
-			originalPoints = new float[parameters.ChartsCount][];
-			for (int i = 0; i < originalPoints.Length; i++) {
-				originalPoints[i] = new float[parameters.ControlPointsCount];
+			originalData = new FixedCapacityQueue<float>[Charts.Length];
+			for (int i = 0; i < originalData.Length; i++) {
+				originalData[i] = new FixedCapacityQueue<float>(controlPointsCount);
 			}
 		}
 
 		public override void PushSlice(float[] values)
 		{
 			base.PushSlice(values);
-			indexOfLast = (indexOfLast + 1) % ControlPointsCount;
-			for (int i = 0; i < originalPoints.Length; i++) {
-				originalPoints[i][indexOfLast] = values[i];
+			for (int i = 0; i < originalData.Length; i++) {
+				originalData[i].Enqueue(values[i]);
 			}
 		}
 
 		public override void Reset()
 		{
 			base.Reset();
-			indexOfLast = ControlPointsCount;
-			foreach (var chartPoints in originalPoints) {
-				for (int i = 0; i < chartPoints.Length; i++) {
+			foreach (var chartPoints in originalData) {
+				for (int i = 0; i < chartPoints.Capacity; i++) {
 					chartPoints[i] = 0;
 				}
 			}
@@ -53,16 +47,15 @@ namespace Tangerine.UI
 		private void Add(int chartIndex, float[] values, bool restoreOriginalValues, float sgn)
 		{
 			var chart = Charts[chartIndex];
-			var chartOriginalPoints = originalPoints[chartIndex];
 			if (restoreOriginalValues) {
-				int pointIndex = (indexOfLast + 1) % ControlPointsCount;
-				for (int i = 0; i < chart.Points.Length; i++) {
-					chart.Points[i] = chartOriginalPoints[pointIndex] + sgn * values[i];
-					pointIndex = (pointIndex + 1) % chart.Points.Length;
+				var originalPoints = originalData[chartIndex];
+				for (int i = 1; i < originalPoints.Capacity; i++) {
+					int internalIndex = chart.Points.GetInternalIndex(i);
+					chart.Points[internalIndex] = originalPoints[internalIndex] + sgn * values[i - 1];
 				}
 			} else {
-				for (int i = 0; i < chart.Points.Length; i++) {
-					chart.Points[i] += sgn * values[i];
+				for (int i = 1; i < chart.Points.Capacity; i++) {
+					chart.Points[chart.Points.GetInternalIndex(i)] += sgn * values[i - 1];
 				}
 			}
 			isMeshUpdateRequired = true;
@@ -74,11 +67,9 @@ namespace Tangerine.UI
 		public void Restore(int chartIndex)
 		{
 			var chart = Charts[chartIndex];
-			var chartOriginalPoints = originalPoints[chartIndex];
-			int pointIndex = (indexOfLast + 1) % ControlPointsCount;
-			for (int i = 0; i < chart.Points.Length; i++) {
-				chart.Points[i] = chartOriginalPoints[pointIndex];
-				pointIndex = (pointIndex + 1) % chart.Points.Length;
+			var originalPoints = originalData[chartIndex];
+			for (int i = 0; i < originalPoints.Capacity; i++) {
+				chart.Points[i] = originalPoints[i];
 			}
 			isMeshUpdateRequired = true;
 		}

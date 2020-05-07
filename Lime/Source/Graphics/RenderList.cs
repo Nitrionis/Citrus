@@ -40,15 +40,15 @@ namespace Lime
 
 		public void Render()
 		{
-#if LIME_PROFILER
-			var usage = RenderCpuProfiler.BatchCpuUsageStarted();
-#endif
 			foreach (var batch in Batches) {
-				batch.Render();
-			}
 #if LIME_PROFILER
-			RenderCpuProfiler.BatchCpuUsageFinished(usage);
+				var usage = RenderCpuProfiler.BatchCpuUsageStarted(batch);
 #endif
+				batch.Render();
+#if LIME_PROFILER
+				RenderCpuProfiler.BatchCpuUsageFinished(usage);
+#endif
+			}
 		}
 
 		public void Clear()

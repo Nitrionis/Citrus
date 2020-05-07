@@ -104,7 +104,7 @@ namespace Lime.Profilers
 					unconfirmedHistory.Peek().FrameIndex -= 1;
 					expectedNextFrameIndex -= 1;
 				}
-				freeItems.Enqueue(items[index].Reset());
+				freeItems.Enqueue(SafeResetUpdate(index));
 				items[index] = LastUpdate = update;
 				LastUpdate.NodesResults.AddRange(RenderCpuProfiler.CpuUsages);
 				RenderCpuProfiler.CpuUsages.Clear();
@@ -119,7 +119,7 @@ namespace Lime.Profilers
 		{
 			if (Instance.isEnabled && Instance.isMainWindow) {
 				var usage = CpuUsage.Acquire(reason);
-				usage.Owner = node;
+				usage.Owners = node;
 				usage.IsPartOfScene =
 					node.Manager == null ||
 					SceneProfilingInfo.NodeManager == null ||

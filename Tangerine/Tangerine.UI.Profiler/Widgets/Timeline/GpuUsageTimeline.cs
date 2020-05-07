@@ -54,27 +54,26 @@ namespace Tangerine.UI.Timeline
 			if (regex == null) {
 				return true;
 			}
-			var pi = gpuUsage.GpuCallInfo;
-			if (pi.Owners is IList list) {
-				foreach (var item in list) {
-					if (item != null) {
-						if (item is Node node) {
-							if (node.Id != null && regex.IsMatch(node.Id)) {
-								return true;
-							}
-						} else {
-							if (regex.IsMatch((string)item)) {
-								return true;
+			var info = gpuUsage.GpuCallInfo;
+			switch (info.Owners) {
+				case null: return true;
+				case Node node: return node.Id != null && regex.IsMatch(node.Id);
+				case string id: return regex.IsMatch(id);
+				case IList list:
+					foreach (var item in list) {
+						if (item != null) {
+							if (item is Node n) {
+								if (n.Id != null && regex.IsMatch(n.Id)) {
+									return true;
+								}
+							} else {
+								if (regex.IsMatch((string)item)) {
+									return true;
+								}
 							}
 						}
 					}
-				}
-			} else if (pi.Owners != null) {
-				if (pi.Owners is Node node) {
-					return node.Id != null && regex.IsMatch(node.Id);
-				} else {
-					return regex.IsMatch((string)pi.Owners);
-				}
+					break;
 			}
 			return false;
 		}
@@ -192,7 +191,7 @@ namespace Tangerine.UI.Timeline
 					} else {
 						colorPair = uiColorPair;
 					}
-					if (pi.Owners is IList list) {
+					if ((pi.Owners is IList list) && !(pi.Owners is Node)) {
 						bool isOwnersSet = true;
 						foreach (var item in list) {
 							isOwnersSet &= item != null;

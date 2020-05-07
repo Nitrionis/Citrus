@@ -30,6 +30,9 @@ namespace Lime.Profilers
 				return this;
 			}
 
+			/// <summary>
+			/// Copy without NodesResults.
+			/// </summary>
 			public Item LightweightClone() => new Item {
 				DeltaTime = DeltaTime,
 				FrameIndex = FrameIndex,
@@ -38,6 +41,9 @@ namespace Lime.Profilers
 		}
 
 		protected readonly Item[] items;
+
+		private Item freeItem;
+		private long protectedIndex;
 
 		/// <summary>
 		/// The last profiled update.
@@ -51,6 +57,8 @@ namespace Lime.Profilers
 
 		public CpuHistory()
 		{
+			freeItem = new Item();
+			protectedIndex = -1;
 			items = new Item[GpuHistory.HistoryFramesCount];
 			for (int i = 0; i < items.Length; i++) {
 				items[i] = new Item();
@@ -63,5 +71,34 @@ namespace Lime.Profilers
 			index > 0 &&
 			index < ProfiledUpdatesCount &&
 			index > ProfiledUpdatesCount - GpuHistory.HistoryFramesCount;
+
+		/// <summary>
+		/// Ensures that the update is not reset.
+		/// </summary>
+		/// <remarks>
+		/// Only one update can be locked at a time.
+		/// Previous update will be automatically unlocked.
+		/// </remarks>
+		public bool TryLockUpdate(long updateIndex)
+		{
+			if (IsUpdateIndexValid(updateIndex)) {
+				protectedIndex = updateIndex % items.Length;
+				return true;
+			} else {
+				return false;
+			}
+		}
+
+		protected Item SafeResetUpdate(long updateIndex)
+		{
+			long itemIndex = updateIndex % items.Length;
+			if (itemIndex == protectedIndex) {
+				var protectedUpdate = items[itemIndex];
+				items[itemIndex] = freeItem.Reset();
+				freeItem = protectedUpdate;
+				protectedIndex = -1;
+			}
+			return items[itemIndex].Reset();
+		}
 	}
 }

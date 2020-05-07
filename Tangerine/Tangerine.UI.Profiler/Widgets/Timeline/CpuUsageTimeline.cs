@@ -1,8 +1,10 @@
 using System;
+using System.Collections;
 using System.Text.RegularExpressions;
 using Lime;
 using Lime.Graphics.Platform;
 using Lime.Profilers;
+using UsageReasons = Lime.Graphics.Platform.CpuUsage.UsageReasons;
 
 namespace Tangerine.UI.Timeline
 {
@@ -47,13 +49,29 @@ namespace Tangerine.UI.Timeline
 
 		public static bool CheckTargetNode(Regex regex, CpuUsage cpuUsage)
 		{
-			if (regex == null) {
+			if (regex == null || cpuUsage.Owners == null) {
 				return true;
 			}
-			if (cpuUsage.Owner is Node node) {
-				return node.Id != null && regex.IsMatch(node.Id);
-			} else if (cpuUsage.Owner is string id) {
-				return regex.IsMatch(id);
+			if (cpuUsage.Reasons.Include(UsageReasons.BatchRender)) {
+				foreach (var item in (IList)cpuUsage.Owners) {
+					if (item != null) {
+						if (item is Node node) {
+							if (node.Id != null && regex.IsMatch(node.Id)) {
+								return true;
+							}
+						} else {
+							if (regex.IsMatch((string)item)) {
+								return true;
+							}
+						}
+					}
+				}
+			} else {
+				if (cpuUsage.Owners is Node node) {
+					return node.Id != null && regex.IsMatch(node.Id);
+				} else {
+					return regex.IsMatch((string)cpuUsage.Owners);
+				}
 			}
 			return false;
 		}
@@ -84,6 +102,7 @@ namespace Tangerine.UI.Timeline
 			private static readonly Color4 gestureColor       = ColorTheme.Current.Profiler.CpuUsageGesture;
 			private static readonly Color4 preparationColor   = ColorTheme.Current.Profiler.CpuUsageRenderPreparation;
 			private static readonly Color4 nodeRenderColor    = ColorTheme.Current.Profiler.CpuUsageNodeRender;
+			private static readonly Color4 batchRenderColor   = ColorTheme.Current.Profiler.CpuUsageBatchRender;
 			private static readonly Color4 ownerUnknownColor  = ColorTheme.Current.Profiler.CpuUsageOwnerUnknown;
 
 			public CpuUsageRect(CpuUsageTimeline timeline, int selfIndex, CpuUsage cpuUsage)
@@ -130,16 +149,30 @@ namespace Tangerine.UI.Timeline
 
 			private static Color4 GetColorTheme(CpuUsage cpuUsage)
 			{
-				if (cpuUsage.Owner != null || (cpuUsage.Reasons & CpuUsage.UsageReasons.NoOwnerFlag) != 0) {
-					switch (cpuUsage.Reasons) {
-						case CpuUsage.UsageReasons.Animation:          return animationColor;
-						case CpuUsage.UsageReasons.Update:             return updateColor;
-						case CpuUsage.UsageReasons.Gesture:            return gestureColor;
-						case CpuUsage.UsageReasons.RenderPreparation:  return preparationColor;
-						case CpuUsage.UsageReasons.NodeRender:         return nodeRenderColor;
-						case CpuUsage.UsageReasons.BatchRender:        return nodeRenderColor;
-						default: throw new NotImplementedException();
+				if (cpuUsage.Owners != null) {
+					Color4 GetBaseColor()
+					{
+						switch (cpuUsage.Reasons & UsageReasons.ReasonBits) {
+							case UsageReasons.Animation:         return animationColor;
+							case UsageReasons.Update:            return updateColor;
+							case UsageReasons.Gesture:           return gestureColor;
+							case UsageReasons.RenderPreparation: return preparationColor;
+							case UsageReasons.NodeRender:        return nodeRenderColor;
+							case UsageReasons.BatchRender:       return batchRenderColor;
+							default: throw new NotImplementedException();
+						}
 					}
+					var color = GetBaseColor();
+					if (cpuUsage.Reasons.Include(UsageReasons.BatchRender)) {
+						bool isOwnersSet = true;
+						foreach (var item in (IList)cpuUsage.Owners) {
+							isOwnersSet &= item != null;
+						}
+						if (!isOwnersSet) {
+							color = ownerUnknownColor;
+						}
+					}
+					return color;
 				} else return ownerUnknownColor;
 			}
 		}

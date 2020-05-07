@@ -44,8 +44,13 @@
     <Compile Include="FixedCapacityQueue.cs" />
     <Compile Include="IpDialog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Widgets\AreaReplaceableCharts.cs" />
+    <Compile Include="Widgets\Charts\AreaReplaceableCharts.cs" />
     <Compile Include="Widgets\ChartsPanel.cs" />
+    <Compile Include="Widgets\Charts\AreaCharts.cs" />
+    <Compile Include="Widgets\Charts\ChartMaterial.cs" />
+    <Compile Include="Widgets\Charts\ChartsContainer.cs" />
+    <Compile Include="Widgets\Charts\Legend.cs" />
+    <Compile Include="Widgets\Charts\LineCharts.cs" />
     <Compile Include="Widgets\CpuTrace.cs" />
     <Compile Include="Widgets\GpuTrace.cs" />
     <Compile Include="Widgets\MainControlPanel.cs" />

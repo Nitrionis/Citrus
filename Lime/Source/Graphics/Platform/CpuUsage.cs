@@ -5,6 +5,11 @@ using Yuzu;
 
 namespace Lime.Graphics.Platform
 {
+	public static class CpuUsageReasonsExtensions
+	{
+		public static bool Include(this CpuUsage.UsageReasons self, CpuUsage.UsageReasons flag) => (self & flag) == flag;
+	}
+
 	public class CpuUsage : ITimePeriod
 	{
 		private static Stack<CpuUsage> updatePool = new Stack<CpuUsage>();
@@ -16,15 +21,15 @@ namespace Lime.Graphics.Platform
 		[Flags]
 		public enum UsageReasons : int
 		{
-			NoOwnerFlag       = 1 << 0,
-			UpdateThreadFlag  = 1 << 1,
-			RenderThreadFlag  = 1 << 2,
-			Animation         = 1 << 3 | UpdateThreadFlag,
-			Update            = 1 << 4 | UpdateThreadFlag,
-			Gesture           = 1 << 5 | UpdateThreadFlag,
-			RenderPreparation = 1 << 6 | UpdateThreadFlag,
-			NodeRender        = 1 << 7 | RenderThreadFlag,
-			BatchRender       = 1 << 8 | RenderThreadFlag | NoOwnerFlag,
+			UpdateThreadFlag  = 1 << 0,
+			RenderThreadFlag  = 1 << 1,
+			Animation         = 1 << 2 | UpdateThreadFlag,
+			Update            = 1 << 3 | UpdateThreadFlag,
+			Gesture           = 1 << 4 | UpdateThreadFlag,
+			RenderPreparation = 1 << 5 | UpdateThreadFlag,
+			NodeRender        = 1 << 6 | RenderThreadFlag,
+			BatchRender       = 1 << 7 | RenderThreadFlag,
+			ReasonBits      = Animation | Update | Gesture | RenderPreparation | NodeRender | BatchRender
 		}
 
 		/// <summary>
@@ -34,13 +39,19 @@ namespace Lime.Graphics.Platform
 		public UsageReasons Reasons;
 
 		/// <summary>
+		/// if <see cref="Reasons"/> is BatchRender:
 		/// <list type="bullet">
-		/// <item><description>This is Node, if <see cref="CpuUsage"/> created on the local device.</description></item>
-		/// <item><description>This is Node.Id, if <see cref="CpuUsage"/> received from outside.</description></item>
+		/// <item><description>
+		/// If <see cref="CpuUsage"/> created on the local device, this can be List of Node or null.
+		/// </description></item>
+		/// <item><description>
+		/// If <see cref="CpuUsage"/> received from outside, this can be List of Node.Id or null.
+		/// </description></item>
 		/// </list>
+		/// else this can be Node or Node.Id or null.
 		/// </summary>
 		[YuzuRequired]
-		public object Owner;
+		public object Owners;
 
 		/// <summary>
 		/// Indicates whether the owner is part of the scene.
@@ -77,7 +88,7 @@ namespace Lime.Graphics.Platform
 		/// </summary>
 		public void Free()
 		{
-			Owner = null;
+			Owners = null;
 			if ((Reasons & UsageReasons.RenderThreadFlag) != 0) {
 				renderPool.Push(this);
 			} else {

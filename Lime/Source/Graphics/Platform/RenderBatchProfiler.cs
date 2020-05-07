@@ -13,16 +13,16 @@ namespace Lime.Graphics.Platform
 			SceneSavedByBatching = 0;
 		}
 
-		protected bool isPartOfScene;
-		protected List<object> drawCallsOwners = new List<object>();
+		public bool IsPartOfScene { get; protected set; }
+		public List<object> DrawCallsOwners { get; protected set; } = new List<object>();
 
 		public void ProcessNode(object node, object manager)
 		{
 			if (node == null) {
 				node = null;
 			}
-			drawCallsOwners.Add(node);
-			isPartOfScene |=
+			DrawCallsOwners.Add(node);
+			IsPartOfScene |=
 				node == null ||
 				SceneProfilingInfo.NodeManager == null || 
 				ReferenceEquals(SceneProfilingInfo.NodeManager, manager);

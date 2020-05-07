@@ -17,9 +17,8 @@ namespace Lime.Profilers.Contexts
 		{
 			public void Enqueue(Item item)
 			{
-				long index = item.FrameIndex % items.Length;
-				items[index].Reset();
-				items[index] = item;
+				SafeResetFrame(item.FrameIndex);
+				items[item.FrameIndex % items.Length] = item;
 				if (ProfiledFramesCount < item.FrameIndex + 1) {
 					ProfiledFramesCount = item.FrameIndex + 1;
 					LastFrame = item;
@@ -33,9 +32,8 @@ namespace Lime.Profilers.Contexts
 		{
 			public void Enqueue(Item item)
 			{
-				long index = item.UpdateIndex % items.Length;
-				items[index].Reset();
-				items[index] = item;
+				SafeResetUpdate(item.UpdateIndex);
+				items[item.UpdateIndex % items.Length] = item;
 				if (ProfiledUpdatesCount < item.UpdateIndex + 1) {
 					ProfiledUpdatesCount = item.UpdateIndex + 1;
 					LastUpdate = item;

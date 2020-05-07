@@ -20,7 +20,7 @@ namespace Tangerine.UI
 		private ThemedCheckBox gpuTraceCheckBox;
 		private ThemedCheckBox cpuTraceCheckBox;
 
-		private FixedCapacityQueue indexesStorage;
+		private FixedCapacityQueue<long> indexesStorage;
 		private ChartsPanel chartsPanel;
 		private CpuTrace cpuTrace;
 		private GpuTrace gpuTrace;
@@ -53,8 +53,8 @@ namespace Tangerine.UI
 			InitializeChartsPanel();
 			InitializeGpuTracePanel();
 			InitializeCpuTracePanel();
-			selectedRenderTime = new float[GpuHistory.HistoryFramesCount];
-			selectedCpuUsageTime = new float[GpuHistory.HistoryFramesCount];
+			selectedRenderTime = new float[ChartsPanel.HistorySize];
+			selectedCpuUsageTime = new float[ChartsPanel.HistorySize];
 			outdatedSamplesCount = selectedRenderTime.Length;
 			Tasks.Add(StateUpdateTask);
 			lastProcessedUpdateIndex = 0;
@@ -80,7 +80,10 @@ namespace Tangerine.UI
 
 		private void InitializeChartsPanel()
 		{
-			indexesStorage = new FixedCapacityQueue(GpuHistory.HistoryFramesCount);
+			indexesStorage = new FixedCapacityQueue<long>(ChartsPanel.HistorySize);
+			for (int i = 0; i < indexesStorage.Capacity; i++) {
+				indexesStorage[i] = -1;
+			}
 			chartsPanel = new ChartsPanel();
 			chartsPanel.SliceSelected += OnChartSliceSelected;
 			AddNode(chartsPanel);
@@ -184,9 +187,9 @@ namespace Tangerine.UI
 				Padding = new Thickness(8),
 				Visible = false,
 				Nodes = {
-					HGroup(cpuInfoCheckBox, CreateLabel("CPU information")),
-					HGroup(gpuInfoCheckBox, CreateLabel("GPU information")),
-					HGroup(geometryInfoCheckBox, CreateLabel("Geometry information")),
+					HGroup(cpuInfoCheckBox, CreateLabel("CPU Charts")),
+					HGroup(gpuInfoCheckBox, CreateLabel("GPU Charts")),
+					HGroup(geometryInfoCheckBox, CreateLabel("Geometry Charts")),
 					HGroup(gpuTraceCheckBox, CreateLabel("GPU trace timeline")),
 					HGroup(cpuTraceCheckBox, CreateLabel("CPU trace timeline")),
 					HGroup(gpuDeepProfilingCheckBox, CreateLabel("Deep profiling GPU")),
@@ -237,20 +240,24 @@ namespace Tangerine.UI
 		private void OnChartSliceSelected(int sliceIndex)
 		{
 			mainControlPanel.ResetFilters();
-			var update = LimeProfiler.CpuHistory.GetUpdate(indexesStorage.GetItem(sliceIndex));
-			GpuHistory.Item frame = null;
-			if (LimeProfiler.GpuHistory.TryLockFrame(update.FrameIndex)) {
-				frame = LimeProfiler.GpuHistory.GetFrame(update.FrameIndex);
-				gpuTrace.Visible = frame.IsDeepProfilingEnabled;
-				gpuTraceMessagePanel.Visible = !frame.IsDeepProfilingEnabled;
-				if (frame.IsDeepProfilingEnabled) {
-					gpuTrace.Timeline.Rebuild(frame);
+			long updateIndex = indexesStorage.GetItem(sliceIndex);
+			if (LimeProfiler.CpuHistory.TryLockUpdate(updateIndex)) {
+				var update = LimeProfiler.CpuHistory.GetUpdate(updateIndex);
+				GpuHistory.Item frame = null;
+				if (LimeProfiler.GpuHistory.TryLockFrame(update.FrameIndex)) {
+					frame = LimeProfiler.GpuHistory.GetFrame(update.FrameIndex);
+					gpuTrace.Visible = frame.IsDeepProfilingEnabled;
+					gpuTraceMessagePanel.Visible = !frame.IsDeepProfilingEnabled;
+					if (frame.IsDeepProfilingEnabled) {
+						gpuTrace.Timeline.Rebuild(frame);
+					}
+					cpuTrace.Timeline.Rebuild(update);
 				}
-				cpuTrace.Timeline.Rebuild(update);
+				long srtIndex = sliceIndex + outdatedSamplesCount;
+				float srt = srtIndex >= selectedRenderTime.Length ? 0 : selectedRenderTime[srtIndex];
+				float sut = srtIndex >= selectedCpuUsageTime.Length ? 0 : selectedCpuUsageTime[srtIndex];
+				chartsPanel.UpdateChartsLegends(frame, update, srt, sut);
 			}
-			long srtIndex = sliceIndex + outdatedSamplesCount;
-			float srt = srtIndex >= selectedRenderTime.Length ? 0 : selectedRenderTime[srtIndex];
-			chartsPanel.UpdateChartsLegends(frame, update, srt);
 		}
 
 		private void SelectRenderTime(bool isSceneOnly, Regex regexNodeFilter, float[] resultsBuffer)
@@ -258,28 +265,30 @@ namespace Tangerine.UI
 			int chartSliceIndex = 0;
 			foreach (var index in indexesStorage) {
 				resultsBuffer[chartSliceIndex] = 0;
-				long frameIndex = LimeProfiler.CpuHistory.GetUpdate(index).FrameIndex;
-				if (LimeProfiler.GpuHistory.IsFrameIndexValid(frameIndex)) {
-					var frame = LimeProfiler.GpuHistory.GetFrame(frameIndex);
-					float renderTimeOfSelected = 0f;
-					uint endOfInterval = 0;
-					foreach (var dc in frame.DrawCalls) {
-						var pi = dc.GpuCallInfo;
-						bool isContainsTargetNode =
-							regexNodeFilter != null &&
-							GpuUsageTimeline.CheckTargetNode(regexNodeFilter, dc);
-						bool isSceneFilterPassed = !isSceneOnly || pi.IsPartOfScene;
-						bool isFilteringPassed = isContainsTargetNode && isSceneFilterPassed;
-						if (isFilteringPassed) {
-							if (endOfInterval < dc.Start) {
-								endOfInterval = dc.Start;
-								renderTimeOfSelected += (dc.Finish - dc.Start) / 1000f;
-							} else {
-								renderTimeOfSelected += (dc.Finish - endOfInterval) / 1000f;
+				if (LimeProfiler.CpuHistory.IsUpdateIndexValid(index)) {
+					long frameIndex = LimeProfiler.CpuHistory.GetUpdate(index).FrameIndex;
+					if (LimeProfiler.GpuHistory.IsFrameIndexValid(frameIndex)) {
+						var frame = LimeProfiler.GpuHistory.GetFrame(frameIndex);
+						float renderTimeOfSelected = 0f;
+						uint endOfInterval = 0;
+						foreach (var dc in frame.DrawCalls) {
+							var pi = dc.GpuCallInfo;
+							bool isContainsTargetNode = GpuUsageTimeline.CheckTargetNode(regexNodeFilter, dc);
+							bool isSceneFilterPassed = !isSceneOnly || pi.IsPartOfScene;
+							bool isFilteringPassed =
+								!(!isSceneOnly && regexNodeFilter == null) &&
+								isContainsTargetNode && isSceneFilterPassed;
+							if (isFilteringPassed) {
+								if (endOfInterval < dc.Start) {
+									endOfInterval = dc.Start;
+									renderTimeOfSelected += (dc.Finish - dc.Start) / 1000f;
+								} else {
+									renderTimeOfSelected += (dc.Finish - endOfInterval) / 1000f;
+								}
 							}
 						}
+						resultsBuffer[chartSliceIndex] = renderTimeOfSelected;
 					}
-					resultsBuffer[chartSliceIndex] = renderTimeOfSelected;
 				}
 				chartSliceIndex += 1;
 			}
@@ -290,25 +299,29 @@ namespace Tangerine.UI
 			int chartSliceIndex = 0;
 			foreach (var index in indexesStorage) {
 				resultsBuffer[chartSliceIndex] = 0;
-				var update = LimeProfiler.CpuHistory.GetUpdate(index);
-				float cpuUsageTimeOfSelected = 0f;
-				uint endOfInterval = 0;
-				foreach (var usage in update.NodesResults) {
-					bool isContainsTargetNode =
-						regexNodeFilter != null &&
-						CpuUsageTimeline.CheckTargetNode(regexNodeFilter, usage);
-					bool isSceneFilterPassed = !isSceneOnly || usage.IsPartOfScene;
-					bool isFilteringPassed = isContainsTargetNode && isSceneFilterPassed;
-					if (isFilteringPassed) {
-						if (endOfInterval < usage.Start) {
-							endOfInterval = usage.Start;
-							cpuUsageTimeOfSelected += (usage.Finish - usage.Start) / 1000f;
-						} else {
-							cpuUsageTimeOfSelected += (usage.Finish - endOfInterval) / 1000f;
+				if (LimeProfiler.CpuHistory.IsUpdateIndexValid(index)) {
+					var update = LimeProfiler.CpuHistory.GetUpdate(index);
+					float cpuUsageTimeOfSelected = 0f;
+					uint endOfInterval = 0;
+					foreach (var usage in update.NodesResults) {
+						bool isContainsTargetNode =
+							regexNodeFilter == null ||
+							CpuUsageTimeline.CheckTargetNode(regexNodeFilter, usage);
+						bool isSceneFilterPassed = !isSceneOnly || usage.IsPartOfScene;
+						bool isFilteringPassed =
+							!(!isSceneOnly && regexNodeFilter == null) &&
+							isContainsTargetNode && isSceneFilterPassed;
+						if (isFilteringPassed) {
+							if (endOfInterval < usage.Start) {
+								endOfInterval = usage.Start;
+								cpuUsageTimeOfSelected += (usage.Finish - usage.Start) / 1000f;
+							} else {
+								cpuUsageTimeOfSelected += (usage.Finish - endOfInterval) / 1000f;
+							}
 						}
 					}
+					resultsBuffer[chartSliceIndex] = cpuUsageTimeOfSelected;
 				}
-				resultsBuffer[chartSliceIndex] = cpuUsageTimeOfSelected;
 				chartSliceIndex += 1;
 			}
 		}

@@ -54,19 +54,19 @@ namespace Lime
 			}
 			ownsMesh = false;
 #if LIME_PROFILER
-			isPartOfScene = false;
-			drawCallsOwners = new List<object>();
+			IsPartOfScene = false;
+			DrawCallsOwners = new List<object>();
 #endif
 		}
 
 		public void Render()
 		{
 #if LIME_PROFILER
-			int savedByBatching = drawCallsOwners.Count == 0 ?
-				0 : (drawCallsOwners.Count - 1) * Material.PassCount;
+			int savedByBatching = DrawCallsOwners.Count == 0 ?
+				0 : (DrawCallsOwners.Count - 1) * Material.PassCount;
 			FullSavedByBatching += savedByBatching;
-			SceneSavedByBatching += isPartOfScene ? savedByBatching : 0;
-			var profilingInfo = GpuCallInfo.Acquire(drawCallsOwners, isPartOfScene, Material, 0);
+			SceneSavedByBatching += IsPartOfScene ? savedByBatching : 0;
+			var profilingInfo = GpuCallInfo.Acquire(DrawCallsOwners, IsPartOfScene, Material, 0);
 #endif
 			PlatformRenderer.SetTexture(0, Texture1);
 			PlatformRenderer.SetTexture(1, Texture2);

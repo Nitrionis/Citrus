@@ -23,7 +23,7 @@ namespace Lime.Graphics.Platform
 		{
 			if (isEnabled) {
 				var usage = CpuUsage.Acquire(CpuUsage.UsageReasons.NodeRender);
-				usage.Owner = node;
+				usage.Owners = node;
 				usage.IsPartOfScene =
 					manager == null ||
 					SceneProfilingInfo.NodeManager == null ||
@@ -43,12 +43,13 @@ namespace Lime.Graphics.Platform
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static CpuUsage BatchCpuUsageStarted()
+		public static CpuUsage BatchCpuUsageStarted(IRenderBatch batch)
 		{
 			if (isEnabled) {
+				var profilingInfo = (RenderBatchProfiler)batch;
 				var usage = CpuUsage.Acquire(CpuUsage.UsageReasons.BatchRender);
-				usage.Owner = null;
-				usage.IsPartOfScene = true;
+				usage.Owners = profilingInfo.DrawCallsOwners;
+				usage.IsPartOfScene = profilingInfo.IsPartOfScene;
 				usage.Start = Stopwatch.ElapsedMicroseconds();
 				CpuUsages.Add(usage);
 				return usage;

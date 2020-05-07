@@ -1,8 +1,9 @@
 using System;
+using Lime;
 
-namespace Lime.Widgets.Charts
+namespace Tangerine.UI.Charts
 {
-	public class Legend : Widget
+	internal class Legend : Widget
 	{
 		public struct ItemDescription
 		{

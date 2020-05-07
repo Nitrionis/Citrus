@@ -1,6 +1,8 @@
-namespace Lime.Widgets.Charts
+using Lime;
+
+namespace Tangerine.UI.Charts
 {
-	public class LineCharts : ChartsContainer
+	internal class LineCharts : ChartsContainer
 	{
 		/// <summary>
 		/// Typically, charts in <see cref="ChartsContainer"/> is aligned to the top.
@@ -16,7 +18,7 @@ namespace Lime.Widgets.Charts
 		/// <summary>
 		/// Stores the maximum value for each chart calculated in the previous <see cref="RecalculateMesh"/>.
 		/// </summary>
-		private float[] maxValuePerChart;
+		private float[] maxValuesPerCharts;
 
 		public new class Parameters : ChartsContainer.Parameters
 		{
@@ -31,51 +33,51 @@ namespace Lime.Widgets.Charts
 			for (int i = 0; i < parameters.ChartsCount; i++) {
 				CustomChartScales[i] = 1.0f;
 			}
-			maxValuePerChart = new float[parameters.ChartsCount];
+			maxValuesPerCharts = new float[parameters.ChartsCount];
 			for (int i = 0; i < parameters.ChartsCount; i++) {
-				maxValuePerChart[i] = 1.0f;
+				maxValuesPerCharts[i] = 1.0f;
 			}
 		}
 
 		private Vector2 GetNormal(Vector2 v) => new Vector2(-v.Y, v.X);
 
-		protected override void RecalculateMesh()
+		protected override void RebuildMesh(Mesh<Vector3> mesh)
 		{
-			if (!isMeshUpdateRequired) return;
-			isMeshUpdateRequired = false;
 			int parity = 0;
 			int chartIndex = 0;
 			int vertexIndex = Line.VerticesCount * userLines.Length;
 			float newChartsMaxValue = 1;
 			foreach (var chart in Charts) {
 				if (chart.IsVisible) {
-					float maxValue = 0;
-					float scalingFactor = CustomChartScales[chartIndex] * chartsHeight /
-						(IsIndependentMode ? maxValuePerChart[chartIndex] : chartsMaxValue);
-					int step = (1 - parity) * 2 - 1; // -1 or +1
-					int start = parity * (chart.Points.Length - 1);
-					int end = (1 - parity) * (chart.Points.Length - 1);
+					float maxValue = IsIndependentMode ? maxValuesPerCharts[chartIndex] : chartsMaxValue;
+					float scalingFactor = CustomChartScales[chartIndex] * Height / maxValue;
+					maxValue = 0;
+					int step = (1 - parity) * 2 - 1;
+					int start = parity * (chart.Points.Capacity - 2);
+					int end = (1 - parity) * (chart.Points.Capacity - 2);
 					for (int i = start; i != end; i += step) {
+						float p1 = chart.Points.GetItem(i + 1);
+						float p2 = chart.Points.GetItem(i + 1 + step);
 						Vector2 a = new Vector2(
 							x: i * ControlPointsSpacing,
-							y: chartsHeight - chart.Points[i] * scalingFactor);
+							y: Height - p1 * scalingFactor);
 						Vector2 b = new Vector2(
 							x: (i + step) * ControlPointsSpacing,
-							y: chartsHeight - chart.Points[i + step] * scalingFactor);
+							y: Height - p2 * scalingFactor);
 						Vector2 n = GetNormal((b - a).Normalized * 0.5f);
 						mesh.Vertices[vertexIndex++] = new Vector3(a - n, chart.ColorIndex);
 						mesh.Vertices[vertexIndex++] = new Vector3(a + n, chart.ColorIndex);
 						mesh.Vertices[vertexIndex++] = new Vector3(b - n, chart.ColorIndex);
 						mesh.Vertices[vertexIndex++] = new Vector3(b + n, chart.ColorIndex);
-						maxValue = Mathf.Max(maxValue, chart.Points[i]);
+						maxValue = Mathf.Max(maxValue, p1);
 					}
 					parity = (parity + 1) % 2;
-					maxValuePerChart[chartIndex] = maxValue;
+					maxValuesPerCharts[chartIndex] = maxValue;
 					newChartsMaxValue = Mathf.Max(maxValue, newChartsMaxValue);
 				}
 				chartIndex++;
 			}
-			RecalculateUserLinesMesh(IsIndependentMode ? 1 : chartsHeight / chartsMaxValue);
+			RecalculateUserLines(mesh, IsIndependentMode ? 1 : Height / chartsMaxValue);
 			chartsMaxValue = newChartsMaxValue;
 			mesh.DirtyFlags |= MeshDirtyFlags.Vertices;
 		}

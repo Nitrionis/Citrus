@@ -35,9 +35,8 @@ namespace Tangerine.UI
 				Padding = new Thickness(0, 4),
 				MinMaxWidth = 128
 			};
-			profilingMode.Items.Add(new ThemedDropDownList.Item("This device mode"));
-			profilingMode.Items.Add(new ThemedDropDownList.Item("Data receiver mode"));
-			profilingMode.Items.Add(new ThemedDropDownList.Item("Data source mode"));
+			profilingMode.Items.Add(new ThemedDropDownList.Item("Engine"));
+			profilingMode.Items.Add(new ThemedDropDownList.Item("Game"));
 			profilingMode.Index = 0;
 			profilingMode.Changed += ProfilingModeChanged;
 			AddNode(profilingMode);

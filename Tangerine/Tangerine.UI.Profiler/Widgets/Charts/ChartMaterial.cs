@@ -1,6 +1,8 @@
-namespace Lime
+using Lime;
+
+namespace Tangerine.UI
 {
-	public class ChartMaterial : IMaterial
+	internal class ChartMaterial : IMaterial
 	{
 		private readonly ShaderParams[] shaderParamsArray;
 		private readonly ShaderParamKey<Matrix44> matrixKey;

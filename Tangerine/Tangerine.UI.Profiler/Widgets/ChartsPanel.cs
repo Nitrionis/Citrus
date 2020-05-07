@@ -1,13 +1,16 @@
 using System;
 using Lime;
-using Lime.Widgets.Charts;
 using Lime.Profilers;
 using GpuHistory = Lime.Graphics.Platform.GpuHistory;
+using Tangerine.UI.Charts;
 
 namespace Tangerine.UI
 {
 	internal class ChartsPanel : Widget
 	{
+		public const int HistorySize = GpuHistory.HistoryFramesCount - 1;
+		private const float ChartsHeight = 64;
+
 		public readonly Legend CpuLegend;
 		public readonly AreaReplaceableCharts CpuCharts;
 
@@ -47,15 +50,16 @@ namespace Tangerine.UI
 				Color4.Red
 			};
 			// Create CPU charts.
-			var parameters = new AreaCharts.Parameters(GpuHistory.HistoryFramesCount, colors) {
-				Height = 64,
+			var parameters = new AreaCharts.Parameters(HistorySize, colors) {
 				ChartsCount = 2,
 				UserLinesCount = 4,
 				SliceSelected = OnSliceSelected
 			};
 			CpuCharts = new AreaReplaceableCharts(parameters) {
 				Id = "CPU Charts",
-				BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground
+				BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground,
+				Height = ChartsHeight,
+				MinMaxHeight = ChartsHeight
 			};
 			var targetWidth = (parameters.ControlPointsCount - 1) * parameters.ControlPointsSpacing;
 			// Horizontal line for lowest fps
@@ -76,20 +80,21 @@ namespace Tangerine.UI
 				new Legend.ItemDescription { Color = colors[1], Name = "Selected", Format = "{0,6:0.00}" },
 			};
 			CpuLegend = new Legend(cpuLegendItems, CpuCharts.SetActive) {
-				MinMaxHeight = parameters.Height,
-				Height = parameters.Height,
+				MinMaxHeight = ChartsHeight,
+				Height = ChartsHeight,
 				TextColor = ColorTheme.Current.Profiler.LegendText
 			};
 			// Create GPU charts.
-			parameters = new AreaCharts.Parameters(GpuHistory.HistoryFramesCount, colors) {
-				Height = 64,
+			parameters = new AreaCharts.Parameters(HistorySize, colors) {
 				ChartsCount = 2,
 				UserLinesCount = 3,
 				SliceSelected = OnSliceSelected
 			};
 			GpuCharts = new AreaReplaceableCharts(parameters) {
 				Id = "GPU Charts",
-				BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground
+				BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground,
+				Height = ChartsHeight,
+				MinMaxHeight = ChartsHeight
 			};
 			GpuCharts.SetLine(0, new ChartsContainer.Line(
 				new Vector2(0, 1), new Vector2(targetWidth, 1), 10, "10 ms"));
@@ -99,12 +104,12 @@ namespace Tangerine.UI
 				new Legend.ItemDescription { Color = colors[1], Name = "Selected", Format = "{0,6:0.00}" },
 			};
 			GpuLegend = new Legend(gpuLegendItems, GpuCharts.SetActive) {
-				MinMaxHeight = parameters.Height,
-				Height = parameters.Height,
+				MinMaxHeight = ChartsHeight,
+				Height = ChartsHeight,
 				TextColor = ColorTheme.Current.Profiler.LegendText
 			};
 			// Create line chars.
-			parameters = new LineCharts.Parameters(GpuHistory.HistoryFramesCount, colors) {
+			parameters = new LineCharts.Parameters(HistorySize, colors) {
 				IsIndependentMode = true,
 				ChartsCount = 4,
 				UserLinesCount = 4,
@@ -112,7 +117,9 @@ namespace Tangerine.UI
 			};
 			LineCharts = new LineCharts((LineCharts.Parameters)parameters) {
 				Id = "GPU LineCharts",
-				BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground
+				BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground,
+				MinMaxHeight = 100,
+				Height = 100,
 			};
 			LineCharts.CustomChartScales[0] = 1.0f;
 			LineCharts.CustomChartScales[1] = 0.9f;
@@ -126,7 +133,9 @@ namespace Tangerine.UI
 				new Legend.ItemDescription { Color = colors[3], Name = "Triangles",         Format = "{0,6}" },
 			};
 			LineLegend = new Legend(legendItems, LineCharts.SetActive) {
-				TextColor = ColorTheme.Current.Profiler.LegendText
+				TextColor = ColorTheme.Current.Profiler.LegendText,
+				MinMaxHeight = 100,
+				Height = 100,
 			};
 			Layout = new VBoxLayout();
 			AddNode(new Widget {
@@ -208,12 +217,12 @@ namespace Tangerine.UI
 					frame.SceneTrianglesCount
 				};
 			LineCharts.PushSlice(points);
-			UpdateChartsLegends(frame, update, selectedRenderTime: 0);
+			UpdateChartsLegends(frame, update, selectedRenderTime: 0, selectedUpdateTime: 0);
 		}
 
-		public void UpdateChartsLegends(GpuHistory.Item frame, CpuHistory.Item update, float selectedRenderTime)
+		public void UpdateChartsLegends(GpuHistory.Item frame, CpuHistory.Item update, float selectedRenderTime, float selectedUpdateTime)
 		{
-			CpuLegend.SetValues(new float[] { update.DeltaTime, 0f });
+			CpuLegend.SetValues(new float[] { update.DeltaTime, selectedUpdateTime });
 			GpuLegend.SetValues(frame == null ? new float[2] : new float[] {
 				(float)frame.FullGpuRenderTime,
 				selectedRenderTime
@@ -265,7 +274,7 @@ namespace Tangerine.UI
 				if (cpuLastSlice.Index < 0) {
 					CpuCharts.SetLine(3, new ChartsContainer.Line(
 						Vector2.Zero, Vector2.Zero, colorIndex: 10, caption: null));
-					GpuCharts.SetLine(2, new ChartsContainer.Line(
+					GpuCharts.SetLine(1, new ChartsContainer.Line(
 						Vector2.Zero, Vector2.Zero, colorIndex: 10, caption: null));
 					LineCharts.SetLine(0, new ChartsContainer.Line(
 						Vector2.Zero, Vector2.Zero, colorIndex: 10, caption: null));
