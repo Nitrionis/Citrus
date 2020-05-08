@@ -6,7 +6,7 @@ namespace Tangerine.UI.Charts
 {
 	internal abstract class ChartsContainer : Widget
 	{
-		protected readonly int chartVerticesCount;
+		//protected readonly int chartVerticesCount;
 		protected readonly int chartsVerticesOffset;
 		protected readonly int controlPointsCount;
 		public readonly int ControlPointsSpacing;

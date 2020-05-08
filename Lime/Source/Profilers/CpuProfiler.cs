@@ -21,6 +21,11 @@ namespace Lime.Profilers
 
 		private readonly Queue<Item> freeItems;
 		private readonly Queue<Item> unconfirmedHistory;
+		private readonly PerformanceCounter privateBytes;
+		private readonly PerformanceCounter gen0Collections;
+		private readonly PerformanceCounter gen1Collections;
+		private readonly PerformanceCounter gen2Collections;
+		private readonly PerformanceCounter timePercentage;
 		private Stopwatch stopwatch;
 		private Item lastUnconfirmed;
 		private Item resultsBuffer;
@@ -33,6 +38,12 @@ namespace Lime.Profilers
 
 		public CpuProfiler()
 		{
+			var currentProcess = Process.GetCurrentProcess().ProcessName;
+			privateBytes    = new PerformanceCounter("Process", "Private Bytes", currentProcess);
+			gen0Collections = new PerformanceCounter(".NET CLR Memory", "# Gen 0 Collections", currentProcess);
+			gen1Collections = new PerformanceCounter(".NET CLR Memory", "# Gen 1 Collections", currentProcess);
+			gen2Collections = new PerformanceCounter(".NET CLR Memory", "# Gen 2 Collections", currentProcess);
+			timePercentage  = new PerformanceCounter(".NET CLR Memory", "% Time in GC", currentProcess);
 			stopwatch = new Stopwatch();
 			freeItems = new Queue<Item>(UnconfirmedHistorySize);
 			unconfirmedHistory = new Queue<Item>(UnconfirmedHistorySize);
@@ -61,6 +72,11 @@ namespace Lime.Profilers
 				resultsBuffer = AcquireResultsBuffer();
 				if (lastUnconfirmed != null) {
 					lastUnconfirmed.DeltaTime = (float)RenderCpuProfiler.Stopwatch.Elapsed.TotalMilliseconds;
+					lastUnconfirmed.Memory = (int)privateBytes.NextValue();
+					lastUnconfirmed.GcGen0 = (int)gen0Collections.NextValue();
+					lastUnconfirmed.GcGen1 = (int)gen1Collections.NextValue();
+					lastUnconfirmed.GcGen2 = (int)gen2Collections.NextValue();
+					lastUnconfirmed.GcTimePercent = timePercentage.NextValue();
 				}
 				lastUnconfirmed = resultsBuffer;
 				unconfirmedHistory.Enqueue(resultsBuffer);
