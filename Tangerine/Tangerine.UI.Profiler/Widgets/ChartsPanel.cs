@@ -51,7 +51,7 @@ namespace Tangerine.UI
 			};
 			// Create CPU charts.
 			var parameters = new AreaCharts.Parameters(HistorySize, colors) {
-				ChartsCount = 2,
+				ChartsCount = 3,
 				UserLinesCount = 4,
 				SliceSelected = OnSliceSelected
 			};
@@ -78,6 +78,7 @@ namespace Tangerine.UI
 			var cpuLegendItems = new Legend.ItemDescription[] {
 				new Legend.ItemDescription { Color = colors[0], Name = "CPU",      Format = "{0,6:0.00}" },
 				new Legend.ItemDescription { Color = colors[1], Name = "Selected", Format = "{0,6:0.00}" },
+				new Legend.ItemDescription { Color = colors[2], Name = "GC",       Format = "{0,6:0.00}" },
 			};
 			CpuLegend = new Legend(cpuLegendItems, CpuCharts.SetActive) {
 				MinMaxHeight = ChartsHeight,
@@ -189,10 +190,12 @@ namespace Tangerine.UI
 		private void PushChartsSlice(GpuHistory.Item frame, CpuHistory.Item update)
 		{
 			// Push CPU charts data
-			CpuCharts.PushSlice(new float[] { Logarithm(update.DeltaTime), 0f });
+			float scaledDeltaTime = Logarithm(update.DeltaTime);
+			float gcTime = scaledDeltaTime * (update.GcTimePercent / 100.0f);
+			CpuCharts.PushSlice(new float[] { scaledDeltaTime - gcTime, 0f, gcTime });
 			// Update CPU charts max value line
 			float cpuMaxValue = CpuCharts.ChartsMaxValue;
-			float originalValue = AntiLogarithm(cpuMaxValue);
+			float originalValue = cpuMaxValue;//AntiLogarithm(cpuMaxValue);
 			CpuCharts.SetLine(lineIndex: 0, new ChartsContainer.Line(
 				start:       new Vector2(0, cpuMaxValue),
 				end:         new Vector2(CpuCharts.Width, cpuMaxValue),
@@ -222,7 +225,11 @@ namespace Tangerine.UI
 
 		public void UpdateChartsLegends(GpuHistory.Item frame, CpuHistory.Item update, float selectedRenderTime, float selectedUpdateTime)
 		{
-			CpuLegend.SetValues(new float[] { update.DeltaTime, selectedUpdateTime });
+			CpuLegend.SetValues(new float[] {
+				update.DeltaTime,
+				selectedUpdateTime,
+				update.DeltaTime * update.GcTimePercent / 100f
+			});
 			GpuLegend.SetValues(frame == null ? new float[2] : new float[] {
 				(float)frame.FullGpuRenderTime,
 				selectedRenderTime

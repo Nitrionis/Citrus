@@ -4,14 +4,24 @@ using Lime.Graphics.Platform;
 
 namespace Tangerine.UI.Charts
 {
+	/// <summary>
+	/// Contains several charts with adjacent control points at the same distance.
+	/// </summary>
 	internal abstract class ChartsContainer : Widget
 	{
-		//protected readonly int chartVerticesCount;
+		protected readonly int chartVerticesCount;
 		protected readonly int chartsVerticesOffset;
 		protected readonly int controlPointsCount;
-		public readonly int ControlPointsSpacing;
 
+		/// <summary>
+		/// The number of control points common to all charts.
+		/// </summary>
 		public int ControlPointsCount => controlPointsCount - 1;
+
+		/// <summary>
+		/// The horizontal distance between the adjacent control points in pixels.
+		/// </summary>
+		public int ControlPointsSpacing { get; }
 
 		protected bool isMeshUpdateRequired = false;
 		protected bool hasPreviousUpdate = false;
@@ -38,9 +48,6 @@ namespace Tangerine.UI.Charts
 		{
 			public const int VerticesCount = 6;
 
-			/// <summary>
-			/// Index of color in <see cref="colors"/>.
-			/// </summary>
 			public readonly int ColorIndex;
 			public readonly string Caption;
 			public readonly Vector2 Start;
@@ -53,11 +60,11 @@ namespace Tangerine.UI.Charts
 
 			public Line(Vector2 start, Vector2 end, int colorIndex, string caption)
 			{
-				Start = start;
-				End = end;
-				ColorIndex = colorIndex;
-				Caption = caption;
-				CaptionPosition = Vector2.Zero;
+				Start            = start;
+				End              = end;
+				ColorIndex       = colorIndex;
+				Caption          = caption;
+				CaptionPosition  = Vector2.Zero;
 			}
 		}
 
@@ -99,9 +106,6 @@ namespace Tangerine.UI.Charts
 		/// </summary>
 		public class Parameters
 		{
-			/// <summary>
-			/// The horizontal distance between the control points in pixels.
-			/// </summary>
 			public int ControlPointsSpacing = 5;
 			public int ControlPointsCount;
 			public int ChartsCount = 1;
