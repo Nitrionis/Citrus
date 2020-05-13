@@ -329,6 +329,7 @@
     <Compile Include="Source\Graphics\Platform\Vulkan\PlatformShaderProgram.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\PlatformTexture2D.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\PlatformVertexInputLayout.cs" />
+    <Compile Include="Source\Graphics\Platform\Vulkan\RenderGpuProfiler.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\SamplerCache.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\Scheduler.cs" />
     <Compile Include="Source\Graphics\Platform\Vulkan\Swapchain.cs" />
