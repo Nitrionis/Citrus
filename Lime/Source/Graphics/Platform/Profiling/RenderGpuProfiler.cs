@@ -73,7 +73,7 @@ namespace Lime.Graphics.Platform.Profiling
 		}
 
 		/// <summary>
-		/// Invoked after sending a frame to the GPU.
+		/// Invoked after sending rendering commands to the GPU.
 		/// </summary>
 		internal virtual void FrameRenderFinished()
 		{
