@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Lime.Graphics.Platform.Profiling;
 
 namespace Lime
 {
@@ -20,8 +21,12 @@ namespace Lime
 		public const int MaxVertices = 400;
 		public const int MaxIndices = 600;
 	}
-
+	
+#if !LIME_PROFILER
 	public class RenderBatch<TVertex> : IRenderBatch where TVertex : unmanaged
+#else
+	public class RenderBatch<TVertex> : RenderBatchOwnersInfo, IRenderBatch where TVertex : unmanaged
+#endif
 	{
 		private static Stack<RenderBatch<TVertex>> batchPool = new Stack<RenderBatch<TVertex>>();
 		private static Stack<Mesh<TVertex>> meshPool = new Stack<Mesh<TVertex>>();
@@ -48,15 +53,31 @@ namespace Lime
 				Mesh = null;
 			}
 			ownsMesh = false;
+#if LIME_PROFILER
+			base.ResetProfilingData();
+#endif
 		}
 
 		public void Render()
 		{
+
+#if LIME_PROFILER
+			int savedByBatching = Owners.Count == 0 ?
+				0 : (Owners.Count - 1) * Material.PassCount;
+			RenderBatchProfiler.FullSavedByBatching += savedByBatching;
+			RenderBatchProfiler.SceneSavedByBatching += IsPartOfScene ? savedByBatching : 0;
+			var profilingInfo = GpuCallInfo.Acquire(Owners, IsPartOfScene, Material, 0);
+#endif
 			PlatformRenderer.SetTexture(0, Texture1);
 			PlatformRenderer.SetTexture(1, Texture2);
 			for (int i = 0; i < Material.PassCount; i++) {
 				Material.Apply(i);
+#if !LIME_PROFILER
 				Mesh.DrawIndexed(StartIndex, LastIndex - StartIndex);
+#else
+				profilingInfo.CurrentRenderPassIndex = i;
+				Mesh.DrawIndexed(StartIndex, LastIndex - StartIndex, 0, profilingInfo);
+#endif
 			}
 		}
 

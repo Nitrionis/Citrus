@@ -363,6 +363,9 @@ namespace Lime
 
 			public override void Render()
 			{
+#if LIME_PROFILER
+				var profilingInfo = Graphics.Platform.Profiling.GpuCallInfo.Acquire();
+#endif
 				Renderer.PushState(
 					RenderState.World |
 					RenderState.CullMode |
@@ -388,9 +391,17 @@ namespace Lime
 							skin.SkinningMode = SkinningMode;
 							skin.SetBones(boneTransforms, submesh.BoneCount);
 						}
+#if LIME_PROFILER
+						profilingInfo.Material = material;
+#endif
 						for (var i = 0; i < material.PassCount; i++) {
 							material.Apply(i);
+#if !LIME_PROFILER
 							mesh.DrawIndexed(0, mesh.Indices.Length);
+#else
+							profilingInfo.CurrentRenderPassIndex = i;
+							mesh.DrawIndexed(0, mesh.Indices.Length, 0, profilingInfo);
+#endif
 						}
 						Renderer.PolyCount3d += mesh.Indices.Length / 3;
 					}
@@ -414,9 +425,17 @@ namespace Lime
 							skin.SkinningMode = SkinningMode;
 							skin.SetBones(dualQuaternionPartA, dualQuaternionPartB, submesh.BoneCount);
 						}
+#if LIME_PROFILER
+						profilingInfo.Material = material;
+#endif
 						for (var i = 0; i < material.PassCount; i++) {
 							material.Apply(i);
+#if !LIME_PROFILER
 							mesh.DrawIndexed(0, mesh.Indices.Length);
+#else
+							profilingInfo.CurrentRenderPassIndex = i;
+							mesh.DrawIndexed(0, mesh.Indices.Length, 0, profilingInfo);
+#endif
 						}
 						Renderer.PolyCount3d += mesh.Indices.Length / 3;
 					}

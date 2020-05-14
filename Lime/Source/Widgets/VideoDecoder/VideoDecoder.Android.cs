@@ -18,6 +18,7 @@ using Android.Widget;
 using Java.Nio;
 using static Android.Media.MediaCodec;
 using Lime.Graphics.Platform.OpenGL;
+using GpuCallInfo = Lime.Graphics.Platform.Profiling.GpuCallInfo;
 
 namespace Lime
 {
@@ -622,7 +623,11 @@ namespace Lime
 				surfaceTexture.UpdateTexImage();
 				PushTexture();
 				material.Apply(0);
+#if !LIME_PROFILER
 				mesh.DrawIndexed(0, mesh.Indices.Length);
+#else
+				mesh.DrawIndexed(0, mesh.Indices.Length, 0, GpuCallInfo.Acquire(material));
+#endif
 				PopTexture();
 			}
 		}
