@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.IO;
+using GpuCallInfo = Lime.Graphics.Platform.Profiling.GpuCallInfo;
 
 using static SharpVulkan.ResultExtensions;
 
@@ -29,6 +30,7 @@ namespace Lime.Graphics.Platform.Vulkan
 		private ulong lastCompletedFenceValue;
 		private Swapchain swapchain;
 		private Scheduler scheduler;
+		private RenderGpuProfiler profiler;
 		private SharpVulkan.RenderPass activeRenderPass;
 		private SharpVulkan.Format activeColorFormat;
 		private SharpVulkan.Format activeDepthStencilFormat;
@@ -117,6 +119,9 @@ namespace Lime.Graphics.Platform.Vulkan
 			placeholderTexture = new PlatformTexture2D(this, Format.R8G8B8A8_UNorm, 1, 1, false, TextureParams.Default);
 			placeholderTexture.SetData(0, new[] { Color4.Black });
 			ResetState();
+#if LIME_PROFILER
+			profiler = new RenderGpuProfiler(device, physicalDeviceLimits, physicalDevice.QueueFamilyProperties[queueFamilyIndex]);
+#endif
 		}
 
 		public void Dispose()
@@ -199,9 +204,9 @@ namespace Lime.Graphics.Platform.Vulkan
 				fixed (IntPtr* enabledExtensionNamesPtr = enabledExtensionNames.ToArray()) {
 					var createInfo = new SharpVulkan.InstanceCreateInfo {
 						StructureType = SharpVulkan.StructureType.InstanceCreateInfo,
-						EnabledLayerCount = (uint) enabledLayerNames.Count,
+						EnabledLayerCount = (uint)enabledLayerNames.Count,
 						EnabledLayerNames = new IntPtr(enabledLayerNamesPtr),
-						EnabledExtensionCount = (uint) enabledExtensionNames.Count,
+						EnabledExtensionCount = (uint)enabledExtensionNames.Count,
 						EnabledExtensionNames = new IntPtr(enabledExtensionNamesPtr)
 					};
 					instance = SharpVulkan.Vulkan.CreateInstance(ref createInfo);
@@ -333,13 +338,17 @@ namespace Lime.Graphics.Platform.Vulkan
 			}
 		}
 
-		public void Begin(Swapchain swapchain)
+		public void Begin(Swapchain swapchain, bool isMainWindow = true)
 		{
 			if (this.swapchain != null) {
 				throw new InvalidOperationException();
 			}
 			this.swapchain = swapchain;
 			EnsureCommandBuffer();
+#if LIME_PROFILER
+			profiler.FrameRenderStarted(isMainWindow);
+			profiler.FirstTimestamp(commandBuffer);
+#endif
 			var memoryBarrier = new SharpVulkan.ImageMemoryBarrier {
 				StructureType = SharpVulkan.StructureType.ImageMemoryBarrier,
 				Image = swapchain.Backbuffer,
@@ -373,9 +382,17 @@ namespace Lime.Graphics.Platform.Vulkan
 			commandBuffer.PipelineBarrier(
 				SharpVulkan.PipelineStageFlags.ColorAttachmentOutput, SharpVulkan.PipelineStageFlags.BottomOfPipe,
 				SharpVulkan.DependencyFlags.None, 0, null, 0, null, 1, &memoryBarrier);
+#if LIME_PROFILER
+			profiler.LastTimestamp();
+#endif
 			Flush();
 			swapchain.Present();
 			swapchain = null;
+#if LIME_PROFILER
+			profiler.FrameRenderFinished(
+				frameCompletedFenceValue: submitInfos.Peek().FenceValue,
+				lastCompletedFenceValue: lastCompletedFenceValue);
+#endif
 		}
 
 		public void SetViewport(Viewport vp)
@@ -451,6 +468,7 @@ namespace Lime.Graphics.Platform.Vulkan
 			indexFormat = format;
 		}
 
+#if !LIME_PROFILER
 		public void Draw(int startVertex, int vertexCount)
 		{
 			PreDraw();
@@ -462,6 +480,23 @@ namespace Lime.Graphics.Platform.Vulkan
 			PreDraw();
 			commandBuffer.DrawIndexed((uint)indexCount, 1, (uint)startIndex, baseVertex, 0);
 		}
+#else
+		public void Draw(int startVertex, int vertexCount, GpuCallInfo profilingInfo)
+		{
+			profiler.DrawCallStart(profilingInfo, vertexCount, primitiveTopology);
+			PreDraw();
+			commandBuffer.Draw((uint)vertexCount, 1, (uint)startVertex, 0);
+			profiler.DrawCallEnd();
+		}
+
+		public void DrawIndexed(int startIndex, int indexCount, int baseVertex, GpuCallInfo profilingInfo)
+		{
+			profiler.DrawCallStart(profilingInfo, indexCount, primitiveTopology);
+			PreDraw();
+			commandBuffer.DrawIndexed((uint)indexCount, 1, (uint)startIndex, baseVertex, 0);
+			profiler.DrawCallEnd();
+		}
+#endif
 
 		private void PreDraw()
 		{
@@ -986,7 +1021,11 @@ namespace Lime.Graphics.Platform.Vulkan
 				SetCullMode(CullMode.None);
 				SetVertexInputLayout(clearVertexInputLayout);
 				SetVertexBuffer(0, clearVertexBuffer, 0);
+#if !LIME_PROFILER
 				Draw(0, clearVertices.Length);
+#else
+				Draw(0, clearVertices.Length, GpuCallInfo.Acquire("ClearMaterial"));
+#endif
 			} finally {
 				SetViewport(oldViewport);
 				SetBlendState(oldBlendState);
