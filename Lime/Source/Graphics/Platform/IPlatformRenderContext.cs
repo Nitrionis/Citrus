@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using GpuCallInfo = Lime.Graphics.Platform.Profiling.GpuCallInfo;
 
 namespace Lime.Graphics.Platform
 {
@@ -44,8 +45,13 @@ namespace Lime.Graphics.Platform
 		void SetTexture(int slot, IPlatformTexture2D texture);
 		void SetVertexBuffer(int slot, IPlatformBuffer buffer, int offset);
 		void SetIndexBuffer(IPlatformBuffer buffer, int offset, IndexFormat format);
+#if !LIME_PROFILER
 		void Draw(int startVertex, int vertexCount);
 		void DrawIndexed(int startIndex, int indexCount, int baseVertex);
+#else
+		void Draw(int startVertex, int vertexCount, GpuCallInfo profilingInfo);
+		void DrawIndexed(int startIndex, int indexCount, int baseVertex, GpuCallInfo profilingInfo);
+#endif
 		byte[] GetPipelineCacheData();
 		bool SetPipelineCacheData(byte[] data);
 	}

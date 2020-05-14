@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Yuzu;
+using GpuCallInfo = Lime.Graphics.Platform.Profiling.GpuCallInfo;
 
 namespace Lime
 {
@@ -52,6 +53,7 @@ namespace Lime
 
 		IMesh IMesh.ShallowClone() => ShallowClone();
 
+#if !LIME_PROFILER
 		public void Draw(int startVertex, int vertexCount)
 		{
 			PreDraw();
@@ -63,6 +65,19 @@ namespace Lime
 			PreDraw();
 			PlatformRenderer.DrawIndexed(Topology, startIndex, indexCount, baseVertex);
 		}
+#else
+		public void Draw(int startVertex, int vertexCount, GpuCallInfo profilingInfo = null)
+		{
+			PreDraw();
+			PlatformRenderer.Draw(Topology, startVertex, vertexCount, profilingInfo);
+		}
+
+		public void DrawIndexed(int startIndex, int indexCount, int baseVertex = 0, GpuCallInfo profilingInfo = null)
+		{
+			PreDraw();
+			PlatformRenderer.DrawIndexed(Topology, startIndex, indexCount, baseVertex, profilingInfo);
+		}
+#endif
 
 		private void PreDraw()
 		{

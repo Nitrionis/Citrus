@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Lime.Graphics.Platform;
+using GpuCallInfo = Lime.Graphics.Platform.Profiling.GpuCallInfo;
 
 namespace Lime
 {
@@ -457,6 +458,7 @@ namespace Lime
 			Context.SetPrimitiveTopology(topology);
 		}
 
+#if !LIME_PROFILER
 		public static void Draw(PrimitiveTopology topology, int startVertex, int vertexCount)
 		{
 			PreDraw(topology);
@@ -470,6 +472,21 @@ namespace Lime
 			Context.DrawIndexed(startIndex, indexCount, baseVertex);
 			DrawCount++;
 		}
+#else
+		public static void Draw(PrimitiveTopology topology, int startVertex, int vertexCount, GpuCallInfo profilingInfo)
+		{
+			PreDraw(topology);
+			Context.Draw(startVertex, vertexCount, profilingInfo);
+			DrawCount++;
+		}
+
+		public static void DrawIndexed(PrimitiveTopology topology, int startIndex, int indexCount, int baseVertex, GpuCallInfo profilingInfo)
+		{
+			PreDraw(topology);
+			Context.DrawIndexed(startIndex, indexCount, baseVertex, profilingInfo);
+			DrawCount++;
+		}
+#endif
 
 		public static byte[] GetPipelineCacheData()
 		{
