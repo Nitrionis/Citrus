@@ -117,8 +117,14 @@ namespace Lime
 
 			public override void Render()
 			{
+#if LIME_PROFILER
+				SetGlobalProfilerData();
+#endif
 				Decoder?.UpdateTexture();
 				base.Render();
+#if LIME_PROFILER
+				ResetGlobalProfilerData();
+#endif
 			}
 
 			protected override void OnRelease()

@@ -52,7 +52,13 @@ namespace Lime
 		public void Render()
 		{
 			foreach (var ro in objects) {
+#if LIME_PROFILER
+				ro.SetGlobalProfilerData();
+#endif
 				ro.Render();
+#if LIME_PROFILER
+				ro.ResetGlobalProfilerData();
+#endif
 			}
 		}
 

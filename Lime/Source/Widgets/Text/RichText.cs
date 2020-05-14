@@ -385,7 +385,13 @@ namespace Lime
 			{
 				Renderer.Transform1 = LocalToWorldTransform;
 				foreach (var ro in Objects) {
+#if LIME_PROFILER
+					ro.SetGlobalProfilerData();
+#endif
 					ro.Render();
+#if LIME_PROFILER
+					ro.ResetGlobalProfilerData();
+#endif
 				}
 			}
 
