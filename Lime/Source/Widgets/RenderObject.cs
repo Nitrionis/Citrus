@@ -1,10 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Lime.Graphics.Platform.Profiling;
 
 namespace Lime
 {
+#if !LIME_PROFILER
 	public abstract class RenderObject
+#else
+	public abstract class RenderObject : RenderObjectOwnersInfo
+#endif
 	{
 		internal bool Free = true;
 

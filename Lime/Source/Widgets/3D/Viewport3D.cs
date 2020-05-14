@@ -207,6 +207,9 @@ namespace Lime
 					foreach (var item in layer) {
 						var renderObject = item.Presenter.GetRenderObject(item.Node);
 						if (renderObject != null) {
+#if LIME_PROFILER
+							renderObject.SetOwnersInfo(item.Node, item.Node.Manager);
+#endif
 							ro.Objects.Add(renderObject);
 						}
 					}
