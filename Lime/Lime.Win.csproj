@@ -393,6 +393,7 @@
     <Compile Include="Source\Profilers\NodeProfilerHelpers\ResultExporter.cs" />
     <Compile Include="Source\Profilers\NodeProfilerHelpers\UsageData.cs" />
     <Compile Include="Source\Profilers\NodeProfilerHelpers\UsageSummary.cs" />
+    <Compile Include="Source\Profilers\ProfilerGameUI.cs" />
     <Compile Include="Source\Profilers\TasksProfiler.cs" />
     <Compile Include="Source\ReferenceEqualityComparer.cs" />
     <Compile Include="Source\ServiceProviderExtensions.cs" />
