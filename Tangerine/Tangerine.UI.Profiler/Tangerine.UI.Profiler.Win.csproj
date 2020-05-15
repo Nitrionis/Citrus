@@ -50,6 +50,11 @@
     <Compile Include="Widgets\Charts\ChartsContainer.cs" />
     <Compile Include="Widgets\Charts\Legend.cs" />
     <Compile Include="Widgets\Charts\LineCharts.cs" />
+    <Compile Include="Widgets\Timeline\CpuUsageTimeline.cs" />
+    <Compile Include="Widgets\Timeline\GpuUsageTimeline.cs" />
+    <Compile Include="Widgets\Timeline\TimelineContainer.cs" />
+    <Compile Include="Widgets\Timeline\TimelineMaterial.cs" />
+    <Compile Include="Widgets\Timeline\TimelineRuler.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Lime\Lime.Win.csproj">
