@@ -377,6 +377,11 @@
     <Compile Include="Source\Optimizations\RenderOptimizerHelpers.cs" />
     <Compile Include="Source\Optimizations\ViewProjector.cs" />
     <Compile Include="Source\Persistence.cs" />
+    <Compile Include="Source\Profilers\Contexts\ClientContext.cs" />
+    <Compile Include="Source\Profilers\Contexts\Context.cs" />
+    <Compile Include="Source\Profilers\Contexts\LocalContext.cs" />
+    <Compile Include="Source\Profilers\Contexts\NetworkContext.cs" />
+    <Compile Include="Source\Profilers\Contexts\ServerContext.cs" />
     <Compile Include="Source\Profilers\CpuHistory.cs" />
     <Compile Include="Source\Profilers\CpuProfiler.cs" />
     <Compile Include="Source\Profilers\Network\Client.cs" />
