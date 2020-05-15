@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using Yuzu;
 using System;
 using System.Linq;
+using Lime.Profilers;
+using Lime.Graphics.Platform.Profiling;
 #if OPENGL
 #if !MAC && !MONOMAC
 using OpenTK.Graphics.ES20;
@@ -205,7 +207,13 @@ namespace Lime
 					}
 					var first = ro.Objects.Count;
 					foreach (var item in layer) {
+#if LIME_PROFILER
+						var usage = CpuProfiler.NodeCpuUsageStarted(item.Node, CpuUsage.UsageReasons.RenderPreparation);
+#endif
 						var renderObject = item.Presenter.GetRenderObject(item.Node);
+#if LIME_PROFILER
+						CpuProfiler.NodeCpuUsageFinished(usage);
+#endif
 						if (renderObject != null) {
 #if LIME_PROFILER
 							renderObject.SetOwnersInfo(item.Node, item.Node.Manager);
@@ -267,9 +275,11 @@ namespace Lime
 						foreach (var obj in opaqueObjects) {
 #if LIME_PROFILER
 							obj.SetGlobalProfilerData();
+							var usage = RenderCpuProfiler.NodeCpuUsageStarted(obj.Node, obj.Manager);
 #endif
 							obj.Render();
 #if LIME_PROFILER
+							RenderCpuProfiler.NodeCpuUsageFinished(usage);
 							obj.ResetGlobalProfilerData();
 #endif
 						}
@@ -278,9 +288,11 @@ namespace Lime
 						foreach (var obj in transparentObjects) {
 #if LIME_PROFILER
 							obj.SetGlobalProfilerData();
+							var usage = RenderCpuProfiler.NodeCpuUsageStarted(obj.Node, obj.Manager);
 #endif
 							obj.Render();
 #if LIME_PROFILER
+							RenderCpuProfiler.NodeCpuUsageFinished(usage);
 							obj.ResetGlobalProfilerData();
 #endif
 						}

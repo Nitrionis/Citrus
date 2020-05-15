@@ -54,9 +54,11 @@ namespace Lime
 			foreach (var ro in objects) {
 #if LIME_PROFILER
 				ro.SetGlobalProfilerData();
+				var usage = RenderCpuProfiler.NodeCpuUsageStarted(ro.Node, ro.Manager);
 #endif
 				ro.Render();
 #if LIME_PROFILER
+				RenderCpuProfiler.NodeCpuUsageFinished(usage);
 				ro.ResetGlobalProfilerData();
 #endif
 			}

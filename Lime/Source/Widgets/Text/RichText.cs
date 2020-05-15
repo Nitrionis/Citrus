@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Lime.Text;
+using Lime.Graphics.Platform.Profiling;
 using Yuzu;
 
 namespace Lime
@@ -387,9 +388,11 @@ namespace Lime
 				foreach (var ro in Objects) {
 #if LIME_PROFILER
 					ro.SetGlobalProfilerData();
+					var usage = RenderCpuProfiler.NodeCpuUsageStarted(ro.Node, ro.Manager);
 #endif
 					ro.Render();
 #if LIME_PROFILER
+					RenderCpuProfiler.NodeCpuUsageFinished(usage);
 					ro.ResetGlobalProfilerData();
 #endif
 				}

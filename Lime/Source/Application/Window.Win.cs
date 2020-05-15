@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Threading;
 using System.Windows.Forms;
 using WinFormsCloseReason = System.Windows.Forms.CloseReason;
+using Lime.Profilers;
 
 namespace Lime
 {
@@ -520,6 +521,9 @@ namespace Lime
 			}
 			active = Form.ActiveForm == form;
 
+#if LIME_PROFILER
+			CpuProfiler.Initialize();
+#endif
 			if (options.UseTimer) {
 				timer = new System.Windows.Forms.Timer {
 					Interval = (int)(1000.0 / 65),
@@ -873,6 +877,9 @@ namespace Lime
 			UnclampedDelta = (float)stopwatch.Elapsed.TotalSeconds;
 			float delta = Mathf.Clamp(UnclampedDelta, 0, Application.MaxDelta);
 			stopwatch.Restart();
+#if LIME_PROFILER
+			CpuProfiler.UpdateStarted(Application.MainWindow == this);
+#endif
 			if (this == Application.MainWindow && Application.MainMenu != null) {
 				Application.MainMenu.Refresh();
 			}
@@ -891,6 +898,11 @@ namespace Lime
 				Input.CopyKeysState();
 				Input.TextInput = null;
 			}
+#if LIME_PROFILER
+			if (!AsyncRendering) {
+				CpuProfiler.RenderingFencePassed();
+			}
+#endif
 			if (wasInvalidated || renderingState == RenderingState.RenderDeferred) {
 				renderControl.Invalidate();
 			}
@@ -904,6 +916,11 @@ namespace Lime
 			}
 			renderingState = renderControl.CanRender ? RenderingState.Updated : RenderingState.Rendered;
 			WaitForRendering();
+#if LIME_PROFILER
+			if (AsyncRendering) {
+				CpuProfiler.RenderingFencePassed();
+			}
+#endif
 			if (renderControl.CanRender) {
 				RaiseSync();
 				if (AsyncRendering) {

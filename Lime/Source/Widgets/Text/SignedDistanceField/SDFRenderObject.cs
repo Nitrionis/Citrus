@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Lime.Graphics.Platform.Profiling;
 
 namespace Lime.SignedDistanceField
 {
@@ -24,9 +25,11 @@ namespace Lime.SignedDistanceField
 			foreach (var ro in Objects) {
 #if LIME_PROFILER
 				ro.SetGlobalProfilerData();
+				var usage = RenderCpuProfiler.NodeCpuUsageStarted(ro.Node, ro.Manager);
 #endif
 				ro.Render();
 #if LIME_PROFILER
+				RenderCpuProfiler.NodeCpuUsageFinished(usage);
 				ro.ResetGlobalProfilerData();
 #endif
 			}
