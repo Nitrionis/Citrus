@@ -99,7 +99,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug.Tangerine|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\Debug.Tangerine\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;WIN;OPENGL;OPENAL;ANGLE;TANGERINE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;WIN;OPENGL;OPENAL;ANGLE;TANGERINE;LIME_PROFILER</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
     <DebugType>full</DebugType>
