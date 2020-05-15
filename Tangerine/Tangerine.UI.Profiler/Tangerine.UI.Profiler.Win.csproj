@@ -51,6 +51,7 @@
     <Compile Include="Widgets\Charts\ChartsContainer.cs" />
     <Compile Include="Widgets\Charts\Legend.cs" />
     <Compile Include="Widgets\Charts\LineCharts.cs" />
+    <Compile Include="Widgets\CpuTrace.cs" />
     <Compile Include="Widgets\GpuTrace.cs" />
     <Compile Include="Widgets\MainControlPanel.cs" />
     <Compile Include="Widgets\Timeline\CpuUsageTimeline.cs" />
