@@ -384,6 +384,7 @@
     <Compile Include="Source\Profilers\Contexts\ServerContext.cs" />
     <Compile Include="Source\Profilers\CpuHistory.cs" />
     <Compile Include="Source\Profilers\CpuProfiler.cs" />
+    <Compile Include="Source\Profilers\LimeProfiler.cs" />
     <Compile Include="Source\Profilers\Network\Client.cs" />
     <Compile Include="Source\Profilers\Network\IConnection.cs" />
     <Compile Include="Source\Profilers\Network\NetworkMember.cs" />
