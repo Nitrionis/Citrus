@@ -8,6 +8,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Lime.Graphics.Platform.Profiling;
 using Yuzu;
 
 namespace Lime
@@ -59,6 +60,9 @@ namespace Lime
 	[YuzuDontGenerateDeserializer]
 	[DebuggerTypeProxy(typeof(NodeDebugView))]
 	public abstract class Node : IDisposable, IAnimationHost, IFolderItem, IFolderContext, IRenderChainBuilder, IAnimable, ICloneable
+#if LIME_PROFILER
+		, IReferencesTableCompatible
+#endif // LIME_PROFILER
 	{
 		[Flags]
 		protected internal enum DirtyFlags
@@ -1503,6 +1507,11 @@ namespace Lime
 				globallyFrozen |= Parent.GloballyFrozen;
 			}
 		}
+
+#if LIME_PROFILER
+		[YuzuExclude]
+		public uint ReferenceTableRowIndex { get; set; } = ReferencesTable.InvalidReference;
+#endif // LIME_PROFILER
 	}
 
 	public interface IUpdatableNode
