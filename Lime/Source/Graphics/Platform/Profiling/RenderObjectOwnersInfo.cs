@@ -4,33 +4,30 @@ namespace Lime.Graphics.Platform.Profiling
 {
 	public class RenderObjectOwnersInfo
 	{
-		private static Stack<object> nodes;
+		private static Stack<IReferencesTableCompatible> nodes;
 		private static Stack<object> managers;
 
-		public static object CurrentNode { get; protected set; }
+		public static IReferencesTableCompatible CurrentNode { get; protected set; }
 		public static object CurrentManager { get; protected set; }
 
 		static RenderObjectOwnersInfo()
 		{
-			nodes = new Stack<object>();
+			nodes = new Stack<IReferencesTableCompatible>();
 			managers = new Stack<object>();
 			nodes.Push(null);
 			managers.Push(null);
 		}
 
-		private object node;
-		private object manager;
-
-		public object Node => node;
-		public object Manager => manager;
+		public IReferencesTableCompatible Node { get; private set; }
+		public object Manager { get; private set; }
 
 		/// <summary>
 		/// Must be called AFTER each <see cref="IPresenter.GetRenderObject(Node)"/>.
 		/// </summary>
-		public void SetOwnersInfo(object node, object manager)
+		public void SetOwnersInfo(IReferencesTableCompatible node, object manager)
 		{
-			this.node = node;
-			this.manager = manager;
+			Node = node;
+			Manager = manager;
 		}
 
 		/// <summary>
@@ -38,10 +35,10 @@ namespace Lime.Graphics.Platform.Profiling
 		/// </summary>
 		public void SetGlobalProfilerData()
 		{
-			CurrentNode = node;
-			CurrentManager = manager;
-			nodes.Push(node);
-			managers.Push(manager);
+			CurrentNode = Node;
+			CurrentManager = Manager;
+			nodes.Push(Node);
+			managers.Push(Manager);
 		}
 
 		/// <summary>
