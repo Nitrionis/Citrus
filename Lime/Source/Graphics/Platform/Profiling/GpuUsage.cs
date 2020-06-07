@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Yuzu;
 
 namespace Lime.Graphics.Platform.Profiling
@@ -6,24 +5,25 @@ namespace Lime.Graphics.Platform.Profiling
 	/// <summary>
 	/// Describes GPU usage period.
 	/// </summary>
-	public class GpuUsage : ITimePeriod
+	public struct GpuUsage
 	{
-		private static readonly Stack<GpuUsage> freeInstances = new Stack<GpuUsage>();
-
-		public uint Start
-		{
-			get => StartTime;
-			set => StartTime = value;
-		}
-
-		public uint Finish
-		{
-			get => FinishTime;
-			set => FinishTime = value;
-		}
-
+		/// <summary>
+		/// The indices of objects in a ReferencesTable that created this draw call.
+		/// </summary>
 		[YuzuRequired]
-		public GpuCallInfo GpuCallInfo;
+		public Owners Owners;
+
+		/// <summary>
+		/// True if at least one owner belongs to the scene.
+		/// </summary>
+		[YuzuRequired]
+		public bool IsPartOfScene;
+
+		/// <summary>
+		/// Material type index in <see cref="MaterialsTable"/> used during rendering.
+		/// </summary>
+		[YuzuRequired]
+		public uint MaterialIndex;
 
 		/// <summary>
 		/// Render Pass index of the material.
@@ -74,16 +74,5 @@ namespace Lime.Graphics.Platform.Profiling
 		/// </remarks>
 		[YuzuRequired]
 		public uint FinishTime;
-
-		public GpuUsage() { }
-
-		public static GpuUsage Acquire() =>
-			freeInstances.Count > 0 ? freeInstances.Pop() : new GpuUsage();
-
-		public void Free()
-		{
-			GpuCallInfo?.Free();
-			freeInstances.Push(this);
-		}
 	}
 }

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Yuzu;
 
 namespace Lime.Graphics.Platform.Profiling
@@ -10,13 +9,10 @@ namespace Lime.Graphics.Platform.Profiling
 	}
 
 	/// <summary>
-	/// Describes CPU usage period.
+	/// Describes CPU usage interval.
 	/// </summary>
-	public class CpuUsage : ITimePeriod
+	public struct CpuUsage
 	{
-		private static Stack<CpuUsage> updatePool = new Stack<CpuUsage>();
-		private static Stack<CpuUsage> renderPool = new Stack<CpuUsage>();
-
 		[Flags]
 		public enum UsageReasons : int
 		{
@@ -38,19 +34,10 @@ namespace Lime.Graphics.Platform.Profiling
 		public UsageReasons Reasons;
 
 		/// <summary>
-		/// if <see cref="Reasons"/> is BatchRender:
-		/// <list type="bullet">
-		/// <item><description>
-		/// If <see cref="CpuUsage"/> created on the local device, this can be List of Node or null.
-		/// </description></item>
-		/// <item><description>
-		/// If <see cref="CpuUsage"/> received from outside, this can be List of Node.Id or null.
-		/// </description></item>
-		/// </list>
-		/// else this can be Node or Node.Id or null.
+		/// The indexes of the objects in the ReferencesTable to which the usage interval belongs.
 		/// </summary>
 		[YuzuRequired]
-		public object Owners;
+		public Owners Owners;
 
 		/// <summary>
 		/// Indicates whether the owner is part of the scene.
@@ -62,37 +49,12 @@ namespace Lime.Graphics.Platform.Profiling
 		/// The timestamp of the start of the usage interval in microseconds from the start of the frame update.
 		/// </summary>
 		[YuzuRequired]
-		public uint Start { get; set; }
+		public uint StartTime;
 
 		/// <summary>
 		/// The timestamp of the finish of the usage interval in microseconds from the start of the frame update.
 		/// </summary>
 		[YuzuRequired]
-		public uint Finish { get; set; }
-
-		/// <summary>
-		/// Acquire CpuUsage from a pool.
-		/// </summary>
-		public static CpuUsage Acquire(UsageReasons reason)
-		{
-			var usage = reason.Include(UsageReasons.RenderThreadFlag)
-				? renderPool.Count > 0 ? renderPool.Pop() : new CpuUsage()
-				: updatePool.Count > 0 ? updatePool.Pop() : new CpuUsage();
-			usage.Reasons = reason;
-			return usage;
-		}
-
-		/// <summary>
-		/// Puts CpuUsage in the pool for reuse.
-		/// </summary>
-		public void Free()
-		{
-			Owners = null;
-			if ((Reasons & UsageReasons.RenderThreadFlag) != 0) {
-				renderPool.Push(this);
-			} else {
-				updatePool.Push(this);
-			}
-		}
+		public uint FinishTime;
 	}
 }
