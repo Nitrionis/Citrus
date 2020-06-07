@@ -120,7 +120,7 @@ namespace Lime.Graphics.Platform.Profiling
 
 				if (IsDeepProfilingEnabled) {
 					foreach (var dc in DrawCalls) {
-						dc.Free();
+						NativeOwnersPool.FreeOldest(dc.Owners);
 					}
 					DrawCalls.Clear();
 				}

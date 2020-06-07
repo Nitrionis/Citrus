@@ -64,7 +64,7 @@ namespace Lime.Profilers
 			{
 				DeltaTime = 0;
 				foreach (var r in NodesResults) {
-					r.Free();
+					NativeOwnersPool.FreeOldest(r.Owners);
 				}
 				NodesResults.Clear();
 				return this;
