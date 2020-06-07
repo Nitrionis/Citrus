@@ -315,6 +315,7 @@
     <Compile Include="Source\Graphics\Platform\Profiling\GpuUsage.cs" />
     <Compile Include="Source\Graphics\Platform\Profiling\RingPool.cs" />
     <Compile Include="Source\Graphics\Platform\Profiling\MaterialsTable.cs" />
+    <Compile Include="Source\Graphics\Platform\Profiling\OwnersPool.cs" />
     <Compile Include="Source\Graphics\Platform\Profiling\ReferencesTable.cs" />
     <Compile Include="Source\Graphics\Platform\Profiling\RenderBatchProfiler.cs" />
     <Compile Include="Source\Graphics\Platform\Profiling\RenderCpuProfiler.cs" />
