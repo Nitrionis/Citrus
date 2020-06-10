@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 
 namespace Lime.Graphics.Platform.Profiling
 {
@@ -47,16 +48,19 @@ namespace Lime.Graphics.Platform.Profiling
 		/// </summary>
 		protected bool isMainWindowTarget;
 
-		protected int maxDrawCallsCount { get; private set; } = DrawCallBufferStartSize;
+		protected int maxDrawCallsCount { get; private set; } = DrawCallPoolStartCapacity;
 
-		protected RenderGpuProfiler()
+		protected RenderGpuProfiler() : base(NativeOwnersPool.Instance)
 		{
 			if (Instance != null) {
 				throw new InvalidOperationException();
 			}
 			Instance = this;
 			ProfiledFramesCount = 0;
-			resultsBuffer = items[0].Reset();
+			resultsBuffer = items[0];
+			Monitor.Enter(resultsBuffer.LockObject);
+			resultsBuffer.Reset(DrawCallsPool, OwnersPool);
+			resultsBuffer.DrawCallsDescriptor = DrawCallsPool.AcquireList();
 			resultsBuffer.FrameIndex = 0;
 			LastFrame = GetFrame(HistoryFramesCount - 1);
 			CheckDrawCallsBufferCapacity();
@@ -93,7 +97,9 @@ namespace Lime.Graphics.Platform.Profiling
 		private Item AcquireResultsBuffer()
 		{
 			LastFrame = GetFrame(ProfiledFramesCount + HistoryFramesCount);
-			var buffer = SafeResetFrame(++ProfiledFramesCount);
+			var buffer = GetFrame(++ProfiledFramesCount);
+			Monitor.Enter(buffer.LockObject);
+			ResetFrame(ProfiledFramesCount);
 			buffer.FrameIndex = ProfiledFramesCount;
 			return buffer;
 		}
@@ -101,9 +107,6 @@ namespace Lime.Graphics.Platform.Profiling
 		private void CheckDrawCallsBufferCapacity()
 		{
 			maxDrawCallsCount = Math.Max(maxDrawCallsCount, LastFrame.FullDrawCallCount);
-			if (resultsBuffer.DrawCalls.Capacity <= maxDrawCallsCount) {
-				resultsBuffer.DrawCalls.Capacity = GetNextSize(maxDrawCallsCount);
-			}
 		}
 
 		protected int CalculateTrianglesCount(int vertexCount, PrimitiveTopology topology) =>

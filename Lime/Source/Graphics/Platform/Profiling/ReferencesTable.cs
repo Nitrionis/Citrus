@@ -35,17 +35,17 @@ namespace Lime.Graphics.Platform.Profiling
 
 		public IReferencesTableCompatible this[uint rowIndex] => table[rowIndex].Object;
 
-		public void CreateOrAddReferenceTo(IReferencesTableCompatible @object)
+		public void CreateOrAddReferenceTo(IReferencesTableCompatible @object, int referencesCount = 1)
 		{
 			if (@object.ReferenceTableRowIndex != InvalidReference) {
-				++table[@object.ReferenceTableRowIndex].ReferencesCount;
+				table[@object.ReferenceTableRowIndex].ReferencesCount += referencesCount;
 			} else {
 				if (freeRows.Count > 0) {
 					uint rowIndex = freeRows.Pop();
 					@object.ReferenceTableRowIndex = rowIndex;
 					ref var row = ref table[rowIndex];
 					row.Object = @object;
-					row.ReferencesCount = 1;
+					row.ReferencesCount = referencesCount;
 				} else {
 					@object.ReferenceTableRowIndex = rowsCount;
 					if (table.Length == rowsCount) {
@@ -53,7 +53,7 @@ namespace Lime.Graphics.Platform.Profiling
 					}
 					table[rowsCount++] = new ReferenceCounter {
 						Object = @object,
-						ReferencesCount = 1
+						ReferencesCount = referencesCount
 					};
 				}
 			}
@@ -70,14 +70,16 @@ namespace Lime.Graphics.Platform.Profiling
 		}
 	}
 
-	public static class NativeNodesTable
+	public static class NativeNodesTables
 	{
-		public static readonly ReferencesTable Instance = new ReferencesTable();
+		/// <summary>
+		/// Table accessed only from update thread.
+		/// </summary>
+		public static readonly ReferencesTable UpdateOnlyTable = new ReferencesTable();
 
-		public static void CreateOrAddReferenceTo(IReferencesTableCompatible node) => Instance.CreateOrAddReferenceTo(node);
-
-		public static void RemoveReferenceTo(uint rowIndex) => Instance.RemoveReferenceTo(rowIndex);
-
-		public static IReferencesTableCompatible GetNodeAt(uint rowIndex) => Instance[rowIndex];
+		/// <summary>
+		/// Table accessed only from render thread.
+		/// </summary>
+		public static readonly ReferencesTable RenderOnlyTable = new ReferencesTable();
 	}
 }

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Yuzu;
 
 namespace Lime.Graphics.Platform.Profiling
@@ -6,10 +5,68 @@ namespace Lime.Graphics.Platform.Profiling
 	public class GpuHistory
 	{
 		/// <summary>
+		/// The maximum number of frames that are stored in history.
+		/// </summary>
+		public const int HistoryFramesCount = 160;
+
+		public const int DrawCallPoolStartCapacity = 256 * HistoryFramesCount;
+
+		/// <summary>
+		/// The last profiled frame.
+		/// </summary>
+		public Item LastFrame { get; protected set; }
+
+		/// <summary>
+		/// The total number of profiled frames from the moment the engine starts.
+		/// </summary>
+		public long ProfiledFramesCount { get; protected set; }
+
+		/// <summary>
+		/// Describes the last <see cref="HistoryFramesCount"/> frames in history.
+		/// </summary>
+		protected readonly Item[] items;
+
+		/// <summary>
+		/// Pool for all draw calls.
+		/// </summary>
+		protected readonly RingPool<GpuUsage> DrawCallsPool;
+
+		/// <summary>
+		/// Stores draw call owners indices.
+		/// </summary>
+		public readonly OwnersPool OwnersPool;
+
+		public GpuHistory(OwnersPool ownersPool)
+		{
+			items = new Item[HistoryFramesCount];
+			for (int i = 0; i < items.Length; i++) {
+				items[i] = new Item();
+			}
+			DrawCallsPool = new RingPool<GpuUsage>(DrawCallPoolStartCapacity);
+			OwnersPool = ownersPool;
+		}
+
+		public Item GetFrame(long index) => items[index % items.Length];
+
+		public bool IsFrameIndexValid(long index) =>
+			index > 0 &&
+			index < ProfiledFramesCount &&
+			index > ProfiledFramesCount - HistoryFramesCount;
+
+		protected Item ResetFrame(long frameIndex) =>
+			items[frameIndex % items.Length].Reset(DrawCallsPool, OwnersPool);
+
+		/// <summary>
 		/// Frame statistics.
 		/// </summary>
 		public class Item
 		{
+			/// <summary>
+			/// Locked when overwriting data.
+			/// </summary>
+			[YuzuExclude]
+			public readonly object LockObject = new object();
+
 			/// <summary>
 			/// Frame index. Frames not involved in profiling are not indexed.
 			/// Only frames from the main window are involved in profiling,
@@ -94,47 +151,41 @@ namespace Lime.Graphics.Platform.Profiling
 			public int FullSavedByBatching;
 
 			/// <summary>
-			/// Stores the results of all draw calls.
+			/// Profiling result list handle for individual draw calls.
 			/// </summary>
 			[YuzuRequired]
-			public List<GpuUsage> DrawCalls;
+			public uint DrawCallsDescriptor = RingPool<GpuUsage>.InvalidDescriptor;
 
-
-			public Item()
+			public Item Reset(RingPool<GpuUsage> drawCallsPool, OwnersPool ownersPool)
 			{
-				DrawCalls = new List<GpuUsage>();
-			}
+				FrameIndex = -1;
 
-			public Item Reset()
-			{
-				SceneDrawCallCount = 0;
-				SceneVerticesCount = 0;
-				SceneTrianglesCount = 0;
+				SceneDrawCallCount   = 0;
+				SceneVerticesCount   = 0;
+				SceneTrianglesCount  = 0;
 				SceneSavedByBatching = 0;
 
-				FullDrawCallCount = 0;
-				FullGpuRenderTime = 0;
-				FullVerticesCount = 0;
-				FullTrianglesCount = 0;
-				FullSavedByBatching = 0;
+				FullDrawCallCount    = 0;
+				FullGpuRenderTime    = 0;
+				FullVerticesCount    = 0;
+				FullTrianglesCount   = 0;
+				FullSavedByBatching  = 0;
 
-				if (IsDeepProfilingEnabled) {
-					foreach (var dc in DrawCalls) {
-						NativeOwnersPool.FreeOldest(dc.Owners);
-					}
-					DrawCalls.Clear();
-				}
 				IsDeepProfilingEnabled = false;
 				IsSceneOnlyDeepProfiling = false;
+				if (DrawCallsDescriptor != RingPool<GpuUsage>.InvalidDescriptor) {
+					foreach (var dc in drawCallsPool.Enumerate(DrawCallsDescriptor)) {
+						ownersPool.FreeOldest(dc.Owners);
+					}
+					drawCallsPool.FreeOldestList(DrawCallsDescriptor);
+				}
+				DrawCallsDescriptor = RingPool<GpuUsage>.InvalidDescriptor;
 				IsCompleted = false;
 
 				return this;
 			}
 
-			/// <summary>
-			/// Copy without draw calls.
-			/// </summary>
-			public Item LightweightClone() => new Item {
+			public Item ShallowClone() => new Item {
 				FrameIndex                = FrameIndex,
 				IsCompleted               = IsCompleted,
 				IsDeepProfilingEnabled    = IsDeepProfilingEnabled,
@@ -148,75 +199,8 @@ namespace Lime.Graphics.Platform.Profiling
 				FullVerticesCount         = FullVerticesCount,
 				FullTrianglesCount        = FullTrianglesCount,
 				FullSavedByBatching       = FullSavedByBatching,
+				DrawCallsDescriptor       = DrawCallsDescriptor
 			};
 		}
-
-		/// <summary>
-		/// The maximum number of frames that are stored in history.
-		/// </summary>
-		public const int HistoryFramesCount = 160;
-
-		public const int DrawCallBufferStartSize = 256;
-
-		/// <summary>
-		/// The last profiled frame.
-		/// </summary>
-		public Item LastFrame { get; protected set; }
-
-		/// <summary>
-		/// The total number of profiled frames from the moment the engine starts.
-		/// </summary>
-		public long ProfiledFramesCount { get; protected set; }
-
-		protected readonly Item[] items;
-
-		private Item freeItem;
-		private long protectedIndex;
-
-		public GpuHistory()
-		{
-			freeItem = new Item();
-			protectedIndex = -1;
-			items = new Item[HistoryFramesCount];
-			for (int i = 0; i < items.Length; i++) {
-				items[i] = new Item();
-			}
-		}
-
-		/// <summary>
-		/// Ensures that the frame is not reset.
-		/// </summary>
-		/// <remarks>
-		/// Only one frame can be locked at a time.
-		/// Previous frame will be automatically unlocked.
-		/// </remarks>
-		public bool TryLockFrame(long frameIndex)
-		{
-			if (IsFrameIndexValid(frameIndex)) {
-				protectedIndex = frameIndex % items.Length;
-				return true;
-			} else {
-				return false;
-			}
-		}
-
-		protected Item SafeResetFrame(long frameIndex)
-		{
-			long itemIndex = frameIndex % items.Length;
-			if (frameIndex == protectedIndex) {
-				var protectedFrame = items[itemIndex];
-				items[itemIndex] = freeItem.Reset();
-				freeItem = protectedFrame;
-				protectedIndex = -1;
-			}
-			return items[itemIndex].Reset();
-		}
-
-		public Item GetFrame(long index) => items[index % items.Length];
-
-		public bool IsFrameIndexValid(long index) =>
-			index > 0 &&
-			index < ProfiledFramesCount &&
-			index > ProfiledFramesCount - HistoryFramesCount;
 	}
 }

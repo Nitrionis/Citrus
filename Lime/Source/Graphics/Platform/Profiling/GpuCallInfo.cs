@@ -50,7 +50,7 @@ namespace Lime.Graphics.Platform.Profiling
 #endif
 			var owners = new Owners(ReferencesTable.InvalidReference);
 			if (RenderObjectOwnersInfo.CurrentNode != null) {
-				NativeNodesTable.CreateOrAddReferenceTo(RenderObjectOwnersInfo.CurrentNode);
+				NativeNodesTables.CreateOrAddReferenceTo(RenderObjectOwnersInfo.CurrentNode);
 				owners.AsIndex = RenderObjectOwnersInfo.CurrentNode.ReferenceTableRowIndex;
 			}
 			uint materialIndex = NativeMaterialsTable.GetIndex(material.GetType());

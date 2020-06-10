@@ -16,7 +16,7 @@ namespace Lime.Graphics.Platform.Profiling
 		public static Stopwatch Stopwatch { get; private set; } = new Stopwatch();
 		public static List<CpuUsage> CpuUsages { get; private set; } = new List<CpuUsage>();
 
-		public static CpuUsage NodeCpuUsageStarted(object node, object manager)
+		public static CpuUsage NodeCpuUsageStarted(IReferencesTableCompatible node, object manager)
 		{
 			if (isEnabled) {
 				var usage = CpuUsage.Acquire(CpuUsage.UsageReasons.NodeRender);

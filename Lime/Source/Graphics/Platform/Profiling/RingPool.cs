@@ -9,6 +9,8 @@ namespace Lime.Graphics.Platform.Profiling
 	/// </summary>
 	public class RingPool<T> where T : new()
 	{
+		public const uint InvalidDescriptor = uint.MaxValue;
+
 		/// <summary>
 		/// Locked when resizing internal indices storage.
 		/// Storage size changes a finite number of times.
@@ -52,7 +54,7 @@ namespace Lime.Graphics.Platform.Profiling
 
 		public uint ListOffset(uint descriptor) => redirections[descriptor].ListOffset;
 
-		public uint GetListItemsCount(uint descriptor) => redirections[descriptor].ListSize;
+		public uint GetLength(uint descriptor) => redirections[descriptor].ListSize;
 
 		public bool HasDoubleDeletionFlag(uint descriptor) =>
 			redirections[descriptor].FlagBits == Redirection.DoubleDeletionBit;
@@ -66,10 +68,28 @@ namespace Lime.Graphics.Platform.Profiling
 		public T ItemAt(uint rawIndex) => data[rawIndex];
 
 		/// <summary>
+		/// Gets a reference to an array element. In the case of recording by reference
+		/// at the time of resizing the size of the array, data will not be written.
+		/// </summary>
+		public ref T ReferenceAtItem(uint descriptor, int itemIndex) =>
+			ref data[(ListOffset(descriptor) + itemIndex) % data.Length];
+
+		/// <summary>
+		/// Gets a reference to an array element. In the case of recording by reference
+		/// at the time of resizing the size of the array, data will not be written.
+		/// </summary>
+		public ref T ReferenceAtItem(uint rawIndex) => ref data[rawIndex];
+
+		/// <summary>
+		/// Returns the index of the next list item.
+		/// </summary>
+		public uint NextListItemIndex(uint listItemIndex) => (listItemIndex + 1u) % Capacity;
+
+		/// <summary>
 		/// Creates a new empty list and returns its descriptor.
 		/// </summary>
 		/// <param name="isDoubleDeletion">Indicates that the list will be deleted a second time.</param>
-		public uint AcquireList(bool isDoubleDeletion)
+		public uint AcquireList(bool isDoubleDeletion = false)
 		{
 			if (freeRedirectionsIndices.Count == 0) {
 				for (uint i = 0; i < redirections.Length; i++) {
@@ -85,19 +105,18 @@ namespace Lime.Graphics.Platform.Profiling
 				ListOffsetAndFlags = nextItemIndex | flag,
 				ListSize = 0
 			};
-			nextItemIndex = AcquireNextIndex();
 			return redirectionIndex;
 		}
 
 		public void FreeOldestList(uint descriptor)
 		{
-			oldestItemIndex = (oldestItemIndex + GetListItemsCount(descriptor)) % Capacity;
+			oldestItemIndex = (oldestItemIndex + GetLength(descriptor)) % Capacity;
 			freeRedirectionsIndices.Enqueue(descriptor);
 		}
 
 		public void FreeNewestList(uint descriptor)
 		{
-			nextItemIndex = (nextItemIndex + Capacity - GetListItemsCount(descriptor)) % Capacity;
+			nextItemIndex = (nextItemIndex + Capacity - GetLength(descriptor)) % Capacity;
 			freeRedirectionsIndices.Enqueue(descriptor);
 		}
 
@@ -198,7 +217,7 @@ namespace Lime.Graphics.Platform.Profiling
 			public bool MoveNext()
 			{
 				Current = pool.ItemAt(itemIndex);
-				itemIndex = (itemIndex + 1u) % pool.Capacity;
+				itemIndex = pool.NextListItemIndex(itemIndex);
 				return ++processedItemsCount < itemsCount;
 			}
 		}

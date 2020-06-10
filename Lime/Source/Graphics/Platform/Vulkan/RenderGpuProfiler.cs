@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Lime.Graphics.Platform.Profiling;
 
 namespace Lime.Graphics.Platform.Vulkan
@@ -36,8 +37,8 @@ namespace Lime.Graphics.Platform.Vulkan
 			public int Capacity;
 		}
 
-		private Queue<PoolInfo> freeQueryPools;
-		private Queue<PoolInfo> recordingQueryPools;
+		private readonly Queue<PoolInfo> freePools;
+		private readonly Queue<PoolInfo> writeTargetPools;
 		private PoolInfo currentPool;
 
 		private readonly double timestampPeriod;
@@ -69,15 +70,15 @@ namespace Lime.Graphics.Platform.Vulkan
 
 			timestampPeriod = limits.TimestampPeriod;
 			timestampValidBitsMask = ulong.MaxValue >> (64 - (int)queueFamilyProperties.TimestampValidBits);
-			timestamps = new ulong[TimestampsReserved + DrawCallBufferStartSize * TimestampsPerDrawCall];
+			timestamps = new ulong[TimestampsReserved + DrawCallPoolStartCapacity * TimestampsPerDrawCall];
 
-			freeQueryPools = new Queue<PoolInfo>();
-			recordingQueryPools = new Queue<PoolInfo>();
+			freePools = new Queue<PoolInfo>();
+			writeTargetPools = new Queue<PoolInfo>();
 		}
 
 		private PoolInfo AcquireQueryPool(long frameIndex, int minCapacity)
 		{
-			var poolInfo = freeQueryPools.Count > 0 ? freeQueryPools.Dequeue() : new PoolInfo();
+			var poolInfo = freePools.Count > 0 ? freePools.Dequeue() : new PoolInfo();
 			if (poolInfo.Handle == null) {
 				poolInfo.Handle = CreateQueryPool((uint)minCapacity);
 				poolInfo.Capacity = minCapacity;
@@ -90,19 +91,12 @@ namespace Lime.Graphics.Platform.Vulkan
 			return poolInfo;
 		}
 
-		private void EnqueuePoolToRecording(PoolInfo pool, ulong frameCompletedFenceValue, uint timestepsCount)
-		{
-			pool.FrameCompletedFenceValue = frameCompletedFenceValue;
-			pool.TimestepsCount = timestepsCount;
-			recordingQueryPools.Enqueue(pool);
-		}
-
-		private SharpVulkan.QueryPool CreateQueryPool(uint size)
+		private SharpVulkan.QueryPool CreateQueryPool(uint capacity)
 		{
 			var createInfo = new SharpVulkan.QueryPoolCreateInfo {
 				StructureType = SharpVulkan.StructureType.QueryPoolCreateInfo,
 				QueryType = SharpVulkan.QueryType.Timestamp,
-				QueryCount = size
+				QueryCount = capacity
 			};
 			return device.CreateQueryPool(ref createInfo);
 		}
@@ -111,9 +105,7 @@ namespace Lime.Graphics.Platform.Vulkan
 		{
 			base.FrameRenderStarted(isMainWindowTarget);
 			isProfilingEnabled &= isSupported;
-			if (isProfilingEnabled) {
-				currentPool = AcquireQueryPool(resultsBuffer.FrameIndex, timestamps.Length);
-			}
+			currentPool = isProfilingEnabled ? AcquireQueryPool(resultsBuffer.FrameIndex, timestamps.Length) : null;
 			isDeepProfilingEnabled = isProfilingEnabled && isDeepProfilingRequired;
 			commandBuffer = SharpVulkan.CommandBuffer.Null;
 			nextTimestampIndex = TimestampsReserved;
@@ -151,20 +143,23 @@ namespace Lime.Graphics.Platform.Vulkan
 					(!isSceneOnlyDeepProfiling || profilingInfo.IsPartOfScene) &&
 					nextTimestampIndex < timestamps.Length - TimestampsPerDrawCall;
 				if (isDrawCallDeepProfilingStarted) {
-					var profilingResult = GpuUsage.Acquire();
-					profilingResult.GpuCallInfo = profilingInfo;
-					profilingResult.VerticesCount = vertexCount;
-					profilingResult.TrianglesCount = trianglesCount;
-					profilingResult.RenderPassIndex = profilingInfo.CurrentRenderPassIndex;
-					resultsBuffer.DrawCalls.Add(profilingResult);
+					var usage = new GpuUsage {
+						Owners           = profilingInfo.Owners,
+						IsPartOfScene    = profilingInfo.IsPartOfScene,
+						MaterialIndex    = profilingInfo.MaterialIndex,
+						RenderPassIndex  = profilingInfo.RenderPassIndex,
+						VerticesCount    = vertexCount,
+						TrianglesCount   = trianglesCount
+					};
+					DrawCallsPool.AddToNewestList(resultsBuffer.DrawCallsDescriptor, usage);
 					commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.TopOfPipe, currentPool.Handle, nextTimestampIndex++);
 					commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.BottomOfPipe, currentPool.Handle, nextTimestampIndex++);
 				} else {
-					profilingInfo.Free();
+					OwnersPool.FreeNewest(profilingInfo.Owners);
 				}
 				resultsBuffer.FullDrawCallCount++;
 			} else {
-				profilingInfo.Free();
+				OwnersPool.FreeNewest(profilingInfo.Owners);
 			}
 		}
 
@@ -176,6 +171,10 @@ namespace Lime.Graphics.Platform.Vulkan
 			}
 		}
 
+		private bool HasCompletedFrame(ulong lastCompletedFenceValue) =>
+			writeTargetPools.Count > 0 &&
+			writeTargetPools.Peek().FrameCompletedFenceValue <= lastCompletedFenceValue;
+
 		public void FrameRenderFinished(ulong frameCompletedFenceValue, ulong lastCompletedFenceValue)
 		{
 			bool isNeedResize = timestamps.Length - TimestampsPerDrawCall <= nextTimestampIndex;
@@ -183,46 +182,43 @@ namespace Lime.Graphics.Platform.Vulkan
 				Array.Resize(ref timestamps, GetNextTimestampsBufferCapacity());
 			}
 			resultsBuffer.IsDeepProfilingEnabled = isDeepProfilingEnabled && !isNeedResize;
-			if (isProfilingEnabled) {
-				EnqueuePoolToRecording(currentPool, frameCompletedFenceValue, nextTimestampIndex);
+			if (currentPool != null) {
+				currentPool.FrameCompletedFenceValue = frameCompletedFenceValue;
+				currentPool.TimestepsCount = isNeedResize ? TimestampsReserved : nextTimestampIndex;
+				writeTargetPools.Enqueue(currentPool);
 			}
-			bool hasCompletedFrame =
-				recordingQueryPools.Count > 0 &&
-				recordingQueryPools.Peek().FrameCompletedFenceValue <= lastCompletedFenceValue;
-			if (hasCompletedFrame) {
-				var pool = recordingQueryPools.Dequeue();
+			while (HasCompletedFrame(lastCompletedFenceValue)) {
+				var pool = writeTargetPools.Dequeue();
 				fixed (ulong* ptr = timestamps) {
 					device.GetQueryPoolResults(
-						pool.Handle,
-						firstQuery: 0,
-						pool.TimestepsCount,
-						dataSize: sizeof(ulong) * pool.TimestepsCount,
-						data: (IntPtr)ptr,
-						stride: sizeof(ulong),
-						SharpVulkan.QueryResultFlags.Is64Bits);
+						queryPool:   pool.Handle,
+						firstQuery:  0,
+						queryCount:  pool.TimestepsCount,
+						dataSize:    sizeof(ulong) * pool.TimestepsCount,
+						data:        (IntPtr)ptr,
+						stride:      sizeof(ulong),
+						flags:       SharpVulkan.QueryResultFlags.Is64Bits);
 				}
 				var frame = GetFrame(pool.FrameIndex);
 				frame.FullGpuRenderTime = 0.001 * CalculateDeltaTime(timestamps[0], timestamps[1]);
-				if (frame.IsDeepProfilingEnabled) {
-					int drawCallCount = frame.IsSceneOnlyDeepProfiling ?
-						frame.SceneDrawCallCount : frame.FullDrawCallCount;
-					for (int i = 0, t = TimestampsReserved; i < drawCallCount; i++) {
-						var dc = frame.DrawCalls[i];
-						bool isContainsRenderingTime =
-							!frame.IsSceneOnlyDeepProfiling ||
-							dc.GpuCallInfo.IsPartOfScene;
-						if (isContainsRenderingTime) {
-							dc.StartTime              = CalculateDeltaTime(timestamps[0], timestamps[t++]);
-							dc.AllPreviousFinishTime  = CalculateDeltaTime(timestamps[0], timestamps[t++]);
-							dc.FinishTime             = CalculateDeltaTime(timestamps[0], timestamps[t++]);
-						}
+				if (frame.IsDeepProfilingEnabled && frame.DrawCallsDescriptor != RingPool<GpuUsage>.InvalidDescriptor) {
+					int timestampIndex = 0;
+					uint listLength = DrawCallsPool.GetLength(frame.DrawCallsDescriptor);
+					uint itemIndex = DrawCallsPool.ListOffset(frame.DrawCallsDescriptor);
+					for (int i = 0; i < listLength; i++) {
+						ref var dc = ref DrawCallsPool.ReferenceAtItem(itemIndex);
+						itemIndex = DrawCallsPool.NextListItemIndex(itemIndex);
+						dc.StartTime              = CalculateDeltaTime(timestamps[0], timestamps[timestampIndex++]);
+						dc.AllPreviousFinishTime  = CalculateDeltaTime(timestamps[0], timestamps[timestampIndex++]);
+						dc.FinishTime             = CalculateDeltaTime(timestamps[0], timestamps[timestampIndex++]);
 					}
 				}
 				frame.IsCompleted = true;
-				freeQueryPools.Enqueue(pool);
+				freePools.Enqueue(pool);
+				Monitor.Exit(frame.LockObject);
 			}
 			base.FrameRenderFinished();
-		}
+		} 
 
 		private int GetNextTimestampsBufferCapacity() =>
 			TimestampsReserved + TimestampsPerDrawCall * GetNextSize(
