@@ -386,7 +386,7 @@ namespace Tangerine.UI.Timeline
 #if !LIME_PROFILER
 					Mesh.DrawIndexed(0, IndexCount);
 #else
-					Mesh.DrawIndexed(0, IndexCount, 0, GpuCallInfo.Acquire(Material, 0));
+					Mesh.DrawIndexed(0, IndexCount, 0, ProfilingInfo.Acquire(Material, 0));
 #endif
 				}
 			}

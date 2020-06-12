@@ -7,12 +7,18 @@ namespace Lime.Graphics.Platform.Profiling
 {
 	public class MaterialAlias { }
 
-	public class MaterialNull : MaterialAlias { }
+	public class NullMaterial : MaterialAlias
+	{
+		public static readonly NullMaterial Instance = new NullMaterial();
+	}
 
 	/// <summary>
 	/// Alias for frame buffers cleaning commands.
 	/// </summary>
-	public class ClearMaterial : MaterialAlias { }
+	public class ClearMaterial : MaterialAlias
+	{
+		public static readonly ClearMaterial Instance = new ClearMaterial();
+	}
 
 	public class MaterialsTable
 	{

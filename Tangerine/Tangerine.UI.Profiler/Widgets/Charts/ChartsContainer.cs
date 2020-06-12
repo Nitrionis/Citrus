@@ -327,7 +327,7 @@ namespace Tangerine.UI.Charts
 					int chartsStartVertex = Line.VerticesCount * Container.userLines.Length;
 					int chartsVertexCount = Container.GetActiveChartsCount() * Container.chartVerticesCount;
 #if LIME_PROFILER
-					var profilingInfo = GpuCallInfo.Acquire(Material, 0);
+					var profilingInfo = ProfilingInfo.Acquire(Material, 0);
 					Mesh.Topology = PrimitiveTopology.TriangleStrip;
 					Mesh.Draw(chartsStartVertex, chartsVertexCount, profilingInfo);
 					Mesh.Topology = PrimitiveTopology.TriangleList;

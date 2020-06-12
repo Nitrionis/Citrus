@@ -364,7 +364,7 @@ namespace Lime
 			public override void Render()
 			{
 #if LIME_PROFILER
-				var profilingInfo = Graphics.Platform.Profiling.GpuCallInfo.Acquire();
+				var profilingInfo = Graphics.Platform.Profiling.ProfilingInfo.Acquire();
 #endif
 				Renderer.PushState(
 					RenderState.World |
@@ -399,7 +399,7 @@ namespace Lime
 #if !LIME_PROFILER
 							mesh.DrawIndexed(0, mesh.Indices.Length);
 #else
-							profilingInfo.CurrentRenderPassIndex = i;
+							profilingInfo.RenderPassIndex = i;
 							mesh.DrawIndexed(0, mesh.Indices.Length, 0, profilingInfo);
 #endif
 						}

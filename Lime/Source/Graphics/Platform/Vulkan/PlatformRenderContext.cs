@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.IO;
-using GpuCallInfo = Lime.Graphics.Platform.Profiling.GpuCallInfo;
+using ProfilingInfo = Lime.Graphics.Platform.Profiling.ProfilingInfo;
 
 using static SharpVulkan.ResultExtensions;
 
@@ -481,7 +481,7 @@ namespace Lime.Graphics.Platform.Vulkan
 			commandBuffer.DrawIndexed((uint)indexCount, 1, (uint)startIndex, baseVertex, 0);
 		}
 #else
-		public void Draw(int startVertex, int vertexCount, GpuCallInfo profilingInfo)
+		public void Draw(int startVertex, int vertexCount, ProfilingInfo profilingInfo)
 		{
 			profiler.DrawCallStart(profilingInfo, vertexCount, primitiveTopology);
 			PreDraw();
@@ -489,7 +489,7 @@ namespace Lime.Graphics.Platform.Vulkan
 			profiler.DrawCallEnd();
 		}
 
-		public void DrawIndexed(int startIndex, int indexCount, int baseVertex, GpuCallInfo profilingInfo)
+		public void DrawIndexed(int startIndex, int indexCount, int baseVertex, ProfilingInfo profilingInfo)
 		{
 			profiler.DrawCallStart(profilingInfo, indexCount, primitiveTopology);
 			PreDraw();
@@ -1024,7 +1024,7 @@ namespace Lime.Graphics.Platform.Vulkan
 #if !LIME_PROFILER
 				Draw(0, clearVertices.Length);
 #else
-				Draw(0, clearVertices.Length, GpuCallInfo.Acquire("ClearMaterial"));
+				Draw(0, clearVertices.Length, ProfilingInfo.Acquire(Profiling.ClearMaterial.Instance));
 #endif
 			} finally {
 				SetViewport(oldViewport);

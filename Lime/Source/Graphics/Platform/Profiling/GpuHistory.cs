@@ -175,7 +175,9 @@ namespace Lime.Graphics.Platform.Profiling
 				IsSceneOnlyDeepProfiling = false;
 				if (DrawCallsDescriptor != RingPool<GpuUsage>.InvalidDescriptor) {
 					foreach (var dc in drawCallsPool.Enumerate(DrawCallsDescriptor)) {
-						ownersPool.FreeOldest(dc.Owners);
+						if (dc.Owners.IsValid) {
+							ownersPool.FreeOldest(dc.Owners);
+						}
 					}
 					drawCallsPool.FreeOldestList(DrawCallsDescriptor);
 				}

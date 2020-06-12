@@ -12,9 +12,9 @@ namespace Lime.Graphics.Platform.Profiling
 	/// <summary>
 	/// Additional draw call parameters for profiling.
 	/// </summary>
-	public class GpuCallInfo
+	public class ProfilingInfo
 	{
-		private static GpuCallInfo instance = new GpuCallInfo();
+		private static ProfilingInfo instance = new ProfilingInfo();
 
 		/// <summary>
 		/// The indices of objects in a ReferencesTable that created this draw call.
@@ -36,9 +36,9 @@ namespace Lime.Graphics.Platform.Profiling
 		/// </summary>
 		public int RenderPassIndex;
 
-		public GpuCallInfo() { }
+		public ProfilingInfo() { }
 
-		public static GpuCallInfo Acquire(object material, int passIndex = 0)
+		public static ProfilingInfo Acquire(object material, int passIndex = 0)
 		{
 			bool isPartOfScene =
 #if ANDROID || iOS
@@ -48,16 +48,12 @@ namespace Lime.Graphics.Platform.Profiling
 				RenderObjectOwnersInfo.CurrentManager == null ||
 				ReferenceEquals(RenderObjectOwnersInfo.CurrentManager, SceneProfilingInfo.NodeManager);
 #endif
-			var owners = new Owners(ReferencesTable.InvalidReference);
-			if (RenderObjectOwnersInfo.CurrentNode != null) {
-				NativeNodesTables.CreateOrAddReferenceTo(RenderObjectOwnersInfo.CurrentNode);
-				owners.AsIndex = RenderObjectOwnersInfo.CurrentNode.ReferenceTableRowIndex;
-			}
+			var owners = NativeOwnersPool.Acquire(RenderObjectOwnersInfo.CurrentNode, Owners.ThreadBit.Render);
 			uint materialIndex = NativeMaterialsTable.GetIndex(material.GetType());
 			return Acquire(owners, isPartOfScene, materialIndex, passIndex);
 		}
 
-		public static GpuCallInfo Acquire(Owners owners, bool isPartOfScene, uint materialIndex, int passIndex)
+		public static ProfilingInfo Acquire(Owners owners, bool isPartOfScene, uint materialIndex, int passIndex)
 		{
 			instance.Owners = owners;
 			instance.IsPartOfScene = isPartOfScene;

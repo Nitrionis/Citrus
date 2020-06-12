@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Yuzu;
-using GpuCallInfo = Lime.Graphics.Platform.Profiling.GpuCallInfo;
+using ProfilingInfo = Lime.Graphics.Platform.Profiling.ProfilingInfo;
 
 namespace Lime
 {
@@ -313,7 +313,7 @@ namespace Lime
 #if !LIME_PROFILER
 				mesh.DrawIndexed(0, mesh.Indices.Length);
 #else
-				mesh.DrawIndexed(0, mesh.Indices.Length, 0, GpuCallInfo.Acquire(material));
+				mesh.DrawIndexed(0, mesh.Indices.Length, 0, ProfilingInfo.Acquire(material));
 #endif
 				RendererWrapper.Current.PopRenderTarget();
 				RendererWrapper.Current.PopState();

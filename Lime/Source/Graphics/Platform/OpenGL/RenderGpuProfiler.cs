@@ -9,7 +9,7 @@ namespace Lime.Graphics.Platform.OpenGL
 	{
 		public override bool IsDeepProfiling { get => false; set { } }
 
-		public void DrawCall(GpuCallInfo profilingInfo, int vertexCount, PrimitiveTopology topology)
+		public void DrawCall(ProfilingInfo profilingInfo, int vertexCount, PrimitiveTopology topology)
 		{
 			if (isProfilingEnabled) {
 				resultsBuffer.FullVerticesCount += vertexCount;

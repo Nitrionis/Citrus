@@ -291,7 +291,7 @@
     <Compile Include="Source\Graphics\PlatformRenderer.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\RenderGpuProfiler.cs" />
     <Compile Include="Source\Graphics\Platform\Profiling\CpuUsage.cs" />
-    <Compile Include="Source\Graphics\Platform\Profiling\GpuCallInfo.cs" />
+    <Compile Include="Source\Graphics\Platform\Profiling\ProfilingInfo.cs" />
     <Compile Include="Source\Graphics\Platform\IPlatformBuffer.cs" />
     <Compile Include="Source\Graphics\Platform\IPlatformRenderContext.cs" />
     <Compile Include="Source\Graphics\Platform\IPlatformRenderTexture2D.cs" />
@@ -676,6 +676,11 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="ClassDiagram1.cd" />
+    <None Include="ClassDiagram2.cd" />
+    <None Include="..\..\..\Users\nitro\Desktop\ClassDiagram3.cd">
+      <Link>ClassDiagram3.cd</Link>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

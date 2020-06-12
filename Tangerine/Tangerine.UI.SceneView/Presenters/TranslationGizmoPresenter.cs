@@ -3,7 +3,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Lime;
 using Tangerine.Core;
-using GpuCallInfo = Lime.Graphics.Platform.Profiling.GpuCallInfo;
+using ProfilingInfo = Lime.Graphics.Platform.Profiling.ProfilingInfo;
 
 namespace Tangerine.UI.SceneView
 {
@@ -65,7 +65,7 @@ namespace Tangerine.UI.SceneView
 #if !LIME_PROFILER
 			gizmo.DrawIndexed(0, gizmo.Indices.Length);
 #else
-			gizmo.DrawIndexed(0, gizmo.Indices.Length, 0, GpuCallInfo.Acquire(WidgetMaterial.Diffuse));
+			gizmo.DrawIndexed(0, gizmo.Indices.Length, 0, ProfilingInfo.Acquire(WidgetMaterial.Diffuse));
 #endif
 		}
 

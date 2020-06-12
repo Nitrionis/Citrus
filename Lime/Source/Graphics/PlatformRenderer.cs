@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using Lime.Graphics.Platform;
-using GpuCallInfo = Lime.Graphics.Platform.Profiling.GpuCallInfo;
+using ProfilingInfo = Lime.Graphics.Platform.Profiling.ProfilingInfo;
 
 namespace Lime
 {
@@ -473,14 +473,14 @@ namespace Lime
 			DrawCount++;
 		}
 #else
-		public static void Draw(PrimitiveTopology topology, int startVertex, int vertexCount, GpuCallInfo profilingInfo)
+		public static void Draw(PrimitiveTopology topology, int startVertex, int vertexCount, ProfilingInfo profilingInfo)
 		{
 			PreDraw(topology);
 			Context.Draw(startVertex, vertexCount, profilingInfo);
 			DrawCount++;
 		}
 
-		public static void DrawIndexed(PrimitiveTopology topology, int startIndex, int indexCount, int baseVertex, GpuCallInfo profilingInfo)
+		public static void DrawIndexed(PrimitiveTopology topology, int startIndex, int indexCount, int baseVertex, ProfilingInfo profilingInfo)
 		{
 			PreDraw(topology);
 			Context.DrawIndexed(startIndex, indexCount, baseVertex, profilingInfo);

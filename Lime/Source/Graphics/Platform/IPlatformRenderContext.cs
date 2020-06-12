@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using GpuCallInfo = Lime.Graphics.Platform.Profiling.GpuCallInfo;
+using ProfilingInfo = Lime.Graphics.Platform.Profiling.ProfilingInfo;
 
 namespace Lime.Graphics.Platform
 {
@@ -49,8 +49,8 @@ namespace Lime.Graphics.Platform
 		void Draw(int startVertex, int vertexCount);
 		void DrawIndexed(int startIndex, int indexCount, int baseVertex);
 #else
-		void Draw(int startVertex, int vertexCount, GpuCallInfo profilingInfo);
-		void DrawIndexed(int startIndex, int indexCount, int baseVertex, GpuCallInfo profilingInfo);
+		void Draw(int startVertex, int vertexCount, ProfilingInfo profilingInfo);
+		void DrawIndexed(int startIndex, int indexCount, int baseVertex, ProfilingInfo profilingInfo);
 #endif
 		byte[] GetPipelineCacheData();
 		bool SetPipelineCacheData(byte[] data);

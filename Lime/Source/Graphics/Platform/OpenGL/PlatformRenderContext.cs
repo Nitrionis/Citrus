@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using GpuCallInfo = Lime.Graphics.Platform.Profiling.GpuCallInfo;
+using ProfilingInfo = Lime.Graphics.Platform.Profiling.ProfilingInfo;
 
 #if iOS || MAC || ANDROID
 using GLStencilOp = Lime.Graphics.Platform.OpenGL.StencilOp;
@@ -392,7 +392,7 @@ namespace Lime.Graphics.Platform.OpenGL
 			GLHelper.CheckGLErrors();
 		}
 #else
-		public void Draw(int startVertex, int vertexCount, GpuCallInfo profilingInfo)
+		public void Draw(int startVertex, int vertexCount, ProfilingInfo profilingInfo)
 		{
 			profiler.DrawCall(profilingInfo, vertexCount, primitiveTopology);
 			PreDraw(0);
@@ -400,7 +400,7 @@ namespace Lime.Graphics.Platform.OpenGL
 			GLHelper.CheckGLErrors();
 		}
 
-		public void DrawIndexed(int startIndex, int indexCount, int baseVertex, GpuCallInfo profilingInfo)
+		public void DrawIndexed(int startIndex, int indexCount, int baseVertex, ProfilingInfo profilingInfo)
 		{
 			profiler.DrawCall(profilingInfo, indexCount, primitiveTopology);
 			PreDraw(baseVertex);

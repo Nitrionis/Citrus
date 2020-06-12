@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Yuzu;
-using GpuCallInfo = Lime.Graphics.Platform.Profiling.GpuCallInfo;
+using ProfilingInfo = Lime.Graphics.Platform.Profiling.ProfilingInfo;
 
 namespace Lime
 {
@@ -66,13 +66,13 @@ namespace Lime
 			PlatformRenderer.DrawIndexed(Topology, startIndex, indexCount, baseVertex);
 		}
 #else
-		public void Draw(int startVertex, int vertexCount, GpuCallInfo profilingInfo = null)
+		public void Draw(int startVertex, int vertexCount, ProfilingInfo profilingInfo = null)
 		{
 			PreDraw();
 			PlatformRenderer.Draw(Topology, startVertex, vertexCount, profilingInfo);
 		}
 
-		public void DrawIndexed(int startIndex, int indexCount, int baseVertex = 0, GpuCallInfo profilingInfo = null)
+		public void DrawIndexed(int startIndex, int indexCount, int baseVertex = 0, ProfilingInfo profilingInfo = null)
 		{
 			PreDraw();
 			PlatformRenderer.DrawIndexed(Topology, startIndex, indexCount, baseVertex, profilingInfo);

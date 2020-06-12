@@ -9,36 +9,47 @@ namespace Lime.Graphics.Platform.Profiling
 	/// </summary>
 	public struct Owners
 	{
-		public const uint ListBit = 0x_8000_0000;
-		public const uint BatchBit = 0x_4000_0000;
-		public const uint ThreadBit = 0x_2000_0000;
-		public const uint FlagsBitMask = ListBit | BatchBit | ThreadBit;
+		private const uint ListBitMask = 0x_8000_0000;
+		private const uint BatchBitMask = 0x_4000_0000;
+		private const uint ThreadBitMask = 0x_2000_0000;
+		private const uint FlagsBitMask = ListBitMask | BatchBitMask | ThreadBitMask;
+
+		public const int ThreadBitOffset = 29;
+		public const uint InvalidData = ~FlagsBitMask;
+
+		public enum ThreadBit : uint
+		{
+			Render = ThreadBitMask,
+			Update = 0x_0000_0000
+		}
 
 		[YuzuRequired]
 		public uint Data;
 
+		public bool IsValid => (Data & InvalidData) != InvalidData;
+
 		public bool IsList
 		{
-			get => (Data & ListBit) == ListBit;
-			set => Data = value ? Data | ListBit : Data & ~ListBit;
+			get => (Data & ListBitMask) == ListBitMask;
+			set => Data = value ? Data | ListBitMask : Data & ~ListBitMask;
 		}
 
 		public bool IsBatch
 		{
-			get => (Data & BatchBit) == BatchBit;
-			set => Data = value ? Data | BatchBit : Data & ~BatchBit;
+			get => (Data & BatchBitMask) == BatchBitMask;
+			set => Data = value ? Data | BatchBitMask : Data & ~BatchBitMask;
 		}
 
 		public bool IsRenderThread
 		{
-			get => (Data & ThreadBit) == ThreadBit;
-			set => Data = value ? Data | ThreadBit : Data & ~ThreadBit;
+			get => (Data & ThreadBitMask) == ThreadBitMask;
+			set => Data = value ? Data | ThreadBitMask : Data & ~ThreadBitMask;
 		}
 
 		public bool IsUpdateThread
 		{
-			get => (Data & ThreadBit) == 0;
-			set => Data = value ? Data & ~ThreadBit : Data | ThreadBit;
+			get => (Data & ThreadBitMask) == 0;
+			set => Data = value ? Data & ~ThreadBitMask : Data | ThreadBitMask;
 		}
 
 		/// <summary>
@@ -66,53 +77,67 @@ namespace Lime.Graphics.Platform.Profiling
 
 	public class OwnersPool
 	{
-		private readonly ReferencesTable renderSafeNodesTable;
-		private readonly ReferencesTable updateSafeNodesTable;
+		private readonly ReferencesTable[] tables;
+		private readonly RingPool<uint>[] pools;
 
-		private readonly RingPool<uint> renderSafeListsPool;
-		private readonly RingPool<uint> updateSafeListsPool;
-
-		private bool isListLinksDoubling;
-		private int listItemsCreationsReferencesCount;
+		private bool isLinksDoubling;
+		private int itemsCreationsReferencesCount;
 
 		public OwnersPool(ReferencesTable nodesTable)
 		{
-			renderSafeNodesTable = updateSafeNodesTable = nodesTable;
-			renderSafeListsPool = updateSafeListsPool = new RingPool<uint>();
+			var pool = new RingPool<uint>();
+			pools = new RingPool<uint>[] { pool, pool };
+			tables = new ReferencesTable[] { nodesTable, nodesTable };
 		}
 
 		public OwnersPool(ReferencesTable renderSafeNodesTable, ReferencesTable updateSafeNodesTable)
 		{
-			this.renderSafeNodesTable = renderSafeNodesTable;
-			this.updateSafeNodesTable = updateSafeNodesTable;
-			renderSafeListsPool = new RingPool<uint>();
-			updateSafeListsPool = new RingPool<uint>();
+			pools = new RingPool<uint>[] { new RingPool<uint>(), new RingPool<uint>() };
+			tables = new ReferencesTable[] { updateSafeNodesTable, renderSafeNodesTable };
 		}
 
-		public Owners Acquire(bool isListLinksDoubling)
+		private uint GetTablePoolIndex(Owners owners) =>
+			(owners.Data & (uint)Owners.ThreadBit.Render) >> Owners.ThreadBitOffset;
+
+		private ReferencesTable GetTable(Owners owners) => tables[GetTablePoolIndex(owners)];
+
+		private RingPool<uint> GetPool(Owners owners) => pools[GetTablePoolIndex(owners)];
+
+		public Owners Acquire(IReferencesTableCompatible node, Owners.ThreadBit threadBit, bool isLinksDoubling)
 		{
-			this.isListLinksDoubling = isListLinksDoubling;
-			listItemsCreationsReferencesCount = isListLinksDoubling ? 2 : 1;
-			return new Owners();
+			if (node != null) {
+				var table = tables[(uint)threadBit >> Owners.ThreadBitOffset];
+				table.CreateOrAddReferenceTo(node, isLinksDoubling ? 2 : 1);
+				return new Owners(node.ReferenceTableRowIndex | (uint)threadBit);
+			} else {
+				return new Owners(Owners.InvalidData | (uint)Owners.ThreadBit.Render);
+			}
 		}
 
-		public void AddToNewest(ref Owners owners, IReferencesTableCompatible node)
+		public Owners AcquireEmptyList(Owners.ThreadBit threadBit, bool isLinksDoubling)
 		{
-			var table = owners.IsRenderThread ? renderSafeNodesTable : updateSafeNodesTable;
+			this.isLinksDoubling = isLinksDoubling;
+			itemsCreationsReferencesCount = isLinksDoubling ? 2 : 1;
+			return new Owners((uint)threadBit);
+		}
+
+		public void AddToNewestList(ref Owners owners, IReferencesTableCompatible node)
+		{
+			var table = GetTable(owners);
 			if (owners.IsBatch) {
-				var pool = owners.IsRenderThread ? renderSafeListsPool : updateSafeListsPool;
+				var pool = GetPool(owners);
 				if (owners.IsList) {
-					table.CreateOrAddReferenceTo(node, listItemsCreationsReferencesCount);
+					table.CreateOrAddReferenceTo(node, itemsCreationsReferencesCount);
 					pool.AddToNewestList(owners.Descriptor, node.ReferenceTableRowIndex);
 				} else {
-					table.CreateOrAddReferenceTo(node, listItemsCreationsReferencesCount);
-					uint descriptor = pool.AcquireList(isDoubleDeletion: isListLinksDoubling);
+					table.CreateOrAddReferenceTo(node, itemsCreationsReferencesCount);
+					uint descriptor = pool.AcquireList(isDoubleDeletion: isLinksDoubling);
 					pool.AddToNewestList(descriptor, owners.AsIndex);
 					pool.AddToNewestList(descriptor, node.ReferenceTableRowIndex);
 					owners = new Owners(descriptor) { IsList = true };
 				}
 			} else {
-				table.CreateOrAddReferenceTo(node, listItemsCreationsReferencesCount);
+				table.CreateOrAddReferenceTo(node, itemsCreationsReferencesCount);
 				owners.IsBatch = true;
 				owners.AsIndex = node.ReferenceTableRowIndex;
 			}
@@ -120,8 +145,8 @@ namespace Lime.Graphics.Platform.Profiling
 
 		public void FreeOldest(Owners owners)
 		{
-			var table = owners.IsRenderThread ? renderSafeNodesTable : updateSafeNodesTable;
-			var pool = owners.IsRenderThread ? renderSafeListsPool : updateSafeListsPool;
+			var table = GetTable(owners);
+			var pool = GetPool(owners);
 			if (owners.IsList) {
 				if (pool.HasDoubleDeletionFlag(owners.Descriptor)) {
 					pool.RemoveDoubleDeletionFlag(owners.Descriptor);
@@ -138,8 +163,8 @@ namespace Lime.Graphics.Platform.Profiling
 
 		public void FreeNewest(Owners owners)
 		{
-			var table = owners.IsRenderThread ? renderSafeNodesTable : updateSafeNodesTable;
-			var pool = owners.IsRenderThread ? renderSafeListsPool : updateSafeListsPool;
+			var table = GetTable(owners);
+			var pool = GetPool(owners);
 			if (owners.IsList) {
 				if (pool.HasDoubleDeletionFlag(owners.Descriptor)) {
 					pool.RemoveDoubleDeletionFlag(owners.Descriptor);
@@ -163,10 +188,14 @@ namespace Lime.Graphics.Platform.Profiling
 				NativeNodesTables.UpdateOnlyTable
 			);
 
-		public static Owners AcquireList(bool isListLinksDoubling) => Instance.Acquire(isListLinksDoubling);
+		public static Owners Acquire(IReferencesTableCompatible node, Owners.ThreadBit threadBit, bool isLinksDoubling = false) =>
+			Instance.Acquire(node, threadBit, isLinksDoubling);
+
+		public static Owners AcquireEmptyList(Owners.ThreadBit threadBit, bool isLinksDoubling) =>
+			Instance.AcquireEmptyList(threadBit, isLinksDoubling);
 
 		public static void AddToNewest(ref Owners owners, IReferencesTableCompatible @object) =>
-			Instance.AddToNewest(ref owners, @object);
+			Instance.AddToNewestList(ref owners, @object);
 
 		public static void FreeOldest(Owners owners) => Instance.FreeOldest(owners);
 

@@ -255,7 +255,7 @@ namespace Lime.Profilers.Contexts
 			{
 				if (Frame != null) {
 					foreach (var drawCall in Frame.DrawCalls) {
-						MemoryManager<GpuCallInfo>.Free(drawCall.GpuCallInfo);
+						MemoryManager<ProfilingInfo>.Free(drawCall.GpuCallInfo);
 						MemoryManager<GpuUsage>.Free(drawCall);
 					}
 				}
@@ -283,7 +283,7 @@ namespace Lime.Profilers.Contexts
 			private GpuUsage CopyGpuUsage(GpuUsage usage)
 			{
 				var info = usage.GpuCallInfo;
-				var infoCopy = MemoryManager<GpuCallInfo>.Acquire();
+				var infoCopy = MemoryManager<ProfilingInfo>.Acquire();
 				infoCopy.IsPartOfScene = info.IsPartOfScene;
 				infoCopy.Material = info.Material.GetType().Name;
 				infoCopy.Owners = ConvertOwnersToText(info.Owners);

@@ -127,11 +127,12 @@ namespace Lime.Graphics.Platform.Vulkan
 			}
 		}
 
-		public void DrawCallStart(GpuCallInfo profilingInfo, int vertexCount, PrimitiveTopology topology)
+		public void DrawCallStart(ProfilingInfo profilingInfo, int vertexCount, PrimitiveTopology topology)
 		{
 			if (isProfilingEnabled) {
-				resultsBuffer.FullVerticesCount += vertexCount;
 				int trianglesCount = CalculateTrianglesCount(vertexCount, topology);
+				resultsBuffer.FullDrawCallCount++;
+				resultsBuffer.FullVerticesCount += vertexCount;
 				resultsBuffer.FullTrianglesCount += trianglesCount;
 				if (profilingInfo.IsPartOfScene) {
 					resultsBuffer.SceneDrawCallCount++;
@@ -154,11 +155,10 @@ namespace Lime.Graphics.Platform.Vulkan
 					DrawCallsPool.AddToNewestList(resultsBuffer.DrawCallsDescriptor, usage);
 					commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.TopOfPipe, currentPool.Handle, nextTimestampIndex++);
 					commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.BottomOfPipe, currentPool.Handle, nextTimestampIndex++);
-				} else {
+				} else if (profilingInfo.Owners.IsValid) {
 					OwnersPool.FreeNewest(profilingInfo.Owners);
 				}
-				resultsBuffer.FullDrawCallCount++;
-			} else {
+			} else if (profilingInfo.Owners.IsValid) {
 				OwnersPool.FreeNewest(profilingInfo.Owners);
 			}
 		}
