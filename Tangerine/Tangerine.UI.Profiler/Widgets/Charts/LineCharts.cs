@@ -41,15 +41,15 @@ namespace Tangerine.UI.Charts
 
 		private Vector2 GetNormal(Vector2 v) => new Vector2(-v.Y, v.X);
 
-		protected override void RebuildMesh(Mesh<Vector3> mesh)
+		protected override void RebuildFullMesh(Mesh<Vector3> mesh)
 		{
 			int parity = 0;
 			int chartIndex = 0;
-			int vertexIndex = Line.VerticesCount * userLines.Length;
+			int vertexIndex = 0;
 			float newChartsMaxValue = 1;
-			foreach (var chart in Charts) {
+			foreach (var chart in charts) {
 				if (chart.IsVisible) {
-					float maxValue = IsIndependentMode ? maxValuesPerCharts[chartIndex] : chartsMaxValue;
+					float maxValue = IsIndependentMode ? maxValuesPerCharts[chartIndex] : ChartsMaxValue;
 					float scalingFactor = CustomChartScales[chartIndex] * Height / maxValue;
 					maxValue = 0;
 					int step = (1 - parity) * 2 - 1;
@@ -65,10 +65,10 @@ namespace Tangerine.UI.Charts
 							x: (i + step) * ControlPointsSpacing,
 							y: Height - p2 * scalingFactor);
 						Vector2 n = GetNormal((b - a).Normalized * 0.5f);
-						mesh.Vertices[vertexIndex++] = new Vector3(a - n, chart.ColorIndex);
-						mesh.Vertices[vertexIndex++] = new Vector3(a + n, chart.ColorIndex);
-						mesh.Vertices[vertexIndex++] = new Vector3(b - n, chart.ColorIndex);
-						mesh.Vertices[vertexIndex++] = new Vector3(b + n, chart.ColorIndex);
+						mesh.Vertices[vertexIndex++] = new Vector3(a - n, chart.ColorIndex + 0.5f);
+						mesh.Vertices[vertexIndex++] = new Vector3(a + n, chart.ColorIndex + 0.5f);
+						mesh.Vertices[vertexIndex++] = new Vector3(b - n, chart.ColorIndex + 0.5f);
+						mesh.Vertices[vertexIndex++] = new Vector3(b + n, chart.ColorIndex + 0.5f);
 						maxValue = Mathf.Max(maxValue, p1);
 					}
 					parity = (parity + 1) % 2;

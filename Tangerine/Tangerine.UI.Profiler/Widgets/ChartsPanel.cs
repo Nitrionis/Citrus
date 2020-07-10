@@ -189,7 +189,7 @@ namespace Tangerine.UI
 		private void PushChartsSlice(GpuHistory.Item frame, CpuHistory.Item update)
 		{
 			// Push CPU charts data
-			cpuCharts.PushSlice(new float[] {
+			cpuCharts.EnqueueSlice(new float[] {
 				Logarithm(update.DeltaTime), 0f
 			});
 			// Update CPU charts max value line
@@ -201,7 +201,7 @@ namespace Tangerine.UI
 				colorIndex: 10,
 				caption: string.Format("{0:0.00} fps {1:0.00} ms", 1000f / cpuUnscaledValue, cpuUnscaledValue)));
 			// Push GPU charts data
-			gpuCharts.PushSlice(frame == null ? new float[2] : new float[] {
+			gpuCharts.EnqueueSlice(frame == null ? new float[2] : new float[] {
 				Logarithm((float)frame.FullGpuRenderTime), 0f
 			});
 			// Update GPU charts max value line
@@ -221,7 +221,7 @@ namespace Tangerine.UI
 					frame.SceneVerticesCount,
 					frame.SceneTrianglesCount
 				};
-			lineCharts.PushSlice(points);
+			lineCharts.EnqueueSlice(points);
 			UpdateChartsLegends(frame, update, selectedRenderTime: 0, selectedUpdateTime: 0);
 		}
 

@@ -56,6 +56,15 @@ namespace Lime
 			platformBuffer.SetData(0, data, 0, elementCount, Dynamic ? BufferSetDataMode.Discard : BufferSetDataMode.Default);
 		}
 
+		public void SetData<T>(int offset, T[] data, int startElement, int elementCount) where T : unmanaged
+		{
+			int requiredCapacity = offset + sizeof(T) * (startElement + elementCount);
+			int capacity = Math.Max(requiredCapacity, platformBuffer?.Size ?? 0);
+			EnsurePlatformBuffer(capacity);
+			var mode = Dynamic ? BufferSetDataMode.Discard : BufferSetDataMode.Default;
+			platformBuffer.SetData(offset, data, startElement, elementCount, mode);
+		}
+
 		public void Dispose()
 		{
 			DisposeInternal();

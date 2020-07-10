@@ -15,9 +15,9 @@ namespace Tangerine.UI.Charts
 		public float GetOriginalPoint(int chartIndex, int pointIndex) =>
 			originalData[chartIndex].GetItem(pointIndex + 1);
 
-		public override void PushSlice(float[] values)
+		public override void EnqueueSlice(float[] values)
 		{
-			base.PushSlice(values);
+			base.EnqueueSlice(values);
 			for (int i = 0; i < originalData.Length; i++) {
 				originalData[i].Enqueue(values[i]);
 			}

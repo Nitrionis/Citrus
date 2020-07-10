@@ -1,26 +1,41 @@
 using System;
 using Lime;
-using Lime.Graphics.Platform.Profiling;
 
 namespace Tangerine.UI.Charts
 {
 	internal abstract class ChartsContainer : Widget
 	{
-		protected readonly int chartVerticesCount;
-		protected readonly int chartsVerticesOffset;
-		protected readonly int controlPointsCount;
-		public readonly int ControlPointsSpacing;
+		protected readonly SwappablePart swappablePart;
+		protected readonly Chart[] charts;
 
-		public int ControlPointsCount => controlPointsCount - 1;
+		protected int UnchangedSlice { get; private set; }
+		protected int LastChangedSlice { get; private set; }
+		protected int MappedLastChangedSlice { get; private set; }
 
-		protected bool isMeshUpdateRequired = false;
-		protected bool hasPreviousUpdate = false;
-		protected float chartsMaxValue;
+		protected bool IsMeshFullRebuildRequired { get; private set; }
+
+		protected Vector2 CachedSize { get; private set; }
 
 		/// <summary>
-		/// The maximum value of the charts calculated during the previous update.
+		/// Max number of control points by horizontally.
 		/// </summary>
-		public float ChartsMaxValue => chartsMaxValue;
+		public int MaxControlPointsCount { get; }
+
+		/// <summary>
+		/// Current number of control points by horizontally.
+		/// Calculated automatically based on widget width.
+		/// </summary>
+		public int MappedControlPointsCount { get; protected set; }
+
+		/// <summary>
+		/// The horizontal distance between the control points in pixels.
+		/// </summary>
+		public int ControlPointsSpacing { get; }
+
+		/// <summary>
+		/// Charts scaling factor calculated during the previous update.
+		/// </summary>
+		public float ScalingFactor { get; protected set; }
 
 		/// <summary>
 		/// To calculate the scaling factor, the charts are based on the results of the previous frame.
@@ -30,57 +45,160 @@ namespace Tangerine.UI.Charts
 		public bool AutoInvalidate { get; set; } = true;
 
 		/// <summary>
-		/// Background color for charts.
+		/// Called when you click on the charts.
 		/// </summary>
-		public Color4 BackgroundColor { get; set; }
+		public Action<Slice> SliceSelected;
 
-		public class Line
+		private readonly Color4 backgroundColor;
+		private readonly Vector4 burntColor;
+
+		protected ChartsContainer(Parameters parameters)
 		{
-			public const int VerticesCount = 6;
+			MaxControlPointsCount = parameters.ControlPointsCount;
+			ControlPointsSpacing = parameters.ControlPointsSpacing;
+			AddNode(new Widget {
+				Anchors = Anchors.LeftRightTopBottom,
+				HitTestTarget = true,
+				HitTestMethod = HitTestMethod.BoundingRect,
+				Clicked = () => {
+					int mappedIndex = Math.Min(
+						MappedControlPointsCount - 1,
+						((int)LocalMousePosition().X + ControlPointsSpacing / 2) / ControlPointsSpacing);
+					int unmappedIndex =
+						LastChangedSlice + MaxControlPointsCount - MappedControlPointsCount + 1 +
+						(mappedIndex + MappedControlPointsCount - MappedLastChangedSlice - 1) % MappedControlPointsCount;
+					SliceSelected?.Invoke(GetSlice(unmappedIndex));
+				},
+				
+			});
+			backgroundColor = parameters.BackgroundColor;
+			burntColor = parameters.BurntColor;
+		}
+
+		protected override void OnSizeChanged(Vector2 sizeDelta)
+		{
+			base.OnSizeChanged(sizeDelta);
+			if (Size.X != CachedSize.X) {
+				MappedControlPointsCount = (int)(Size.X / ControlPointsSpacing);
+				MappedLastChangedSlice = Math.Min(MappedLastChangedSlice, MappedControlPointsCount);
+			}
+		}
+
+		/// <summary>
+		/// Enables or disables a specific chart.
+		/// </summary>
+		public void SetVisible(int chartIndex, bool value)
+		{
+			IsMeshFullRebuildRequired = true;
+			charts[chartIndex].IsVisible = value;
+		}
+
+		/// <summary>
+		/// Returns a vertical slice of charts.
+		/// </summary>
+		public Slice GetSlice(int index)
+		{
+			var values = new float[charts.Length];
+			for (int i = 0; i < charts.Length; i++) {
+				values[i] = charts[i].Points[index];
+			}
+			return new Slice { Points = values, Index = index };
+		}
+
+		/// <summary>
+		/// Enqueue a vertical slice to charts.
+		/// </summary>
+		public virtual void EnqueueSlice(float[] points)
+		{
+			LastChangedSlice = (LastChangedSlice + 1) % MaxControlPointsCount;
+			MappedLastChangedSlice = (MappedLastChangedSlice + 1) % MappedControlPointsCount;
+			for (int i = 0; i < charts.Length; i++) {
+				charts[i].Points[LastChangedSlice] = points[i];
+			}
+		}
+
+		/// <summary>
+		/// Inserts a line into the specified slot.
+		/// </summary>
+		public void SetLine(int lineIndex, Line line) =>
+			swappablePart.WriteTarget.Lines[lineIndex] = line;
+
+		/// <summary>
+		/// Clears the charts data.
+		/// </summary>
+		public virtual void Reset()
+		{
+			IsMeshFullRebuildRequired = true;
+			foreach (var chart in charts) {
+				for (int i = 0; i < chart.Points.Length; i++) {
+					chart.Points[i] = 0;
+				}
+			}
+		}
+
+		protected int GetActiveChartsCount()
+		{
+			int activeCount = 0;
+			foreach (var chart in charts) {
+				activeCount += chart.IsVisible ? 1 : 0;
+			}
+			return activeCount;
+		}
+
+		public struct Line
+		{
+			public Color4 Color;
 
 			/// <summary>
-			/// Index of color in <see cref="colors"/>.
+			/// Line start position.
 			/// </summary>
-			public readonly int ColorIndex;
-			public readonly Vector2 Start;
-			public readonly Vector2 End;
-			public readonly string Caption;
+			public Vector2 Start;
+
+			/// <summary>
+			/// Line end position.
+			/// </summary>
+			public Vector2 End;
+
+			/// <summary>
+			/// Some caption near the line.
+			/// </summary>
+			public string Caption;
 
 			/// <summary>
 			/// Indicates whether the line will scale along with the chart.
 			/// </summary>
-			public bool IsScalable { get; set; } = true;
+			public bool IsScalable { get; set; }
 
 			/// <summary>
-			/// Start position after applying scaling. Calculated automatically.
+			/// Caption position relative to the line.
+			/// If x and y is 0 then it is start of the line.
+			/// If x and y is 1 then it is end of the line.
 			/// </summary>
-			public Vector2 CaptionPosition = Vector2.Zero;
+			public Vector2 CaptionPosition;
 
-			public Line(Vector2 start, Vector2 end, int colorIndex, string caption = null)
+			/// <summary>
+			/// Caption offset at pixels relative caption position.
+			/// </summary>
+			public Vector2 CaptionOffset;
+
+			public Line(Vector2 start, Vector2 end, Color4 color)
 			{
-				Start       = start;
-				End         = end;
-				ColorIndex  = colorIndex;
-				Caption     = caption;
+				Start            = start;
+				End              = end;
+				Color            = color;
+				Caption          = null;
+				IsScalable       = true;
+				CaptionPosition  = Vector2.Zero;
+				CaptionOffset    = Vector2.Zero;
 			}
 		}
 
-		/// <remarks>
-		/// Represents a user defined line.
-		/// </remarks>
-		protected readonly Line[] userLines;
-
-		public class Chart
+		protected class Chart
 		{
-			/// <summary>
-			/// Index of color in <see cref="colors"/>.
-			/// </summary>
 			public int ColorIndex;
 			public bool IsVisible = false;
-			public FixedCapacityQueue<float> Points = null;
+			public float[] Points = null;
 		}
-
-		public readonly Chart[] Charts;
 
 		/// <summary>
 		/// Represents vertical slice of charts.
@@ -103,253 +221,135 @@ namespace Tangerine.UI.Charts
 		/// </summary>
 		public class Parameters
 		{
-			/// <summary>
-			/// The horizontal distance between the control points in pixels.
-			/// </summary>
 			public int ControlPointsSpacing = 5;
 			public int ControlPointsCount;
 			public int ChartsCount = 1;
 			public int UserLinesCount = 0;
-			public Color4[] Colors;
-
-			/// <summary>
-			/// Called when you click on the charts.
-			/// </summary>
-			public Action<Slice> SliceSelected;
+			public Color4[] ChartsColors;
+			public Color4 BackgroundColor = Color4.Black;
+			public Vector4 BurntColor = Vector4.One;
 
 			public Parameters(int controlPointsCount, Color4[] colors)
 			{
 				ControlPointsCount = controlPointsCount;
-				Colors = colors;
+				ChartsColors = colors;
 			}
 		}
 
-		public ChartsContainer(Parameters parameters)
+		protected class SwappablePart
 		{
-			controlPointsCount = 1 + parameters.ControlPointsCount;
-			ControlPointsSpacing = parameters.ControlPointsSpacing;
+			public MutablePart ReadTarget { get; private set; }
+			public MutablePart WriteTarget { get; private set; }
 
-			chartVerticesCount = CalculateSubmeshVerticesCount(controlPointsCount - 1);
-			chartsVerticesOffset = Line.VerticesCount * parameters.UserLinesCount;
-
-			float width = (controlPointsCount - 2) * ControlPointsSpacing;
-			Width = width;
-			MinMaxWidth = width;
-
-			Charts = new Chart[parameters.ChartsCount];
-			for (int i = 0; i < Charts.Length; i++) {
-				var chart = new Chart();
-				Charts[i] = chart;
-				chart.IsVisible = true;
-				chart.ColorIndex = i;
-				chart.Points = new FixedCapacityQueue<float>(controlPointsCount);
-			}
-			userLines = new Line[parameters.UserLinesCount];
-			for (int i = 0; i < userLines.Length; i++) {
-				userLines[i] = new Line(Vector2.Zero, Vector2.Zero, 0, null);
+			public SwappablePart(Parameters parameters, int verticesCount, int indicesCount)
+			{
+				ReadTarget = new MutablePart(parameters, verticesCount, indicesCount);
+				WriteTarget = new MutablePart(parameters, verticesCount, indicesCount);
 			}
 
-			Presenter = new ChartsPresenter(parameters.Colors, this);
-
-			AddNode(new Widget {
-				Anchors = Anchors.LeftRightTopBottom,
-				HitTestTarget = true,
-				HitTestMethod = HitTestMethod.BoundingRect,
-				Width = width,
-				MinMaxWidth = width,
-				Clicked = () => {
-					int index = Math.Min(
-						controlPointsCount - 2,
-						((int)LocalMousePosition().X + ControlPointsSpacing / 2) / ControlPointsSpacing);
-					parameters.SliceSelected?.Invoke(GetSlice(index));
-				}
-			});
+			public void SwapTargets() => (ReadTarget, WriteTarget) = (WriteTarget, ReadTarget);
 		}
 
-		/// <summary>
-		/// Enables or disables a specific chart.
-		/// </summary>
-		public void SetActive(int chartIndex, bool value)
+		protected class MutablePart
 		{
-			isMeshUpdateRequired = true;
-			Charts[chartIndex].IsVisible = value;
-		}
+			public readonly Line[] Lines;
+			public readonly Vector3[] Vertices;
+			public readonly ushort[] Indices;
 
-		public Slice GetSlice(int index)
-		{
-			var values = new float[Charts.Length];
-			for (int i = 0; i < Charts.Length; i++) {
-				values[i] = Charts[i].Points.GetItem(index + 1);
-			}
-			return new Slice { Points = values, Index = index };
-		}
+			public float NewestSlicePosition;
+			public float ScaleFactor;
 
-		public virtual void PushSlice(float[] points)
-		{
-			isMeshUpdateRequired = true;
-			int submeshIndex = 0;
-			foreach (var submesh in Charts) {
-				submesh.Points.Enqueue(points[submeshIndex++]);
+			public MutablePart(Parameters parameters, int verticesCount, int indicesCount)
+			{
+				Lines = new Line[parameters.UserLinesCount];
+				Vertices = new Vector3[verticesCount];
+				Indices = new ushort[indicesCount];
 			}
 		}
 
-		public virtual void Reset()
+		protected abstract class ChartsPresenter : IPresenter
 		{
-			foreach (var chart in Charts) {
-				for (int i = 0; i < chart.Points.Capacity; i++) {
-					chart.Points[i] = 0;
-				}
-			}
-		}
-
-		protected abstract void RebuildMesh(Mesh<Vector3> mesh);
-
-		protected abstract int CalculateSubmeshVerticesCount(int controlPointsCount);
-
-		protected int GetActiveVerticesCount() =>
-			chartsVerticesOffset + chartVerticesCount * GetActiveChartsCount();
-
-		protected int GetActiveChartsCount()
-		{
-			int activeCount = 0;
-			foreach (var chart in Charts) {
-				activeCount += chart.IsVisible ? 1 : 0;
-			}
-			return activeCount;
-		}
-
-		/// <summary>
-		/// Add custom horizontal or vertical line.
-		/// </summary>
-		public void SetLine(int lineIndex, Line line)
-		{
-			isMeshUpdateRequired = true;
-			userLines[lineIndex] = line;
-		}
-
-		protected void RecalculateUserLines(Mesh<Vector3> mesh, float scalingFactor)
-		{
-			for (int i = 0; i < userLines.Length; i++) {
-				int offset = i * Line.VerticesCount;
-				var line = userLines[i];
-				var s = line.Start;
-				var e = line.End;
-				int colorIndex = line.ColorIndex;
-				scalingFactor = line.IsScalable ? scalingFactor : 1;
-				s.Y *= scalingFactor;
-				e.Y *= scalingFactor;
-				if (s.Y > Height && e.Y > Height) {
-					s = Vector2.Zero;
-					e = Vector2.Zero;
-				}
-				mesh.Vertices[offset + 0] = new Vector3(s.X, Height - s.Y, colorIndex);
-				mesh.Vertices[offset + 1] = new Vector3(s.X, Height - e.Y - 1, colorIndex);
-				mesh.Vertices[offset + 2] = new Vector3(e.X + 1, Height - e.Y - 1, colorIndex);
-				mesh.Vertices[offset + 3] = new Vector3(s.X, Height - s.Y, colorIndex);
-				mesh.Vertices[offset + 4] = new Vector3(e.X + 1, Height - e.Y - 1, colorIndex);
-				mesh.Vertices[offset + 5] = new Vector3(e.X + 1, Height - s.Y, colorIndex);
-				line.CaptionPosition = s;
-			}
-		}
-
-		private class ChartsPresenter : IPresenter
-		{
-			private readonly Color4[] colors;
-			private readonly Mesh<Vector3> mesh;
-			private readonly ChartMaterial material;
-			private readonly ChartsContainer container;
+			protected readonly ChartsContainer container;
+			protected readonly ChartsMesh<Vector3> mesh;
+			protected readonly ChartMaterial material;
 
 			public ChartsPresenter(Color4[] colors, ChartsContainer container)
 			{
-				this.colors = colors;
 				this.container = container;
 				var chartsColors = new Vector4[colors.Length];
 				for (int i = 0; i < colors.Length; i++) {
 					chartsColors[i] = colors[i].ToVector4();
 				}
-				material = new ChartMaterial() { Colors = chartsColors };
-				mesh = new Mesh<Vector3> {
-					Indices = new ushort[] { 0 },
-					Vertices = new Vector3[
-						container.chartsVerticesOffset +
-						container.Charts.Length * container.chartVerticesCount
-					],
+				material = new ChartMaterial() {
+					Colors = chartsColors,
+					BurntColor = container.burntColor
+				};
+				mesh = new ChartsMesh<Vector3> {
 					AttributeLocations = ChartMaterial.ShaderProgram.MeshAttribLocations
 				};
-				int vi = container.chartsVerticesOffset;
-				for (int ci = 0; ci < container.Charts.Length; ++ci) {
-					for (int cvi = 0; cvi < container.chartVerticesCount; vi++, cvi++) {
-						int x = (cvi / 2) * container.ControlPointsSpacing;
-						mesh.Vertices[vi] = new Vector3(x, 0, container.Charts[ci].ColorIndex);
-					}
-				}
 			}
 
 			public bool PartialHitTest(Node node, ref HitTestArgs args) => false;
 
+			protected abstract RenderObject AcquireRenderObject();
+
 			public Lime.RenderObject GetRenderObject(Node node)
 			{
-				var ro = RenderObjectPool<RenderObject>.Acquire();
+				container.swappablePart.SwapTargets();
+				var immutablePart = container.swappablePart.ReadTarget;
+				mesh.Vertices = immutablePart.Vertices;
+				mesh.Indices = immutablePart.Indices;
+
+				var ro = AcquireRenderObject();
 				ro.CaptureRenderState((Widget)node);
-				ro.Colors = colors;
-				ro.Mesh = mesh;
-				ro.Material = material;
-				ro.Container = container;
+				ro.Mesh            = mesh;
+				ro.Material        = material;
+				ro.ImmutablePart   = immutablePart;
+				ro.Size            = container.Size;
+				ro.BackgroundColor = container.backgroundColor;
 				return ro;
 			}
 
-			public IPresenter Clone() => (IPresenter)MemberwiseClone();
+			public IPresenter Clone() => throw new NotImplementedException();
 
-			private class RenderObject : WidgetRenderObject
+			protected abstract class RenderObject : WidgetRenderObject
 			{
-				public Color4[] Colors;
-				public Mesh<Vector3> Mesh;
 				public ChartMaterial Material;
-				public ChartsContainer Container;
+				public ChartsMesh<Vector3> Mesh;
+				public MutablePart ImmutablePart;
+				public Vector2 Size;
+				public Color4 BackgroundColor;
 
-				public override void Render()
+				protected abstract void DrawCharts();
+
+				public sealed override void Render()
 				{
 					PrepareRenderState();
-					Renderer.DrawRect(Vector2.Zero, Container.Size, Container.BackgroundColor);
+					Renderer.DrawRect(Vector2.Zero, Size, BackgroundColor);
 					Renderer.MainRenderList.Flush();
 
-					if (Container.isMeshUpdateRequired || Container.hasPreviousUpdate) {
-						Container.RebuildMesh(Mesh);
-						if (Container.AutoInvalidate) {
-							Window.Current.Invalidate();
-						}
-					}
-					Container.hasPreviousUpdate = Container.isMeshUpdateRequired;
-					Container.isMeshUpdateRequired = false;
+					var scaleMatrix = Matrix44.CreateScale(0, ImmutablePart.ScaleFactor, 0);
 
-					Material.Matrix = Renderer.FixupWVP((Matrix44)LocalToWorldTransform * Renderer.ViewProjection);
+					Material.Matrix = Renderer.FixupWVP(
+						(Matrix44)LocalToWorldTransform * scaleMatrix * Renderer.ViewProjection);
+					Material.BurnRange = Size.X;
+					Material.NewestItemPosition = ImmutablePart.NewestSlicePosition;
 					Material.Apply(0);
-					int chartsStartVertex = Line.VerticesCount * Container.userLines.Length;
-					int chartsVertexCount = Container.GetActiveChartsCount() * Container.chartVerticesCount;
-#if LIME_PROFILER
-					var profilingInfo = GpuCallInfo.Acquire(Material, 0);
-					Mesh.Topology = PrimitiveTopology.TriangleStrip;
-					Mesh.Draw(chartsStartVertex, chartsVertexCount, profilingInfo);
-					Mesh.Topology = PrimitiveTopology.TriangleList;
-					Mesh.Draw(0, chartsStartVertex, profilingInfo);
-#else
-					Mesh.Topology = PrimitiveTopology.TriangleStrip;
-					Mesh.Draw(chartsStartVertex, chartsVertexCount);
-					Mesh.Topology = PrimitiveTopology.TriangleList;
-					Mesh.Draw(0, chartsStartVertex);
-#endif
+
+					((IPartialInvalidationMesh<Vector3>)Mesh).FlushInvalidatedData();
+					DrawCharts();
+
+					// Draw additional lines over charts.
 					const float fontHeight = 14;
-					foreach (var line in Container.userLines) {
+					foreach (var line in ImmutablePart.Lines) {
+						var tsp = scaleMatrix.TransformVector(line.Start);
+						var tep = scaleMatrix.TransformVector(line.End);
+						Renderer.DrawLine(tsp, tep, line.Color);
 						if (line.Caption != null && line.CaptionPosition.Y > fontHeight) {
-							var startPosition = new Vector2(
-								line.CaptionPosition.X,
-								Container.Height - line.CaptionPosition.Y);
-							Renderer.DrawTextLine(
-								startPosition,
-								line.Caption,
-								fontHeight,
-								Colors[line.ColorIndex],
-								letterSpacing: 0);
+							var position = line.CaptionOffset + new Vector2(
+									Mathf.Lerp(line.CaptionPosition.X, tsp.X, tep.X),
+									Mathf.Lerp(line.CaptionPosition.Y, tsp.Y, tep.Y));
+							Renderer.DrawTextLine(position, line.Caption, fontHeight, line.Color, 0);
 						}
 					}
 				}

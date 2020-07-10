@@ -28,8 +28,8 @@ namespace Lime
 		public MeshDirtyFlags DirtyFlags = MeshDirtyFlags.All;
 
 		private VertexInputLayout inputLayout;
-		private VertexBuffer vertexBuffer;
-		private IndexBuffer indexBuffer;
+		protected VertexBuffer vertexBuffer;
+		protected IndexBuffer indexBuffer;
 
 		public void Dispose()
 		{
@@ -88,7 +88,7 @@ namespace Lime
 			PlatformRenderer.SetIndexBuffer(indexBuffer, 0, IndexFormat.Index16Bits);
 		}
 
-		private void UpdateBuffers()
+		protected void UpdateBuffers()
 		{
 			if ((DirtyFlags & MeshDirtyFlags.Vertices) != 0) {
 				if (vertexBuffer == null) {
@@ -106,7 +106,7 @@ namespace Lime
 			}
 		}
 
-		private void UpdateInputLayout()
+		protected void UpdateInputLayout()
 		{
 			if (inputLayout == null || (DirtyFlags & MeshDirtyFlags.AttributeLocations) != 0) {
 				var bindings = new[] {
