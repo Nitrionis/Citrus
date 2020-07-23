@@ -124,7 +124,7 @@ namespace Lime.Graphics.Platform.Vulkan
 			if (isProfilingEnabled) {
 				this.commandBuffer = commandBuffer;
 				commandBuffer.ResetQueryPool(currentPool.Handle, 0, (uint)timestamps.Length);
-				commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.BottomOfPipe, currentPool.Handle, 0);
+				commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.TopOfPipe, currentPool.Handle, 0);
 			}
 		}
 
