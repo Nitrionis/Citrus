@@ -29,7 +29,8 @@ namespace Lime.Graphics.Platform.Vulkan
 
 		private class PoolInfo
 		{
-			public SharpVulkan.QueryPool Handle;
+			public SharpVulkan.QueryPool OcclusionPoolHandle;
+			public SharpVulkan.QueryPool TimestampsPoolHandle;
 			public ulong FrameCompletedFenceValue;
 			public long FrameIndex;
 			public uint TimestepsCount;
@@ -78,12 +79,13 @@ namespace Lime.Graphics.Platform.Vulkan
 		private PoolInfo AcquireQueryPool(long frameIndex, int minCapacity)
 		{
 			var poolInfo = freeQueryPools.Count > 0 ? freeQueryPools.Dequeue() : new PoolInfo();
-			if (poolInfo.Handle == null) {
-				poolInfo.Handle = CreateQueryPool((uint)minCapacity);
+			if (poolInfo.TimestampsPoolHandle == SharpVulkan.QueryPool.Null) {
+				poolInfo.OcclusionPoolHandle = CreateOcclusionQueryPool(1);
+				poolInfo.TimestampsPoolHandle = CreateTimestampsQueryPool((uint)minCapacity);
 				poolInfo.Capacity = minCapacity;
 			} else if (poolInfo.Capacity < minCapacity) {
-				device.DestroyQueryPool(poolInfo.Handle);
-				poolInfo.Handle = CreateQueryPool((uint)minCapacity);
+				device.DestroyQueryPool(poolInfo.TimestampsPoolHandle);
+				poolInfo.TimestampsPoolHandle = CreateTimestampsQueryPool((uint)minCapacity);
 				poolInfo.Capacity = minCapacity;
 			}
 			poolInfo.FrameIndex = frameIndex;
@@ -97,11 +99,21 @@ namespace Lime.Graphics.Platform.Vulkan
 			recordingQueryPools.Enqueue(pool);
 		}
 
-		private SharpVulkan.QueryPool CreateQueryPool(uint size)
+		private SharpVulkan.QueryPool CreateTimestampsQueryPool(uint size)
 		{
 			var createInfo = new SharpVulkan.QueryPoolCreateInfo {
 				StructureType = SharpVulkan.StructureType.QueryPoolCreateInfo,
 				QueryType = SharpVulkan.QueryType.Timestamp,
+				QueryCount = size
+			};
+			return device.CreateQueryPool(ref createInfo);
+		}
+
+		private SharpVulkan.QueryPool CreateOcclusionQueryPool(uint size)
+		{
+			var createInfo = new SharpVulkan.QueryPoolCreateInfo {
+				StructureType = SharpVulkan.StructureType.QueryPoolCreateInfo,
+				QueryType = SharpVulkan.QueryType.Occlusion,
 				QueryCount = size
 			};
 			return device.CreateQueryPool(ref createInfo);
@@ -123,15 +135,22 @@ namespace Lime.Graphics.Platform.Vulkan
 		{
 			if (isProfilingEnabled) {
 				this.commandBuffer = commandBuffer;
-				commandBuffer.ResetQueryPool(currentPool.Handle, 0, (uint)timestamps.Length);
-				commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.TopOfPipe, currentPool.Handle, 0);
+				if (isOcclusionEnabled) {
+					commandBuffer.ResetQueryPool(currentPool.OcclusionPoolHandle, 0, 1);
+					commandBuffer.BeginQuery(currentPool.OcclusionPoolHandle, 0, SharpVulkan.QueryControlFlags.Precise);
+				}
+				commandBuffer.ResetQueryPool(currentPool.TimestampsPoolHandle, 0, (uint)timestamps.Length);
+				commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.TopOfPipe, currentPool.TimestampsPoolHandle, 0);
 			}
 		}
 
 		public void LastTimestamp()
 		{
 			if (isProfilingEnabled) {
-				commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.BottomOfPipe, currentPool.Handle, 1);
+				commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.BottomOfPipe, currentPool.TimestampsPoolHandle, 1);
+				if (isOcclusionEnabled) {
+					commandBuffer.EndQuery(currentPool.OcclusionPoolHandle, 0);
+				}
 			}
 		}
 
@@ -157,8 +176,8 @@ namespace Lime.Graphics.Platform.Vulkan
 					profilingResult.TrianglesCount = trianglesCount;
 					profilingResult.RenderPassIndex = profilingInfo.CurrentRenderPassIndex;
 					resultsBuffer.DrawCalls.Add(profilingResult);
-					commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.TopOfPipe, currentPool.Handle, nextTimestampIndex++);
-					commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.BottomOfPipe, currentPool.Handle, nextTimestampIndex++);
+					commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.TopOfPipe, currentPool.TimestampsPoolHandle, nextTimestampIndex++);
+					commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.BottomOfPipe, currentPool.TimestampsPoolHandle, nextTimestampIndex++);
 				} else {
 					profilingInfo.Free();
 				}
@@ -172,7 +191,7 @@ namespace Lime.Graphics.Platform.Vulkan
 		{
 			if (isDrawCallDeepProfilingStarted) {
 				isDrawCallDeepProfilingStarted = false;
-				commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.BottomOfPipe, currentPool.Handle, nextTimestampIndex++);
+				commandBuffer.WriteTimestamp(SharpVulkan.PipelineStageFlags.BottomOfPipe, currentPool.TimestampsPoolHandle, nextTimestampIndex++);
 			}
 		}
 
@@ -193,7 +212,7 @@ namespace Lime.Graphics.Platform.Vulkan
 				var pool = recordingQueryPools.Dequeue();
 				fixed (ulong* ptr = timestamps) {
 					device.GetQueryPoolResults(
-						pool.Handle,
+						pool.TimestampsPoolHandle,
 						firstQuery: 0,
 						pool.TimestepsCount,
 						dataSize: sizeof(ulong) * pool.TimestepsCount,
@@ -218,6 +237,16 @@ namespace Lime.Graphics.Platform.Vulkan
 						}
 					}
 				}
+				ulong occlusionCounter = 0;
+				device.GetQueryPoolResults(
+					pool.OcclusionPoolHandle,
+					firstQuery: 0,
+					queryCount: 1,
+					dataSize: sizeof(ulong),
+					data: new IntPtr(&occlusionCounter),
+					stride: sizeof(ulong),
+					SharpVulkan.QueryResultFlags.Is64Bits);
+				frame.OcclusionCounter = (int)occlusionCounter;
 				frame.IsCompleted = true;
 				freeQueryPools.Enqueue(pool);
 			}

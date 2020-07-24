@@ -42,6 +42,18 @@ namespace Lime.Graphics.Platform.Profiling
 
 		protected GpuHistory.Item resultsBuffer;
 
+		protected bool isOcclusionEnabled = true;
+		private bool isOcclusionRequired = true;
+
+		/// <summary>
+		/// Turn on and off occlusion query.
+		/// </summary>
+		public bool IsOcclusionEnabled
+		{
+			get => isOcclusionEnabled;
+			set => isOcclusionRequired = value;
+		}
+
 		/// <summary>
 		/// Profiler processes only the main window.
 		/// </summary>
@@ -69,6 +81,7 @@ namespace Lime.Graphics.Platform.Profiling
 		{
 			this.isMainWindowTarget = isMainWindowTarget;
 			isProfilingEnabled = isProfilingRequired && isMainWindowTarget;
+			isOcclusionEnabled = isOcclusionRequired;
 			RenderBatchProfiler.Reset();
 		}
 

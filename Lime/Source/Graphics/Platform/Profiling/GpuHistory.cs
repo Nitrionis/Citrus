@@ -94,6 +94,12 @@ namespace Lime.Graphics.Platform.Profiling
 			public int FullSavedByBatching;
 
 			/// <summary>
+			/// Track the number of samples that pass the per-fragment tests.
+			/// </summary>
+			[YuzuRequired]
+			public int OcclusionCounter;
+
+			/// <summary>
 			/// Stores the results of all draw calls.
 			/// </summary>
 			[YuzuRequired]
@@ -117,6 +123,8 @@ namespace Lime.Graphics.Platform.Profiling
 				FullVerticesCount = 0;
 				FullTrianglesCount = 0;
 				FullSavedByBatching = 0;
+
+				OcclusionCounter = 0;
 
 				if (IsDeepProfilingEnabled) {
 					foreach (var dc in DrawCalls) {
@@ -148,6 +156,7 @@ namespace Lime.Graphics.Platform.Profiling
 				FullVerticesCount         = FullVerticesCount,
 				FullTrianglesCount        = FullTrianglesCount,
 				FullSavedByBatching       = FullSavedByBatching,
+				OcclusionCounter          = OcclusionCounter
 			};
 		}
 
