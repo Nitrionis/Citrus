@@ -288,6 +288,7 @@
     <Compile Include="Source\Graphics\MovieTexture.cs" />
     <Compile Include="Source\Graphics\OgvDecoder.cs" />
     <Compile Include="Source\Graphics\OpacityMask.cs" />
+    <Compile Include="Source\Graphics\Overdraw.cs" />
     <Compile Include="Source\Graphics\PlatformRenderer.cs" />
     <Compile Include="Source\Graphics\Platform\OpenGL\RenderGpuProfiler.cs" />
     <Compile Include="Source\Graphics\Platform\Profiling\CpuUsage.cs" />

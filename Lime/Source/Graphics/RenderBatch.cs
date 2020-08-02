@@ -60,13 +60,14 @@ namespace Lime
 
 		public void Render()
 		{
-
 #if LIME_PROFILER
 			int savedByBatching = Owners.Count == 0 ?
 				0 : (Owners.Count - 1) * Material.PassCount;
 			RenderBatchProfiler.FullSavedByBatching += savedByBatching;
 			RenderBatchProfiler.SceneSavedByBatching += IsPartOfScene ? savedByBatching : 0;
 			var profilingInfo = GpuCallInfo.Acquire(Owners, IsPartOfScene, Material, 0);
+			RenderObjectOwnersInfo.BatchInfo.SetOwnersInfo(null, IsPartOfScene ? SceneProfilingInfo.NodeManager : null);
+			RenderObjectOwnersInfo.BatchInfo.SetGlobalProfilerData();
 #endif
 			PlatformRenderer.SetTexture(0, Texture1);
 			PlatformRenderer.SetTexture(1, Texture2);
@@ -79,6 +80,9 @@ namespace Lime
 				Mesh.DrawIndexed(StartIndex, LastIndex - StartIndex, 0, profilingInfo);
 #endif
 			}
+#if LIME_PROFILER
+			RenderObjectOwnersInfo.BatchInfo.ResetGlobalProfilerData();
+#endif
 		}
 
 		public static RenderBatch<TVertex> Acquire(RenderBatch<TVertex> origin)

@@ -28,11 +28,23 @@ namespace Lime
 		private BoundShaderParam[] boundParams;
 		private Uniform[] uniforms;
 
-		public ShaderProgram(IEnumerable<Shader> shaders, IEnumerable<AttribLocation> attribLocations, IEnumerable<Sampler> samplers)
+#if LIME_PROFILER
+		public Overdraw.Info OverdrawInfo { get; }
+#endif
+
+		public ShaderProgram(
+			IEnumerable<Shader>         shaders,
+			IEnumerable<AttribLocation> attribLocations,
+			IEnumerable<Sampler>        samplers,
+			Overdraw.Info               overdrawInfo = null)
 		{
 			this.shaders = shaders.ToArray();
 			this.attribLocations = attribLocations.ToArray();
 			this.samplers = samplers.ToArray();
+#if LIME_PROFILER
+			OverdrawInfo = overdrawInfo ?? new Overdraw.Info(program:
+				Overdraw.CreateDefaultShaderProgram(shaders, attribLocations, samplers));
+#endif
 		}
 
 		~ShaderProgram()

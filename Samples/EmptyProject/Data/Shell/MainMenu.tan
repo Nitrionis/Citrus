@@ -26,6 +26,35 @@
 	"Color":[4294967295],
 	"Nodes":[
 		{
+			"class":"Lime.ParticleEmitter, Lime",
+			"Color":[4294967295],
+			"Id":"ParticleEmitter",
+			"Nodes":[
+				{
+					"class":"Lime.ParticleModifier, Lime",
+					"Animators":[
+						{
+							"class":"Lime.Color4Animator, Lime",
+							"ReadonlyKeys":[
+								[0,0,[16777215]],
+								[30,0,[4294967295]],
+								[60,0,[16777215]]
+							],
+							"TargetProperty":"Color"
+						}
+					],
+					"Color":[16777215],
+					"Id":"ParticleModifier",
+					"Texture":{
+						"class":"Lime.SerializableTexture, Lime"
+					}
+				}
+			],
+			"Pivot":[0.5,0.5],
+			"Position":[-95.96997,286],
+			"Size":[991.94,710]
+		},
+		{
 			"class":"Lime.Frame, Lime",
 			"Anchors":48,
 			"Animators":[

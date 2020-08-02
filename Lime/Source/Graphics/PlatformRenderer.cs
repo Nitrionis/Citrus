@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Lime.Graphics.Platform;
+using Lime.Graphics.Platform.Profiling;
 using GpuCallInfo = Lime.Graphics.Platform.Profiling.GpuCallInfo;
 
 namespace Lime
@@ -334,6 +335,18 @@ namespace Lime
 		public static void SetShaderProgram(ShaderProgram program)
 		{
 			shaderProgram = program;
+#if LIME_PROFILER
+			bool isPartOfScene =
+				SceneProfilingInfo.NodeManager == null ||
+				RenderObjectOwnersInfo.CurrentManager == null ||
+				ReferenceEquals(RenderObjectOwnersInfo.CurrentManager, SceneProfilingInfo.NodeManager);
+			if (isPartOfScene && program != null) {
+				if (program.OverdrawInfo.UseDefaultBlending) {
+					Context.SetBlendState(Overdraw.DefaultBlendState);
+				}
+				shaderProgram = program.OverdrawInfo.Program;
+			}
+#endif
 			Context.SetShaderProgram(shaderProgram?.GetPlatformProgram());
 		}
 
