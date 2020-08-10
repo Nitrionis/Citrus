@@ -8,6 +8,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Lime.Profiler;
 using Yuzu;
 
 namespace Lime
@@ -58,7 +59,7 @@ namespace Lime
 	/// </summary>
 	[YuzuDontGenerateDeserializer]
 	[DebuggerTypeProxy(typeof(NodeDebugView))]
-	public abstract class Node : IDisposable, IAnimationHost, IFolderItem, IFolderContext, IRenderChainBuilder, IAnimable, ICloneable
+	public abstract class Node : IDisposable, IAnimationHost, IFolderItem, IFolderContext, IRenderChainBuilder, IAnimable, ICloneable, IProfileableObject
 	{
 		[Flags]
 		protected internal enum DirtyFlags
@@ -549,6 +550,12 @@ namespace Lime
 
 		public static int CreatedCount = 0;
 		public static int FinalizedCount = 0;
+
+#if TANGERINE
+		bool IProfileableObject.IsPartOfScene => SceneProfilingInfo.NodeManager == Manager;
+#else // TANGERINE
+		bool IProfileableObject.IsPartOfScene => true;
+#endif // TANGERINE
 
 		/// <summary>
 		/// Initializes a new instance of node.

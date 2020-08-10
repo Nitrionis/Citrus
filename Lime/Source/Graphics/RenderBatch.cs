@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Lime.Profiler.Graphics;
 
 namespace Lime
 {
@@ -35,6 +36,10 @@ namespace Lime
 		public int LastIndex { get; set; }
 		public Mesh<TVertex> Mesh { get; set; }
 
+#if PROFILER || OVERDRAW
+		public RenderBatchOwnersInfo OwnersInfo;
+#endif // PROFILER || OVERDRAW
+
 		private void Clear()
 		{
 			Texture1 = null;
@@ -52,12 +57,18 @@ namespace Lime
 
 		public void Render()
 		{
+#if PROFILER || OVERDRAW
+			RenderThreadProfilingInfo.PushState(OwnersInfo.IsPartOfScene);
+#endif // PROFILER || OVERDRAW
 			PlatformRenderer.SetTexture(0, Texture1);
 			PlatformRenderer.SetTexture(1, Texture2);
 			for (int i = 0; i < Material.PassCount; i++) {
 				Material.Apply(i);
 				Mesh.DrawIndexed(StartIndex, LastIndex - StartIndex);
 			}
+#if PROFILER || OVERDRAW
+			RenderThreadProfilingInfo.PopState();
+#endif // PROFILER || OVERDRAW
 		}
 
 		public static RenderBatch<TVertex> Acquire(RenderBatch<TVertex> origin)
@@ -72,6 +83,9 @@ namespace Lime
 				batch.ownsMesh = true;
 				batch.Mesh = AcquireMesh();
 			}
+#if PROFILER || OVERDRAW
+			batch.OwnersInfo.Initialize();
+#endif // PROFILER || OVERDRAW
 			return batch;
 		}
 

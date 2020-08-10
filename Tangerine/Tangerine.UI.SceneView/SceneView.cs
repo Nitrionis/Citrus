@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Lime;
+using Lime.Profiler.Graphics;
 using Tangerine.Common.FilesDropHandlers;
 using Tangerine.Core;
 using Tangerine.Core.Operations;
@@ -99,7 +100,7 @@ namespace Tangerine.UI.SceneView
 			Core.Operations.UntieWidgetsFromBones.Perform(bones, widgets);
 		}
 
-		class ScenePresenter : IPresenter
+		private class ScenePresenter : IPresenter
 		{
 			private RenderChain renderChain = new RenderChain();
 			private Node content;
@@ -119,6 +120,8 @@ namespace Tangerine.UI.SceneView
 				} finally {
 					renderChain.Clear();
 				}
+				ro.SceneViewTransform = node.Parent.Parent.AsWidget.LocalToWorldTransform;
+				ro.SceneViewSize = (Size)node.Parent.Parent.AsWidget.Size;
 				ro.LocalToWorldTransform = w.LocalToWorldTransform;
 				return ro;
 			}
@@ -137,17 +140,52 @@ namespace Tangerine.UI.SceneView
 				}
 			}
 
-			class RenderObject : Lime.RenderObject
+			private class RenderObject : Lime.RenderObject
 			{
 				public Matrix32 LocalToWorldTransform;
 				public RenderObjectList SceneObjects = new RenderObjectList();
+
+				public Matrix32 SceneViewTransform;
+				public Size SceneViewSize;
+
+				private RenderTexture RenderTexture;
 
 				public override void Render()
 				{
 					Renderer.PushState(RenderState.All);
 					// Hack: use the current state of Transform2 since it may be configured for generating SceneViewThumbnail.
 					Renderer.Transform2 = LocalToWorldTransform * Renderer.Transform2;
+					if (Overdraw.Enabled) {
+						var viewportSize = new Size(
+							Renderer.Viewport.X + Renderer.Viewport.Width,
+							Renderer.Viewport.Y + Renderer.Viewport.Height);
+						if (RenderTexture == null || viewportSize != RenderTexture.ImageSize) {
+							RenderTexture?.Dispose();
+							RenderTexture = new RenderTexture(viewportSize.Width, viewportSize.Height);
+						}
+						RenderTexture.SetAsRenderTarget();
+						Renderer.Clear(new Color4(0,0,0,0));
+					}
 					SceneObjects.Render();
+					if (Overdraw.Enabled) {
+						RenderTexture.RestoreRenderTarget();
+						Renderer.PushState(RenderState.Transform1 | RenderState.Transform2);
+						Renderer.Transform1 = SceneViewTransform;
+						Renderer.Transform2 = Matrix32.Identity;
+						float pixelScale = Window.Current.PixelScale;
+						var uv0 = new Vector2(
+							SceneViewTransform.TX * pixelScale / RenderTexture.ImageSize.Width,
+							SceneViewTransform.TY * pixelScale / RenderTexture.ImageSize.Height);
+						var uv1 = new Vector2(
+							(SceneViewTransform.TX + SceneViewSize.Width) * pixelScale / RenderTexture.ImageSize.Width,
+							(SceneViewTransform.TY + SceneViewSize.Height) * pixelScale / RenderTexture.ImageSize.Height);
+						Renderer.DrawSprite(
+							texture1: RenderTexture, texture2: null,
+							material: OverdrawInterpreter.Material.Instance, color: Color4.Black,
+							position: Vector2.Zero, size: (Vector2)SceneViewSize,
+							uv0t1: uv0, uv1t1: uv1, uv0t2: Vector2.Zero, uv1t2: Vector2.Zero);
+						Renderer.PopState();
+					}
 					Renderer.PopState();
 				}
 

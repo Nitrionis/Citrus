@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Lime.Text;
+using Lime.Profiler.Graphics;
 using Yuzu;
 
 namespace Lime
@@ -385,7 +386,13 @@ namespace Lime
 			{
 				Renderer.Transform1 = LocalToWorldTransform;
 				foreach (var ro in Objects) {
+#if PROFILER || OVERDRAW
+					RenderObjectOwnerInfo.PushState(ro.OwnerInfo);
+#endif // PROFILER || OVERDRAW
 					ro.Render();
+#if PROFILER || OVERDRAW
+					RenderObjectOwnerInfo.PopState();
+#endif // PROFILER || OVERDRAW
 				}
 			}
 

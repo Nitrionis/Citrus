@@ -1,12 +1,17 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Lime.Profiler.Graphics;
 
 namespace Lime
 {
 	public abstract class RenderObject
 	{
 		internal bool Free = true;
+
+#if PROFILER || OVERDRAW
+		public RenderObjectOwnerInfo OwnerInfo;
+#endif // PROFILER || OVERDRAW
 
 		public abstract void Render();
 
@@ -47,7 +52,13 @@ namespace Lime
 		public void Render()
 		{
 			foreach (var ro in objects) {
+#if PROFILER || OVERDRAW
+				RenderObjectOwnerInfo.PushState(ro.OwnerInfo);
+#endif // PROFILER || OVERDRAW
 				ro.Render();
+#if PROFILER || OVERDRAW
+				RenderObjectOwnerInfo.PopState();
+#endif // PROFILER || OVERDRAW
 			}
 		}
 

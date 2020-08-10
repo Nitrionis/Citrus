@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Lime.Profiler.Graphics;
 
 namespace Lime
 {
@@ -31,6 +32,9 @@ namespace Lime
 				Batches.Add(typedLastBatch);
 				lastBatch = typedLastBatch;
 			}
+#if PROFILER || OVERDRAW
+			typedLastBatch.OwnersInfo.ProcessNode(RenderObjectOwnerInfo.CurrentNode);
+#endif // PROFILER || OVERDRAW
 			return typedLastBatch;
 		}
 

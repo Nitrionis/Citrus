@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Yuzu;
 using System;
 using System.Linq;
+using Lime.Profiler.Graphics;
 #if OPENGL
 #if !MAC && !MONOMAC
 using OpenTK.Graphics.ES20;
@@ -207,6 +208,9 @@ namespace Lime
 					foreach (var item in layer) {
 						var renderObject = item.Presenter.GetRenderObject(item.Node);
 						if (renderObject != null) {
+#if PROFILER || OVERDRAW
+							renderObject.OwnerInfo.Initialize(item.Node);
+#endif // PROFILER || OVERDRAW
 							ro.Objects.Add(renderObject);
 						}
 					}
@@ -262,12 +266,24 @@ namespace Lime
 						Renderer.DepthState = DepthState.DepthReadWrite;
 						opaqueObjects.Sort(RenderOrderComparers.FrontToBack);
 						foreach (var obj in opaqueObjects) {
+#if PROFILER || OVERDRAW
+							RenderObjectOwnerInfo.PushState(obj.OwnerInfo);
+#endif // PROFILER || OVERDRAW
 							obj.Render();
+#if PROFILER || OVERDRAW
+							RenderObjectOwnerInfo.PopState();
+#endif // PROFILER || OVERDRAW
 						}
 						Renderer.DepthState = DepthState.DepthRead;
 						transparentObjects.Sort(RenderOrderComparers.BackToFront);
 						foreach (var obj in transparentObjects) {
+#if PROFILER || OVERDRAW
+							RenderObjectOwnerInfo.PushState(obj.OwnerInfo);
+#endif // PROFILER || OVERDRAW
 							obj.Render();
+#if PROFILER || OVERDRAW
+							RenderObjectOwnerInfo.PopState();
+#endif // PROFILER || OVERDRAW
 						}
 					} finally {
 						opaqueObjects.Clear();

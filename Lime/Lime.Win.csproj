@@ -47,7 +47,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;WIN;OPENGL;OPENAL;ANGLE;DEBUG</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;WIN;OPENGL;OPENAL;ANGLE;OVERDRAW</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
     <DebugType>full</DebugType>
@@ -99,7 +99,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug.Tangerine|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\Debug.Tangerine\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;WIN;OPENGL;OPENAL;ANGLE;TANGERINE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;WIN;OPENGL;OPENAL;ANGLE;TANGERINE;OVERDRAW</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
     <DebugType>full</DebugType>
@@ -122,7 +122,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release.Tangerine|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\Release.Tangerine\</OutputPath>
-    <DefineConstants>WIN;OPENGL;OPENAL;TANGERINE</DefineConstants>
+    <DefineConstants>WIN;OPENGL;OPENAL;TANGERINE;OVERDRAW</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>true</Optimize>
     <DebugType>full</DebugType>
@@ -372,6 +372,12 @@
     <Compile Include="Source\Profilers\NodeProfilerHelpers\UsageData.cs" />
     <Compile Include="Source\Profilers\NodeProfilerHelpers\UsageSummary.cs" />
     <Compile Include="Source\Profilers\TasksProfiler.cs" />
+    <Compile Include="Source\Profiler\Graphics\Overdraw.cs" />
+    <Compile Include="Source\Profiler\Graphics\RenderBatchOwnersInfo.cs" />
+    <Compile Include="Source\Profiler\Graphics\RenderObjectOwnerInfo.cs" />
+    <Compile Include="Source\Profiler\Graphics\RenderThreadProfilingInfo.cs" />
+    <Compile Include="Source\Profiler\IProfileableObject.cs" />
+    <Compile Include="Source\Profiler\SceneProfilingInfo.cs" />
     <Compile Include="Source\ReferenceEqualityComparer.cs" />
     <Compile Include="Source\ServiceProviderExtensions.cs" />
     <Compile Include="Source\ServiceRegistry.cs" />
