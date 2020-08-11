@@ -268,12 +268,24 @@ namespace Lime
 						Renderer.DepthState = DepthState.DepthReadWrite;
 						opaqueObjects.Sort(RenderOrderComparers.FrontToBack);
 						foreach (var obj in opaqueObjects) {
+#if PROFILER || OVERDRAW
+							RenderObjectOwnerInfo.PushState(obj.OwnerInfo);
+#endif // PROFILER || OVERDRAW
 							obj.Render();
+#if PROFILER || OVERDRAW
+							RenderObjectOwnerInfo.PopState();
+#endif // PROFILER || OVERDRAW
 						}
 						Renderer.DepthState = DepthState.DepthRead;
 						transparentObjects.Sort(RenderOrderComparers.BackToFront);
 						foreach (var obj in transparentObjects) {
+#if PROFILER || OVERDRAW
+							RenderObjectOwnerInfo.PushState(obj.OwnerInfo);
+#endif // PROFILER || OVERDRAW
 							obj.Render();
+#if PROFILER || OVERDRAW
+							RenderObjectOwnerInfo.PopState();
+#endif // PROFILER || OVERDRAW
 						}
 					} finally {
 						opaqueObjects.Clear();

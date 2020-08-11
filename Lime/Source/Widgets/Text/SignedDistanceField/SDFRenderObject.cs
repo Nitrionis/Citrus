@@ -1,5 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
+#if PROFILER || OVERDRAW
+using Lime.Profiler.Graphics;
+#endif // PROFILER || OVERDRAW
 
 namespace Lime.SignedDistanceField
 {
@@ -22,7 +25,13 @@ namespace Lime.SignedDistanceField
 		public override void Render()
 		{
 			foreach (var ro in Objects) {
+#if PROFILER || OVERDRAW
+				RenderObjectOwnerInfo.PushState(ro.OwnerInfo);
+#endif // PROFILER || OVERDRAW
 				ro.Render();
+#if PROFILER || OVERDRAW
+				RenderObjectOwnerInfo.PopState();
+#endif // PROFILER || OVERDRAW
 			}
 		}
 
