@@ -1,4 +1,7 @@
 using System.Collections.Generic;
+#if PROFILER || OVERDRAW
+using Lime.Profiler.Graphics;
+#endif // PROFILER || OVERDRAW
 
 namespace Lime
 {
@@ -31,6 +34,9 @@ namespace Lime
 				Batches.Add(typedLastBatch);
 				lastBatch = typedLastBatch;
 			}
+#if PROFILER || OVERDRAW
+			typedLastBatch.OwnersInfo.ProcessNode(RenderObjectOwnerInfo.CurrentNode);
+#endif // PROFILER || OVERDRAW
 			return typedLastBatch;
 		}
 
