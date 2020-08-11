@@ -58,6 +58,7 @@ namespace Tangerine.UI.SceneView
 				() => Document.Current?.TopLevelSelectedRows().Any(row => row.IsCopyPasteAllowed()) ?? false);
 			ConnectCommand(SceneViewCommands.TieWidgetsWithBones, TieWidgetsWithBones);
 			ConnectCommand(SceneViewCommands.UntieWidgetsFromBones, UntieWidgetsFromBones);
+			ConnectCommand(SceneViewCommands.ToggleOverdrawMod, ToggleOverdrawMod);
 		}
 
 		private static void ConnectCommand(ICommand command, DocumentCommandHandler handler)
@@ -84,6 +85,14 @@ namespace Tangerine.UI.SceneView
 		public Matrix32 CalcTransitionFromSceneSpace(Widget targetSpace)
 		{
 			return Scene.LocalToWorldTransform * targetSpace.LocalToWorldTransform.CalcInversed();
+		}
+
+		private static void ToggleOverdrawMod()
+		{
+#if PROFILER || OVERDRAW
+			Overdraw.Enabled = !Overdraw.EnabledAtUpdateThread;
+#endif // PROFILER || OVERDRAW
+			Window.Current.Invalidate();
 		}
 
 		private static void TieWidgetsWithBones()
