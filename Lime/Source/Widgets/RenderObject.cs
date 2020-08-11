@@ -1,12 +1,19 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+#if PROFILER || OVERDRAW
+using Lime.Profiler.Graphics;
+#endif // PROFILER || OVERDRAW
 
 namespace Lime
 {
 	public abstract class RenderObject
 	{
 		internal bool Free = true;
+
+#if PROFILER || OVERDRAW
+		public RenderObjectOwnerInfo OwnerInfo;
+#endif // PROFILER || OVERDRAW
 
 		public abstract void Render();
 
