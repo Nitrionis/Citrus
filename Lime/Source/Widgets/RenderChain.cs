@@ -70,6 +70,9 @@ namespace Lime
 					var item = layer[j];
 					var ro = item.Presenter.GetRenderObject(item.Node);
 					if (ro != null) {
+#if PROFILER || OVERDRAW
+						ro.OwnerInfo.Initialize(item.Node);
+#endif // PROFILER || OVERDRAW
 						list.Add(ro);
 					}
 				}
