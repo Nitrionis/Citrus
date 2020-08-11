@@ -8,6 +8,9 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
+#if PROFILER || OVERDRAW
+using Lime.Profiler;
+#endif // PROFILER || OVERDRAW
 using Yuzu;
 
 namespace Lime
@@ -59,6 +62,9 @@ namespace Lime
 	[YuzuDontGenerateDeserializer]
 	[DebuggerTypeProxy(typeof(NodeDebugView))]
 	public abstract class Node : IDisposable, IAnimationHost, IFolderItem, IFolderContext, IRenderChainBuilder, IAnimable, ICloneable
+#if PROFILER || OVERDRAW
+		, IProfileableObject
+#endif // PROFILER || OVERDRAW
 	{
 		[Flags]
 		protected internal enum DirtyFlags
@@ -549,6 +555,13 @@ namespace Lime
 
 		public static int CreatedCount = 0;
 		public static int FinalizedCount = 0;
+
+#if TANGERINE && (PROFILER || OVERDRAW)
+		bool IProfileableObject.IsPartOfScene => SceneProfilingInfo.NodeManager == Manager;
+#endif // TANGERINE && (PROFILER || OVERDRAW)
+#if !TANGERINE && (PROFILER || OVERDRAW)
+		bool IProfileableObject.IsPartOfScene => true;
+#endif // !TANGERINE && (PROFILER || OVERDRAW)
 
 		/// <summary>
 		/// Initializes a new instance of node.
