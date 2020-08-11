@@ -138,6 +138,11 @@ namespace Lime
 
 		public static readonly ShaderParams GlobalShaderParams = new ShaderParams();
 
+#if PROFILER || OVERDRAW
+		public static event Action FrameStarted;
+		public static event Action FrameFinishing;
+#endif // PROFILER || OVERDRAW
+
 		public static Matrix44 World
 		{
 			get { return world; }
@@ -339,10 +344,16 @@ namespace Lime
 			CurrentRenderList = MainRenderList;
 			Clear(ClearOptions.All, Color4.Black);
 			RenderCycle++;
+#if PROFILER || OVERDRAW
+			FrameStarted?.Invoke();
+#endif // PROFILER || OVERDRAW
 		}
 
 		public static void EndFrame()
 		{
+#if PROFILER || OVERDRAW
+			FrameFinishing?.Invoke();
+#endif // PROFILER || OVERDRAW
 			Flush();
 		}
 
