@@ -58,6 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="OverdrawController.cs" />
+    <Compile Include="Charts\ChartsMaterial.cs" />
     <Compile Include="Profiler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
