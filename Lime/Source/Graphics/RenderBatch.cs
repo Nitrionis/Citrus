@@ -39,7 +39,7 @@ namespace Lime
 		public Mesh<TVertex> Mesh { get; set; }
 
 #if PROFILER || OVERDRAW
-		public RenderBatchOwnersInfo OwnersInfo;
+		public RenderBatchProfilingInfo ProfilingInfo;
 #endif // PROFILER || OVERDRAW
 
 		private void Clear()
@@ -59,12 +59,22 @@ namespace Lime
 
 		public void Render()
 		{
+#if PROFILER || OVERDRAW
+			if (ProfilingInfo.IsInsideOverdrawMaterialsScope) {
+				OverdrawMaterialsScope.Enter();
+			}
+#endif // PROFILER || OVERDRAW
 			PlatformRenderer.SetTexture(0, Texture1);
 			PlatformRenderer.SetTexture(1, Texture2);
 			for (int i = 0; i < Material.PassCount; i++) {
 				Material.Apply(i);
 				Mesh.DrawIndexed(StartIndex, LastIndex - StartIndex);
 			}
+#if PROFILER || OVERDRAW
+			if (ProfilingInfo.IsInsideOverdrawMaterialsScope) {
+				OverdrawMaterialsScope.Leave();
+			}
+#endif // PROFILER || OVERDRAW
 		}
 
 		public static RenderBatch<TVertex> Acquire(RenderBatch<TVertex> origin)
@@ -80,7 +90,7 @@ namespace Lime
 				batch.Mesh = AcquireMesh();
 			}
 #if PROFILER || OVERDRAW
-			batch.OwnersInfo.Initialize();
+			batch.ProfilingInfo.Initialize();
 #endif // PROFILER || OVERDRAW
 			return batch;
 		}
