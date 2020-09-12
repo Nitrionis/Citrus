@@ -556,12 +556,15 @@ namespace Lime
 		public static int CreatedCount = 0;
 		public static int FinalizedCount = 0;
 
-#if TANGERINE && (PROFILER || OVERDRAW)
+#if PROFILER || OVERDRAW
+#if TANGERINE
 		bool IProfileableObject.IsPartOfScene => SceneProfilingInfo.NodeManager == Manager;
-#endif // TANGERINE && (PROFILER || OVERDRAW)
-#if !TANGERINE && (PROFILER || OVERDRAW)
+#else // TANGERINE
 		bool IProfileableObject.IsPartOfScene => true;
-#endif // !TANGERINE && (PROFILER || OVERDRAW)
+#endif // TANGERINE
+		[YuzuExclude]
+		public bool IsOverdrawForeground { get; set; }
+#endif // PROFILER || OVERDRAW
 
 		/// <summary>
 		/// Initializes a new instance of node.
