@@ -38,6 +38,7 @@
   <ItemGroup>
     <Compile Include="OverdrawController.cs" />
     <Compile Include="Charts\ChartsMaterial.cs" />
+    <Compile Include="Charts\ThemedColorCheckBox.cs" />
     <Compile Include="Profiler.cs" />
     <Compile Include="ProfilerUI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
