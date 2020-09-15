@@ -58,6 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="OverdrawController.cs" />
+    <Compile Include="Charts\ChartsLegend.cs" />
     <Compile Include="Charts\ChartsMaterial.cs" />
     <Compile Include="Charts\ChartsContainer.cs" />
     <Compile Include="Charts\ChartsVisibilityController.cs" />
