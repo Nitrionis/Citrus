@@ -40,6 +40,7 @@
     <Compile Include="OverdrawController.cs" />
     <Compile Include="Charts\ChartsMaterial.cs" />
     <Compile Include="Charts\ChartsContainer.cs" />
+    <Compile Include="Charts\ChartsVisibilityController.cs" />
     <Compile Include="Charts\ThemedColorCheckBox.cs" />
     <Compile Include="Profiler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
