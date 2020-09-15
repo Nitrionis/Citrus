@@ -271,6 +271,32 @@ namespace Tangerine.UI
 			public Color4 JointColor { get; set; }
 		}
 
+		public class ProfilerColors : Theme.DefaultColors
+		{
+			[YuzuOptional]
+			public Color4 ChartsLegendText { get; set; }
+			[YuzuOptional]
+			public Color4 ChartsBackground { get; set; }
+			[YuzuOptional]
+			public Color4 ChartOne { get; set; }
+			[YuzuOptional]
+			public Color4 ChartTwo { get; set; }
+			[YuzuOptional]
+			public Color4 ChartThree { get; set; }
+			[YuzuOptional]
+			public Color4 ChartFour { get; set; }
+			[YuzuOptional]
+			public Color4 ChartFive { get; set; }
+			[YuzuOptional]
+			public Color4 ChartSix { get; set; }
+			[YuzuOptional]
+			public Color4 ChartSeven { get; set; }
+			[YuzuOptional]
+			public Color4 ChartEight { get; set; }
+			[YuzuOptional]
+			public Color4 ChartNine { get; set; }
+		}
+
 		[YuzuOptional]
 		public bool IsDark { get; set; }
 		[YuzuOptional]
@@ -295,6 +321,8 @@ namespace Tangerine.UI
 		public KeyboardColors Keyboard { get; set; }
 		[YuzuOptional]
 		public HierarchyColors Hierarchy { get; set; }
+		[YuzuOptional]
+		public ProfilerColors Profiler { get; set; }
 
 		public ColorTheme Clone()
 		{
@@ -448,6 +476,16 @@ namespace Tangerine.UI
 				MatchColor = Color4.Yellow.Darken(0.5f).Transparentify(0.6f),
 				JointColor = Color4.Gray,
 			};
+			var profiler = new ProfilerColors {
+				ChartsBackground = new Color4(33, 37, 43),
+				ChartsLegendText = new Color4(204, 204, 204),
+				ChartOne = new Color4(76, 176, 80),
+				ChartTwo = new Color4(33, 150, 243),
+				ChartThree = new Color4(254, 87, 34),
+				ChartFour = new Color4(255, 235, 60),
+				ChartFive = new Color4(0, 150, 136),
+				ChartSix = new Color4(165, 208, 97),
+			};
 			return new ColorTheme {
 				IsDark = true,
 				Toolbar = toolbar,
@@ -461,6 +499,7 @@ namespace Tangerine.UI
 				Inspector = inspector,
 				Keyboard = keyboard,
 				Hierarchy = hierarchy,
+				Profiler = profiler,
 			};
 		}
 
@@ -602,6 +641,16 @@ namespace Tangerine.UI
 				MatchColor = Color4.Yellow.Transparentify(0.6f),
 				JointColor = Color4.Gray,
 			};
+			var profiler = new ProfilerColors {
+				ChartsBackground = new Color4(33, 37, 43),
+				ChartsLegendText = new Color4(204, 204, 204),
+				ChartOne = new Color4(76, 176, 80),
+				ChartTwo = new Color4(33, 150, 243),
+				ChartThree = new Color4(254, 87, 34),
+				ChartFour = new Color4(255, 235, 60),
+				ChartFive = new Color4(0, 150, 136),
+				ChartSix = new Color4(165, 208, 97),
+			};
 			return new ColorTheme {
 				IsDark = false,
 				Toolbar = toolbar,
@@ -615,6 +664,7 @@ namespace Tangerine.UI
 				Inspector = inspector,
 				Keyboard = keyboard,
 				Hierarchy = hierarchy,
+				Profiler = profiler,
 			};
 		}
 	}
