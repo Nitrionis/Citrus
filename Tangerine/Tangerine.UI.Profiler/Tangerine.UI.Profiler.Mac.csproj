@@ -57,6 +57,7 @@
     <Reference Include="Xamarin.Mac" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Charts\FixedHorizontalSpacingCharts.cs" />
     <Compile Include="OverdrawController.cs" />
     <Compile Include="Charts\ChartsLegend.cs" />
     <Compile Include="Charts\ChartsMaterial.cs" />

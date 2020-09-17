@@ -4,12 +4,14 @@ namespace Tangerine.UI.Charts
 {
 	internal class ChartsMaterial : IMaterial
 	{
+		public const int ColorsCount = 16;
+
 		private readonly ShaderParams[] shaderParamsArray;
 		private readonly ShaderParamKey<Matrix44> matrixKey;
 		private readonly ShaderParamKey<Vector4> colorsKeys;
 
 		public Matrix44 Matrix = Matrix44.Identity;
-		public Vector4[] Colors { get; private set; } = new Vector4[16];
+		public Vector4[] Colors { get; private set; } = new Vector4[ColorsCount];
 
 		public string Id { get; set; }
 		public int PassCount => 1;
