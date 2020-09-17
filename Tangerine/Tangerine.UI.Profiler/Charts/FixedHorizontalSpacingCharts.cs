@@ -54,6 +54,9 @@ namespace Tangerine.UI.Charts
 			charts = new FixedSpacingChart[parameters.ChartsCount];
 			Charts = new ReadOnlyCollection<IFixedSpacingChart>(charts);
 			baseInterfaceCharts = new ReadOnlyCollection<IChart>(charts);
+			for (int i = 0; i < charts.Length; i++) {
+				charts[i] = new FixedSpacingChart(ControlPointsCount);
+			}
 			if (parameters.Colors.Length != ChartsMaterial.ColorsCount) {
 				throw new InvalidOperationException("Charts: wrong colors count!");
 			}
@@ -109,7 +112,7 @@ namespace Tangerine.UI.Charts
 			return new VerticalSlice { Heights = values, Index = index };
 		}
 
-		public interface IFixedSpacingChart
+		public interface IFixedSpacingChart : IChart
 		{
 			float[] Heights { get; }
 		}

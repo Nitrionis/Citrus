@@ -59,6 +59,7 @@
   <ItemGroup>
     <Compile Include="Charts\FixedHorizontalSpacingCharts.cs" />
     <Compile Include="Charts\FixedSpacingChartsExtension.cs" />
+    <Compile Include="Charts\StackedAreaCharts.cs" />
     <Compile Include="OverdrawController.cs" />
     <Compile Include="Charts\ChartsLegend.cs" />
     <Compile Include="Charts\ChartsMaterial.cs" />
