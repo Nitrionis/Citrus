@@ -1,13 +1,13 @@
-using Lime;
 using System;
+using Lime;
 
 namespace Tangerine.UI.Charts
 {
-	internal class StackedAreaCharts : FixedHorizontalSpacingCharts
+	internal class LineCharts : FixedHorizontalSpacingCharts
 	{
 		private readonly ChartsGroupMeshBuilder meshBuilder;
 
-		public StackedAreaCharts(Parameters parameters) : base(parameters)
+		public LineCharts(Parameters parameters) : base(parameters)
 		{
 			if (parameters.ControlPointsCount < 2) {
 				throw new InvalidOperationException();
@@ -63,8 +63,8 @@ namespace Tangerine.UI.Charts
 			/// <inheritdoc/>
 			public void Rebuild()
 			{
-				float containerHeight = chartsGroup.Height;
-				float chartsMaxValue = float.NegativeInfinity;
+				float scaledContainerHeight = chartsGroup.Height/* * Window.Current.PixelScale*/;
+				float lineWidthScale = 1;
 				int controlPointsSpacing = chartsGroup.ControlPointsSpacing;
 				int vertexIndex = 0;
 				int visibleChartParity = 0;
@@ -78,35 +78,35 @@ namespace Tangerine.UI.Charts
 					foreach (var chart in chartsGroup.Charts) {
 						if (chart.Visible) {
 							var heights = chart.Heights;
+							var scale = scaledContainerHeight / Math.Max(1e-6f, chart.MaxValue());
 							int step = (1 - visibleChartParity) * 2 - 1;
 							int start = visibleChartParity * (heightsRange - 1);
-							int end = (1 - visibleChartParity) * heightsRange - visibleChartParity;
+							int end = (1 - visibleChartParity) * heightsRange - (1 - visibleChartParity);
 							for (int i = start; i != end; i += step) {
-								int hIndex = heightIndexOffset + i;
-								float h = heights[hIndex];
-								float ah = accumulatedHeights[hIndex];
-								accumulatedHeights[hIndex] += h;
-								float x = i * controlPointsSpacing;
-								float y0 = ah + h * visibleChartParity;
-								float y1 = ah + h * (1 - visibleChartParity);
-								vertexBuffer[vertexIndex++] = new Vector3(x, y0, chart.ColorIndex);
-								vertexBuffer[vertexIndex++] = new Vector3(x, y1, chart.ColorIndex);
+								float p1 = heights[heightIndexOffset + i];
+								float p2 = heights[heightIndexOffset + i + step];
+								Vector2 a = new Vector2(
+									x: i * controlPointsSpacing,
+									y: p1 * scale);
+								Vector2 b = new Vector2(
+									x: (i + step) * controlPointsSpacing,
+									y: p2 * scale);
+								Vector2 n = GetNormal((b - a).Normalized * 0.5f) * lineWidthScale;
+								vertexBuffer[vertexIndex++] = new Vector3(a - n, chart.ColorIndex);
+								vertexBuffer[vertexIndex++] = new Vector3(a + n, chart.ColorIndex);
+								vertexBuffer[vertexIndex++] = new Vector3(b - n, chart.ColorIndex);
+								vertexBuffer[vertexIndex++] = new Vector3(b + n, chart.ColorIndex);
 							}
 							visibleChartParity = 1 - visibleChartParity;
 							++VisibleVertexCount;
 						}
 					}
-					for (int i = heightIndexOffset; i < accumulatedHeights.Length; i++) {
-						chartsMaxValue = Math.Max(chartsMaxValue, accumulatedHeights[i]);
-						accumulatedHeights[i] = 0;
-					}
 				}
 				VisibleVertexCount *= GetChartVertexCount(heightsRange);
 				MeshDirtyFlags = MeshDirtyFlags.Vertices;
-				float scaleCoefficient = containerHeight * ChartsScaleFactor / Mathf.Max(chartsMaxValue, 1e-6f);
 				ExtraTransform =
-					Matrix44.CreateScale(1, -scaleCoefficient, 1) *
-					Matrix44.CreateTranslation(0, containerHeight, 0);
+					Matrix44.CreateScale(1, -1, 1) *
+					Matrix44.CreateTranslation(0, chartsGroup.Height, 0);
 				IsRebuildRequired = false;
 			}
 
@@ -117,7 +117,9 @@ namespace Tangerine.UI.Charts
 				vertexStorage.Swap();
 			}
 
-			private int GetChartVertexCount(int controlPointsCount) => 2 * controlPointsCount;
+			private Vector2 GetNormal(Vector2 v) => new Vector2(-v.Y, v.X);
+
+			private int GetChartVertexCount(int controlPointsCount) => 4 * controlPointsCount - 4;
 		}
 	}
 }
