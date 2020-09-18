@@ -4,6 +4,30 @@ namespace Tangerine.UI.Charts
 {
 	internal static class ChartsCommon
 	{
+		public class SwappableVertexStorage
+		{
+			private int currentBufferIndex;
+			private Vector3[][] buffers;
+
+			public Vector3[] Vertices { get; private set; }
+
+			public SwappableVertexStorage(int buffersCapacity, int buffersCount = 2)
+			{
+				currentBufferIndex = 0;
+				buffers = new Vector3[buffersCount][];
+				for (int i = 0; i < buffersCount; i++) {
+					buffers[i] = new Vector3[buffersCapacity];
+				}
+				Vertices = buffers[currentBufferIndex];
+			}
+
+			public void Swap()
+			{
+				currentBufferIndex = (currentBufferIndex + 1) % buffers.Length;
+				Vertices = buffers[currentBufferIndex];
+			}
+		}
+
 		public class Presenter : IPresenter
 		{
 			private readonly Mesh<Vector3> mesh;
