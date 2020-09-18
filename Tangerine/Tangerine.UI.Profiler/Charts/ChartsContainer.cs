@@ -92,6 +92,55 @@ namespace Tangerine.UI.Charts
 	}
 
 	/// <summary>
+	/// Performed in the update and is responsible for building a mesh for a group of charts.
+	/// </summary>
+	internal interface IChartsGroupMeshBuilder
+	{
+		/// <summary>
+		/// A reference to a vertex buffer that was or will be built during
+		/// this or one of the previous updates and is guaranteed not to change
+		/// during rendering, which will be caused by changes in this update.
+		/// The link may change in every update.
+		/// </summary>
+		Vector3[] Vertices { get; }
+
+		/// <summary>
+		/// First visible vertex index for next rendering.
+		/// </summary>
+		int FirstVisibleVertex { get; }
+
+		/// <summary>
+		/// Count of visible vertices for next rendering.
+		/// </summary>
+		int VisibleVertexCount { get; }
+
+		/// <summary>
+		/// Mesh dirty flags for next rendering.
+		/// </summary>
+		MeshDirtyFlags MeshDirtyFlags { get; }
+
+		/// <summary>
+		/// Use to check if the mesh needs rebuilding.
+		/// </summary>
+		bool IsRebuildRequired { get; set; }
+
+		/// <summary>
+		/// Rebuilds the mesh immediately.
+		/// </summary>
+		void Rebuild();
+
+		/// <summary>
+		/// Invoked by a presenter AFTER copying data for RenderObject.
+		/// </summary>
+		void RenderObjectAcquired(RenderObject renderObject);
+
+		/// <summary>
+		/// Can be used for example to scale the charts.
+		/// </summary>
+		Matrix44 ExtraTransform { get; }
+	}
+
+	/// <summary>
 	/// Stores several groups of сharts.
 	/// </summary>
 	internal class ChartsContainer : Widget
