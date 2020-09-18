@@ -59,6 +59,7 @@
     <Compile Include="FixedCapacityQueue.cs" />
     <Compile Include="IpDialog.cs" />
     <Compile Include="Charts\ChartsCommon.cs" />
+    <Compile Include="Charts\FixedHorizontalSpacingCharts.cs" />
     <Compile Include="OverdrawController.cs" />
     <Compile Include="Charts\ChartsLegend.cs" />
     <Compile Include="Charts\ChartsMaterial.cs" />
