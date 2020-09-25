@@ -295,6 +295,34 @@ namespace Tangerine.UI
 			public Color4 ChartEight { get; set; }
 			[YuzuOptional]
 			public Color4 ChartNine { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineRulerText { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineRulerBackground { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineRulerStep { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineTasksText { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineTasksBackground { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineTasksVerticalLine { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineUnselectedTasks { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineAnimationTasks { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineUpdateTasks { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineGestureTasks { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineRenderPreparationTasks { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineNodeRenderTasks { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineBatchRenderTasks { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineUnknownOwnerTasks { get; set; }
 		}
 
 		[YuzuOptional]
@@ -477,14 +505,28 @@ namespace Tangerine.UI
 				JointColor = Color4.Gray,
 			};
 			var profiler = new ProfilerColors {
-				ChartsBackground = new Color4(33, 37, 43),
+				ChartsBackground = new Color4(40, 40, 40),
 				ChartsLegendText = new Color4(204, 204, 204),
 				ChartOne = new Color4(123, 158, 5),
 				ChartTwo = new Color4(51, 136, 167),
 				ChartThree = new Color4(203, 112, 1),
 				ChartFour = new Color4(197, 162, 6),
-				ChartFive = new Color4(0, 150, 136),
+				ChartFive = new Color4(95, 70, 129),
 				ChartSix = new Color4(165, 208, 97),
+				TimelineRulerText = Color4.White,
+				TimelineRulerBackground = new Color4(52, 52, 52),
+				TimelineRulerStep = Color4.White,
+				TimelineTasksText = Color4.White,
+				TimelineTasksBackground = new Color4(40, 40, 40),
+				TimelineTasksVerticalLine = new Color4(40, 40, 40).Lighten(0.114f),
+				TimelineUnselectedTasks = new Color4(83, 83, 83),
+				TimelineAnimationTasks = new Color4(95, 70, 129),
+				TimelineUpdateTasks = new Color4(107, 108, 33),
+				TimelineGestureTasks = new Color4(197, 162, 6),
+				TimelineRenderPreparationTasks = new Color4(50, 132, 161),
+				TimelineNodeRenderTasks = new Color4(108, 135, 12),
+				TimelineBatchRenderTasks = new Color4(51, 136, 167),
+				TimelineUnknownOwnerTasks = new Color4(203, 112, 1),
 			};
 			return new ColorTheme {
 				IsDark = true,
@@ -642,14 +684,28 @@ namespace Tangerine.UI
 				JointColor = Color4.Gray,
 			};
 			var profiler = new ProfilerColors {
-				ChartsBackground = new Color4(33, 37, 43),
+				ChartsBackground = new Color4(61, 61, 61),
 				ChartsLegendText = new Color4(204, 204, 204),
 				ChartOne = new Color4(123, 158, 5),
 				ChartTwo = new Color4(51, 136, 167),
 				ChartThree = new Color4(203, 112, 1),
 				ChartFour = new Color4(197, 162, 6),
-				ChartFive = new Color4(0, 150, 136),
+				ChartFive = new Color4(95, 70, 129),
 				ChartSix = new Color4(165, 208, 97),
+				TimelineRulerText = Color4.Black,
+				TimelineRulerBackground = new Color4(191, 191, 191),
+				TimelineRulerStep = Color4.Black,
+				TimelineTasksText = Color4.White,
+				TimelineTasksBackground = new Color4(61, 61, 61),
+				TimelineTasksVerticalLine = new Color4(61, 61, 61).Darken(0.114f),
+				TimelineUnselectedTasks = new Color4(83, 83, 83),
+				TimelineAnimationTasks = new Color4(95, 70, 129),
+				TimelineUpdateTasks = new Color4(107, 108, 33),
+				TimelineGestureTasks = new Color4(197, 162, 6),
+				TimelineRenderPreparationTasks = new Color4(50, 132, 161),
+				TimelineNodeRenderTasks = new Color4(108, 135, 12),
+				TimelineBatchRenderTasks = new Color4(51, 136, 167),
+				TimelineUnknownOwnerTasks = new Color4(203, 112, 1),
 			};
 			return new ColorTheme {
 				IsDark = false,
