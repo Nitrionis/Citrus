@@ -70,6 +70,9 @@
     <Compile Include="Charts\ThemedColorCheckBox.cs" />
     <Compile Include="Profiler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Timeline\Timeline.cs" />
+    <Compile Include="Timeline\TimelineCPU.cs" />
+    <Compile Include="Timeline\TimelineGPU.cs" />
     <Compile Include="Timeline\TimelineRuler.cs" />
   </ItemGroup>
   <ItemGroup>
