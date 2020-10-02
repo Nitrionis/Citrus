@@ -1,8 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using AsyncTask = System.Threading.Tasks.Task;
 using Lime;
 using Tangerine.UI.Charts;
 
@@ -10,6 +10,7 @@ namespace Tangerine.UI.Timeline
 {
 	internal class Timeline : Widget
 	{
+		private readonly ExecutionManager executionManager;
 		private readonly TimelineRuler ruler;
 		private readonly Widget container;
 		private readonly ThemedScrollView horizontalScrollView;
@@ -27,7 +28,34 @@ namespace Tangerine.UI.Timeline
 		private float cachedVerticalScrollPosition;
 		private float cachedMicrosecondsPerPixel;
 
-		private SpaceManager.Parameters spaceManagerParameters;
+		private Vector2 localClickPos;
+		private bool isHitTestRequired;
+
+		private float itemHeight = 20;
+
+		public float ItemHeight
+		{
+			get { return itemHeight; }
+			set {
+				if (itemHeight != value) {
+					itemHeight = value;
+					isMeshRebuildRequired = true;
+				}
+			}
+		}
+
+		private float itemMargin = 2;
+
+		public float ItemMargin
+		{
+			get { return itemMargin; }
+			set {
+				if (itemMargin != value) {
+					itemMargin = value;
+					isMeshRebuildRequired = true;
+				}
+			}
+		}
 
 		protected Timeline(ContentPresenter contentPresenter)
 		{
@@ -36,12 +64,6 @@ namespace Tangerine.UI.Timeline
 			MinMaxHeight = 100;
 			Input.AcceptMouseBeyondWidget = false;
 			Input.AcceptMouseThroughDescendants = true;
-			spaceManagerParameters = new SpaceManager.Parameters {
-				ItemHeight = 20,
-				ItemMargin = 2,
-				MicrosecondsPerPixel = 1,
-				HorizontalOffset = 0
-			};
 			ruler = new TimelineRuler(10, 10) {
 				Anchors = Anchors.LeftRight,
 				MinMaxHeight = 32,
@@ -81,12 +103,26 @@ namespace Tangerine.UI.Timeline
 					};
 				}
 				isMeshRebuildRequired |= cachedContainerSize != Size;
-				if (isMeshRebuildRequired) {
-					isMeshRebuildRequired = false;
+				TimelineState timelineState = new TimelineState();
+				if (isMeshRebuildRequired || isHitTestRequired) {
 					cachedContainerSize = Size;
 					var visibleTimePeriod = CalculateVisibleTimePeriod();
-					// TODO run mesh rebuild
+					timelineState = new TimelineState {
+						
+					};
+
 					throw new NotImplementedException();
+				}
+				if (isMeshRebuildRequired) {
+					executionManager.RequestAsyncMeshRebuilding(timelineState);
+				}
+				if (isHitTestRequired) {
+					executionManager.RequestAsyncHitTestCheck(timelineState);
+				}
+				if (isMeshRebuildRequired || isHitTestRequired) {
+					isMeshRebuildRequired = false;
+					isHitTestRequired = false;
+					executionManager.TimelineUpdated();
 				}
 			};
 			throw new NotImplementedException();
@@ -147,43 +183,23 @@ namespace Tangerine.UI.Timeline
 
 		private void OnContainerClicked()
 		{
-			throw new NotImplementedException();
+			localClickPos = LocalMousePosition();
+			isHitTestRequired = true;
 		}
 
-		internal class ExecutionManager
+		public class ExecutionManager
 		{
 			private const int UndefinedHitTestTarget = -1;
 
 			private readonly IMeshBuilder meshBuilder;
-			private readonly int maxTasksCount;
-			private readonly Queue<TaskRequest> waitingQueue;
 
+			private TaskRequest nextTaskRequest = new TaskRequest();
+			private readonly Queue<TaskRequest> waitingQueue = new Queue<TaskRequest>();
+
+			private readonly int maxParallelTasksCount;
+			private uint nextTaskNoveltyIdentifier = 0;
 			private Queue<System.Threading.Tasks.Task<TaskResult>> runningTasks;
 			private Queue<System.Threading.Tasks.Task<TaskResult>> unusedQueue;
-			private TimelineState lastTimelineState;
-			private Result<int> hitTestResult;
-			private TaskRequest currentTaskRequest = new TaskRequest();
-			private IEnumerable<TimePeriod> timePeriods = Enumerable.Empty<TimePeriod>();
-			private uint LastAssignedNoveltyIdentifier = 0;
-
-			/// <summary>
-			/// Represents all time intervals on the timeline including visible and invisible.
-			/// Property assignment will cause synchronous waiting for all passwords!
-			/// </summary>
-			public IEnumerable<TimePeriod> TimePeriods
-			{
-				get { return timePeriods; }
-				set {
-					// Asynchronous tasks constantly read timeline intervals.
-					// So we are waiting for all asynchronous tasks to complete.
-					foreach (var task in runningTasks) {
-						task.Wait();
-					}
-					runningTasks.Clear();
-					timePeriods = value;
-					currentTaskRequest.IsMeshRebuildRequired = true;
-				}
-			}
 
 			/// <summary>
 			/// Indicates whether any task is running.
@@ -200,25 +216,33 @@ namespace Tangerine.UI.Timeline
 			/// </summary>
 			/// <remarks>
 			///	If there were several clicks, it can be called only for the last click.
-			///	This event is deferred.
+			///	This event is deferred, meaning this event may be invoked after several updates.
 			/// </remarks>
 			public event Action<int> TimePeriodSelected;
 
-			public ExecutionManager(IMeshBuilder meshBuilder, TimelineState state, int maxParallelTasksCount = 2)
+			public ExecutionManager(IMeshBuilder meshBuilder, int maxParallelTasksCount = 2)
 			{
 				this.meshBuilder = meshBuilder;
-				lastTimelineState = state;
-				maxTasksCount = maxParallelTasksCount;
-				runningTasks = new Queue<System.Threading.Tasks.Task<TaskResult>>(maxTasksCount);
-				unusedQueue = new Queue<System.Threading.Tasks.Task<TaskResult>>(maxTasksCount);
+				this.maxParallelTasksCount = maxParallelTasksCount;
+				runningTasks = new Queue<System.Threading.Tasks.Task<TaskResult>>(this.maxParallelTasksCount);
+				unusedQueue = new Queue<System.Threading.Tasks.Task<TaskResult>>(this.maxParallelTasksCount);
+				RenderingResources = new Result<IRenderingResources> {
+					NoveltyID = GetOldestNoveltyIdentifier(nextTaskNoveltyIdentifier)
+				};
 			}
+
+			private static uint GetOldestNoveltyIdentifier(uint nextTaskNoveltyIdentifier) =>
+				(uint)((nextTaskNoveltyIdentifier + (1L << 31)) % (1L << 32));
 
 			public void TimelineUpdated()
 			{
+				var hitTestResult = new Result<int> {
+					NoveltyID = GetOldestNoveltyIdentifier(nextTaskNoveltyIdentifier)
+				};
 				foreach (var task in runningTasks) {
 					if (task.IsCompleted) {
 						if (task.Result.HasMeshRebuildingResult) {
-							RenderingResources = SelectNewest(RenderingResources, task.Result.MeshRebuildingResult);
+							RenderingResources = SelectNewest(RenderingResources, task.Result.RenderingResources);
 						}
 						if (task.Result.HasHitTestResult) {
 							hitTestResult = SelectNewest(hitTestResult, task.Result.HitTestResult);
@@ -228,18 +252,15 @@ namespace Tangerine.UI.Timeline
 					}
 				}
 				runningTasks.Clear();
-				void SwapTasksQueue() {
-					var tmp = runningTasks;
-					runningTasks = unusedQueue;
-					unusedQueue = tmp;
-				}
-				SwapTasksQueue();
-				if (!currentTaskRequest.IsEmpty) {
-					waitingQueue.Enqueue(currentTaskRequest);
-					currentTaskRequest = new TaskRequest();
+				Toolbox.Swap(ref runningTasks, ref unusedQueue);
+				if (!nextTaskRequest.IsEmpty) {
+					waitingQueue.Enqueue(nextTaskRequest);
+					nextTaskRequest = new TaskRequest();
 				}
 				if (waitingQueue.Count > 0) {
-					// Iterating over tasks and removing meaningless.
+					// Removing meaningless tasks and combine the remaining.
+					// Meaningless tasks are tasks in waitingQueue witch results
+					// will be overridden by the next tasks in waitingQueue.
 					var finalRequest = new TaskRequest();
 					foreach (var request in waitingQueue) {
 						if (request.IsMeshRebuildRequired) {
@@ -253,9 +274,23 @@ namespace Tangerine.UI.Timeline
 					}
 					waitingQueue.Clear();
 					waitingQueue.Enqueue(finalRequest);
-					if (runningTasks.Count < maxTasksCount) {
-						// TODO try to run async task
-						throw new NotImplementedException();
+					if (runningTasks.Count < maxParallelTasksCount) {
+						var request = waitingQueue.Dequeue();
+						uint noveltyIdentifier = nextTaskNoveltyIdentifier++;
+						var task = System.Threading.Tasks.Task.Run(() => new TaskResult {
+							NoveltyID = noveltyIdentifier,
+							RenderingResources = new Result<IRenderingResources> {
+								NoveltyID = noveltyIdentifier,
+								Value = request.IsMeshRebuildRequired ?
+									meshBuilder.RebuildMeshAsync(request.MeshRebuildTimelineState) : null
+							},
+							HitTestResult = new Result<int> {
+								NoveltyID = noveltyIdentifier,
+								Value = request.IsHitTestRequired ?
+									GetAsyncHitTest(request.HitTestTimelineState) : UndefinedHitTestTarget
+							}
+						});
+						runningTasks.Enqueue(task);
 					}
 				}
 				if (hitTestResult.Value != UndefinedHitTestTarget) {
@@ -263,22 +298,29 @@ namespace Tangerine.UI.Timeline
 				}
 			}
 
+			private int GetAsyncHitTest(TimelineState state)
+			{
+				throw new NotImplementedException();
+			}
+
 			public void RequestAsyncMeshRebuilding(TimelineState state)
 			{
-				currentTaskRequest.IsMeshRebuildRequired = true;
-				currentTaskRequest.MeshRebuildTimelineState = state;
+				nextTaskRequest.IsMeshRebuildRequired = true;
+				nextTaskRequest.MeshRebuildTimelineState = state;
 			}
 
 			public void RequestAsyncHitTestCheck(TimelineState state)
 			{
-				currentTaskRequest.IsHitTestRequired = true;
-				currentTaskRequest.HitTestTimelineState = state;
+				nextTaskRequest.IsHitTestRequired = true;
+				nextTaskRequest.HitTestTimelineState = state;
 			}
 
 			private static Result<T> SelectNewest<T>(Result<T> first, Result<T> second)
 			{
-				bool isFirstClemped = (long)second.NoveltyID - (long)first.NoveltyID > uint.MaxValue / 2;
-				return (first.NoveltyID > second.NoveltyID || isFirstClemped) ? first : second;
+				bool isFirstClipped = (long)second.NoveltyID - (long)first.NoveltyID >= 1L << 31;
+				bool isSecondClipped = (long)first.NoveltyID - (long)second.NoveltyID >= 1L << 31;
+				return isFirstClipped ? first : isSecondClipped ? second :
+					second.NoveltyID > first.NoveltyID ? second : first;
 			}
 
 			public struct Result<ValueType>
@@ -308,7 +350,7 @@ namespace Tangerine.UI.Timeline
 				/// <summary>
 				/// Represents new render resources.
 				/// </summary>
-				public Result<IRenderingResources> MeshRebuildingResult;
+				public Result<IRenderingResources> RenderingResources;
 
 				/// <summary>
 				/// Represents an <see cref="TimePeriod"/> index.
@@ -316,22 +358,52 @@ namespace Tangerine.UI.Timeline
 				public Result<int> HitTestResult;
 
 				public bool IsEmpty =>
-					MeshRebuildingResult.Value == null &&
+					RenderingResources.Value == null &&
 					HitTestResult.Value == UndefinedHitTestTarget;
 
 				public bool HasHitTestResult => HitTestResult.Value != UndefinedHitTestTarget;
 
-				public bool HasMeshRebuildingResult => MeshRebuildingResult.Value == null;
+				public bool HasMeshRebuildingResult => RenderingResources.Value == null;
 			}
 		}
 
-		internal interface IMeshBuilder
+		public class ProtectedList<T> : ReadOnlyCollection<T> where T : struct
 		{
-			
-			IRenderingResources RebuildMesh(TimelineState state);
+			public ProtectedList(IList<T> list) : base(list) { }
 		}
 
-		internal class SpaceManager
+		public class ProtectedLists<T> where T : struct
+		{
+			private readonly Queue<List<T>> freeLists = new Queue<List<T>>();
+
+			public ProtectedList<T> Acquire(IEnumerable<T> items)
+			{
+				var list = freeLists.Count > 0 ? freeLists.Dequeue() : new List<T>();
+				list.AddRange(items);
+				return new ReadableList<T>(list);
+			}
+
+			public void Free(ReadOnlyCollection<T> list)
+			{
+				var items = ((ReadableList<T>)list).Items;
+				items.Clear();
+				freeLists.Enqueue(items);
+			}
+
+			private class ReadableList<T> : ProtectedList<T> where T : struct
+			{
+				public ReadableList(IList<T> list) : base(list) { }
+
+				public new List<T> Items => (List<T>)base.Items;
+			}
+		}
+
+		public interface IMeshBuilder
+		{
+			IRenderingResources RebuildMeshAsync(TimelineState state);
+		}
+
+		public class SpaceManager
 		{
 			private readonly List<uint> freeSpaceOfLines;
 			private Parameters parameters;
@@ -380,7 +452,7 @@ namespace Tangerine.UI.Timeline
 			}
 		}
 
-		internal struct TimePeriod
+		public struct TimePeriod
 		{
 			/// <summary>
 			/// Start time in microseconds.
@@ -393,7 +465,7 @@ namespace Tangerine.UI.Timeline
 			public uint FinishTime;
 		}
 
-		internal abstract class ContentPresenter : IPresenter
+		public abstract class ContentPresenter : IPresenter
 		{
 			private readonly ChartsMaterial material;
 			private readonly RectanglesMesh mesh;
@@ -450,7 +522,7 @@ namespace Tangerine.UI.Timeline
 			}
 		}
 
-		internal struct TimelineState
+		public struct TimelineState
 		{
 			public IEnumerable<TimePeriod> TimePeriods;
 			public SpaceManager.Parameters SpaceManagerParameters;
@@ -460,7 +532,7 @@ namespace Tangerine.UI.Timeline
 			public Vector2 LocalMousePosition;
 		}
 
-		internal interface IRenderingResources
+		public interface IRenderingResources
 		{
 			/// <summary>
 			/// Extra transform for <see cref="RectanglesMesh"/>.
@@ -471,13 +543,13 @@ namespace Tangerine.UI.Timeline
 			List<RectangleLabel> Labels { get; }
 		}
 
-		internal struct RectangleLabel
+		public struct RectangleLabel
 		{
 			public Vector2 Position;
 			public string Text;
 		}
 
-		internal class RectanglesMesh
+		public class RectanglesMesh
 		{
 			private List<Mesh<Vector3>> meshes = new List<Mesh<Vector3>>();
 			private List<Chunk> chunks = new List<Chunk>();
