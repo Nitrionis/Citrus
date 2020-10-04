@@ -108,7 +108,20 @@ namespace Tangerine.UI.Timeline
 					cachedContainerSize = Size;
 					var visibleTimePeriod = CalculateVisibleTimePeriod();
 					timelineState = new TimelineState {
-						
+						VisibleTimePeriod = visibleTimePeriod,
+						LocalMousePosition = this.LocalMousePosition(),
+						TimePeriods = ,
+						SpaceManagerParameters = new SpaceManager.Parameters {
+							MicrosecondsPerPixel = visibleTimePeriod.Duration / this.Width,
+							HorizontalOffset = ruler.Offset,
+							ItemHeight = itemHeight,
+							ItemMargin = itemMargin
+						},
+						ContainerVisiblePartOffset = new Vector2 {
+							X = horizontalScrollView.ScrollPosition,
+							Y = verticalScrollView.ScrollPosition
+						},
+						ContainerVisiblePartSize = cachedContainerSize
 					};
 
 					throw new NotImplementedException();
@@ -192,6 +205,7 @@ namespace Tangerine.UI.Timeline
 			private const int UndefinedHitTestTarget = -1;
 
 			private readonly IMeshBuilder meshBuilder;
+			private readonly SpaceManager spaceManager;
 
 			private TaskRequest nextTaskRequest = new TaskRequest();
 			private readonly Queue<TaskRequest> waitingQueue = new Queue<TaskRequest>();
@@ -224,6 +238,7 @@ namespace Tangerine.UI.Timeline
 			{
 				this.meshBuilder = meshBuilder;
 				this.maxParallelTasksCount = maxParallelTasksCount;
+				spaceManager = new SpaceManager(new SpaceManager.Parameters());
 				runningTasks = new Queue<System.Threading.Tasks.Task<TaskResult>>(this.maxParallelTasksCount);
 				unusedQueue = new Queue<System.Threading.Tasks.Task<TaskResult>>(this.maxParallelTasksCount);
 				RenderingResources = new Result<IRenderingResources> {
@@ -300,7 +315,25 @@ namespace Tangerine.UI.Timeline
 
 			private int GetAsyncHitTest(TimelineState state)
 			{
-				throw new NotImplementedException();
+				var sm = spaceManager;
+				sm.Reset(state.SpaceManagerParameters);
+				var mousePosition = state.LocalMousePosition;
+				float itemHeight = state.SpaceManagerParameters.ItemHeight;
+				float microsecondsPerPixel = state.SpaceManagerParameters.MicrosecondsPerPixel;
+				int timePeriodIndex = 0;
+				foreach (var timePeriod in state.TimePeriods) {
+					var itemPosition = sm.AcquirePosition(timePeriod);
+					var itemWidth = timePeriod.Duration * microsecondsPerPixel;
+					if (
+						mousePosition.X >= itemPosition.X && mousePosition.X <= itemPosition.X + itemWidth &&
+						mousePosition.Y >= itemPosition.Y && mousePosition.Y <= itemPosition.Y + itemHeight
+						)
+					{
+						return timePeriodIndex;
+					}
+					++timePeriodIndex;
+				}
+				return UndefinedHitTestTarget;
 			}
 
 			public void RequestAsyncMeshRebuilding(TimelineState state)
@@ -463,6 +496,11 @@ namespace Tangerine.UI.Timeline
 			/// Finish time in microseconds.
 			/// </summary>
 			public uint FinishTime;
+
+			/// <summary>
+			/// Time period duration in microseconds.
+			/// </summary>
+			public uint Duration => FinishTime - StartTime;
 		}
 
 		public abstract class ContentPresenter : IPresenter
@@ -524,7 +562,7 @@ namespace Tangerine.UI.Timeline
 
 		public struct TimelineState
 		{
-			public IEnumerable<TimePeriod> TimePeriods;
+			public ProtectedList<TimePeriod> TimePeriods;
 			public SpaceManager.Parameters SpaceManagerParameters;
 			public TimePeriod VisibleTimePeriod;
 			public Vector2 ContainerVisiblePartOffset;
