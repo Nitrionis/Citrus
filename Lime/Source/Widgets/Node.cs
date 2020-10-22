@@ -558,13 +558,17 @@ namespace Lime
 		public static int FinalizedCount = 0;
 
 #if PROFILER
+		string IProfileableObject.Name => Id;
 #if TANGERINE
 		bool IProfileableObject.IsPartOfScene => SceneProfilingInfo.NodeManager == Manager;
 #else // TANGERINE
 		bool IProfileableObject.IsPartOfScene => true;
 #endif // TANGERINE
-		[YuzuExclude]
 		public bool IsOverdrawForeground { get; set; }
+
+		IProfileableObject IProfileableObject.Parent => Parent;
+
+		ReferenceTable.RowIndex IProfileableObject.RowIndex { get; set; } = ReferenceTable.RowIndex.Invalid;
 #endif // PROFILER
 
 		/// <summary>

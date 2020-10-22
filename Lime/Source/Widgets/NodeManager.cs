@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -26,6 +29,13 @@ namespace Lime
 			ServiceProvider = serviceProvider;
 			RootNodes = new NodeManagerRootNodeCollection(this);
 			Processors = new NodeManagerProcessorCollection(this);
+#if PROFILER
+			HierarchyChanged += (evt) => {
+				foreach (var node in evt.Child.SelfAndDescendants) {
+					ReferenceTable.ObjectDetachedFromMainHierarchy(node);
+				}
+			};
+#endif // PROFILER
 		}
 
 		internal void RegisterNodeProcessor(NodeProcessor processor)
