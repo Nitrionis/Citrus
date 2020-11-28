@@ -2,17 +2,25 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 #if PROFILER
+using Lime.Profiler;
 using Lime.Profiler.Graphics;
 #endif // PROFILER
 
 namespace Lime
 {
 	public abstract class RenderObject
+#if PROFILER
+		: ITypeIdProvider
+#endif // PROFILER
 	{
 		internal bool Free = true;
 
 #if PROFILER
 		public RenderObjectOwnerInfo OwnerInfo;
+		public readonly int ProfilerTypeId;
+		int ITypeIdProvider.TypeId => ProfilerTypeId;
+
+		public RenderObject() => ProfilerTypeId = ProfilerDatabase.EnsureNumberFor(GetType());
 #endif // PROFILER
 
 		public abstract void Render();
@@ -22,6 +30,9 @@ namespace Lime
 			if (Free) return;
 			try {
 				OnRelease();
+#if PROFILER
+				OwnerInfo.Reset();
+#endif // PROFILER
 			} finally {
 				Free = true;
 			}
@@ -57,9 +68,11 @@ namespace Lime
 #if PROFILER
 				RenderObjectOwnerInfo.PushState(ro.OwnerInfo);
 				if (!OverdrawMaterialScope.IsInside || !RenderObjectOwnerInfo.CurrentNode.IsOverdrawForeground) {
+					//var usageInfo = RenderObjectOwnerInfo.NodeRenderCpuUsageStarted();
 #endif // PROFILER
 					ro.Render();
 #if PROFILER
+					//Profiler.ProfilerDatabase.CpuUsageFinished(usageInfo, ro.GetType().GUID);
 				}
 				RenderObjectOwnerInfo.PopState();
 #endif // PROFILER
@@ -108,9 +121,6 @@ namespace Lime
 					index = 0;
 				if (item.Free) {
 					item.Free = false;
-#if PROFILER
-					item.OwnerInfo.Reset();
-#endif // PROFILER
 					return item;
 				}
 			}
@@ -120,9 +130,6 @@ namespace Lime
 				items[i] = new T();
 			}
 			items[index].Free = false;
-#if PROFILER
-			items[index].OwnerInfo.Reset();
-#endif // PROFILER
 			return items[index];
 		}
 	}

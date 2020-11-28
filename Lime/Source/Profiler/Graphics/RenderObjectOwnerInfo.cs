@@ -1,4 +1,5 @@
 #if PROFILER
+using System;
 using System.Collections.Generic;
 
 namespace Lime.Profiler.Graphics
@@ -9,13 +10,17 @@ namespace Lime.Profiler.Graphics
 	public struct RenderObjectOwnerInfo
 	{
 		private static readonly Stack<RenderObjectOwnerInfo> descriptions;
+		private static readonly IProfileableObject emptyProfileableObject;
 
 		public static IProfileableObject CurrentNode { get; private set; }
+
+		public static Owners CurrentOwner => new Owners(CurrentNode.RowIndex);
 
 		static RenderObjectOwnerInfo()
 		{
 			descriptions = new Stack<RenderObjectOwnerInfo>();
-			descriptions.Push(new RenderObjectOwnerInfo { Node = new EmptyProfileableObject() });
+			emptyProfileableObject = new EmptyProfileableObject();
+			descriptions.Push(new RenderObjectOwnerInfo { Node = emptyProfileableObject });
 		}
 
 		public IProfileableObject Node { get; private set; }
@@ -23,13 +28,16 @@ namespace Lime.Profiler.Graphics
 		/// <summary>
 		/// Must be called AFTER each <see cref="IPresenter.GetRenderObject(Node)"/>.
 		/// </summary>
+		/// <remarks>
+		/// Can only be called in the update thread.
+		/// </remarks>
 		public void Initialize(IProfileableObject node) => Node = node;
 
 		/// <summary>
 		/// Resets owner data.
 		/// </summary>
 		public void Reset() => Node = null;
-
+			
 		/// <summary>
 		/// Must be called BEFORE each <see cref="RenderObject.Render"/>.
 		/// </summary>
@@ -48,10 +56,35 @@ namespace Lime.Profiler.Graphics
 			CurrentNode = descriptions.Peek().Node;
 		}
 
+		public static ProfilerDatabase.CpuUsageStartInfo GetRenderObjectCpuUsageStarted(IProfileableObject @object)
+		{
+			@object = @object ?? emptyProfileableObject;
+			ProfilerDatabase.EnsureDescriptionFor(@object);
+			return ProfilerDatabase.CpuUsageStarted();
+		}
+
+		public static void GetRenderObjectCpuUsageFinished(
+			ProfilerDatabase.CpuUsageStartInfo startInfo,
+			IProfileableObject @object, ITypeIdProvider renderObject)
+		{
+			@object = @object ?? emptyProfileableObject;
+			ProfilerDatabase.EnsureDescriptionFor(@object);
+			ProfilerDatabase.CpuUsageFinished(
+				startInfo, new Owners(@object),
+				CpuUsage.Reasons.NodeRenderPreparation,
+				renderObject.TypeId);
+		}
+
+		//public static ProfilerDatabase.CpuUsageStartInfo NodeRenderCpuUsageStarted() =>
+		//	ProfilerDatabase.CpuUsageStarted(CurrentOwner, CpuUsage.Reasons.NodeRender);
+
 		private class EmptyProfileableObject : IProfileableObject
 		{
+			public string Name => null;
 			public bool IsPartOfScene => false;
 			public bool IsOverdrawForeground => false;
+			public IProfileableObject Parent => null;
+			public ReferenceTable.RowIndex RowIndex { get; set; } = ReferenceTable.RowIndex.Invalid;
 		}
 	}
 }

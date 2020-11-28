@@ -3,6 +3,7 @@ using Yuzu;
 using System;
 using System.Linq;
 #if PROFILER
+using Lime.Profiler;
 using Lime.Profiler.Graphics;
 #endif // PROFILER
 #if OPENGL
@@ -208,9 +209,13 @@ namespace Lime
 					}
 					var first = ro.Objects.Count;
 					foreach (var item in layer) {
+#if PROFILER
+						var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 						var renderObject = item.Presenter.GetRenderObject(item.Node);
 						if (renderObject != null) {
 #if PROFILER
+							RenderObjectOwnerInfo.GetRenderObjectCpuUsageFinished(usageInfo, item.Node, renderObject);
 							renderObject.OwnerInfo.Initialize(item.Node);
 #endif // PROFILER
 							ro.Objects.Add(renderObject);
@@ -270,9 +275,11 @@ namespace Lime
 						foreach (var obj in opaqueObjects) {
 #if PROFILER
 							RenderObjectOwnerInfo.PushState(obj.OwnerInfo);
+							//var usageInfo = RenderObjectOwnerInfo.NodeRenderCpuUsageStarted();
 #endif // PROFILER
 							obj.Render();
 #if PROFILER
+							//ProfilerDatabase.CpuUsageFinished(usageInfo, obj.GetType().GUID);
 							RenderObjectOwnerInfo.PopState();
 #endif // PROFILER
 						}
@@ -281,9 +288,11 @@ namespace Lime
 						foreach (var obj in transparentObjects) {
 #if PROFILER
 							RenderObjectOwnerInfo.PushState(obj.OwnerInfo);
+							//var usageInfo = RenderObjectOwnerInfo.NodeRenderCpuUsageStarted();
 #endif // PROFILER
 							obj.Render();
 #if PROFILER
+							//ProfilerDatabase.CpuUsageFinished(usageInfo, obj.GetType().GUID);
 							RenderObjectOwnerInfo.PopState();
 #endif // PROFILER
 						}

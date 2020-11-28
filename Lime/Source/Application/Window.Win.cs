@@ -6,6 +6,10 @@ using System.Drawing;
 using System.Threading;
 using System.Windows.Forms;
 using WinFormsCloseReason = System.Windows.Forms.CloseReason;
+using System.IO;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -828,10 +832,16 @@ namespace Lime
 				if (renderThreadToken.IsCancellationRequested) {
 					return;
 				}
+#if PROFILER
+				ProfilerDatabase.Rendering();
+#endif // PROFILER
 				renderControl.Begin();
 				RaiseRendering();
 				renderControl.SwapBuffers();
 				renderControl.UnbindContext();
+#if PROFILER
+				ProfilerDatabase.Rendered();
+#endif // PROFILER
 				renderCompleted.Set();
 			}
 		}
@@ -849,9 +859,17 @@ namespace Lime
 				case RenderingState.Updated:
 					PixelScale = CalcPixelScale(e.Graphics.DpiX);
 					if (!AsyncRendering && renderControl.IsHandleCreated && form.Visible && !renderControl.IsDisposed && renderControl.CanRender) {
+						//var sw = Stopwatch.StartNew();
+#if PROFILER
+						//ProfilerDatabase.Rendering();
+#endif // PROFILER
 						renderControl.Begin();
 						RaiseRendering();
 						renderControl.SwapBuffers();
+#if PROFILER
+						//ProfilerDatabase.Rendered();
+#endif // PROFILER
+						//Console.WriteLine("{0}", sw.ElapsedMilliseconds);
 					}
 					renderingState = RenderingState.Rendered;
 					break;
@@ -863,6 +881,9 @@ namespace Lime
 			}
 		}
 
+		private static FileStream fileStream = new FileStream("C:/Users/nitro/Desktop/profilingresults.txt", FileMode.Create);
+		private static StreamWriter streamWriter = new StreamWriter(fileStream);
+
 		private void Update()
 		{
 			var wasInvalidated = isInvalidated;
@@ -870,6 +891,9 @@ namespace Lime
 			if (!form.Visible || !form.CanFocus || !renderControl.IsHandleCreated) {
 				return;
 			}
+#if PROFILER
+			ProfilerDatabase.Updating(this == Application.MainWindow);
+#endif // PROFILER
 			UnclampedDelta = (float)stopwatch.Elapsed.TotalSeconds;
 			float delta = Mathf.Clamp(UnclampedDelta, 0, Application.MaxDelta);
 			stopwatch.Restart();
@@ -911,6 +935,11 @@ namespace Lime
 					renderReady.Set();
 				}
 			}
+#if PROFILER
+			ProfilerDatabase.Updated();
+#endif // PROFILER
+			streamWriter.WriteLine(stopwatch.Elapsed.TotalMilliseconds);
+			//Console.WriteLine("{0}", stopwatch.Elapsed.TotalMilliseconds);
 		}
 
 		private static Key TranslateKey(Keys key)

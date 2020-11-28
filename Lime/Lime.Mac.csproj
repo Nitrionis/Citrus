@@ -342,6 +342,13 @@
     <Compile Include="Source\Profiler\Graphics\RenderObjectOwnerInfo.cs" />
     <Compile Include="Source\Profiler\IProfileableObject.cs" />
     <Compile Include="Source\Profiler\SceneProfilingInfo.cs" />
+    <Compile Include="Source\Profiler\ReferenceTable.cs" />
+    <Compile Include="Source\Profiler\RingPool.cs" />
+    <Compile Include="Source\Profiler\Network\Client.cs" />
+    <Compile Include="Source\Profiler\Network\IConnection.cs" />
+    <Compile Include="Source\Profiler\Formatting\IInterrupter.cs" />
+    <Compile Include="Source\Profiler\Network\MessageProcessor.cs" />
+    <Compile Include="Source\Profiler\Network\Server.cs" />
     <Compile Include="Source\ReferenceEqualityComparer.cs" />
     <Compile Include="Source\ServiceProviderExtensions.cs" />
     <Compile Include="Source\ServiceRegistry.cs" />

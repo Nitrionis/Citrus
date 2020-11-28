@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Yuzu;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -28,6 +31,10 @@ namespace Lime
 		public List<IAbstractAnimator> EffectiveAnimators;
 		public List<IAbstractAnimator> EffectiveTriggerableAnimators;
 		internal int EffectiveAnimatorsVersion;
+
+#if PROFILER
+		public static readonly int TypeId = ProfilerDatabase.EnsureNumberFor(typeof(Animation));
+#endif // PROFILER
 
 		[YuzuMember]
 		public bool IsCompound { get; set; }

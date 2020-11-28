@@ -558,13 +558,19 @@ namespace Lime
 		public static int FinalizedCount = 0;
 
 #if PROFILER
+		string IProfileableObject.Name => Id;
 #if TANGERINE
 		bool IProfileableObject.IsPartOfScene => SceneProfilingInfo.NodeManager == Manager;
 #else // TANGERINE
 		bool IProfileableObject.IsPartOfScene => true;
 #endif // TANGERINE
-		[YuzuExclude]
 		public bool IsOverdrawForeground { get; set; }
+
+		IProfileableObject IProfileableObject.Parent => Parent;
+
+		ReferenceTable.RowIndex IProfileableObject.RowIndex { get; set; } = ReferenceTable.RowIndex.Invalid;
+
+		public readonly int ProfilerTypeId;
 #endif // PROFILER
 
 		/// <summary>
@@ -580,6 +586,9 @@ namespace Lime
 			Presenter = DefaultPresenter.Instance;
 			RenderChainBuilder = this;
 			++CreatedCount;
+#if PROFILER
+			ProfilerTypeId = ProfilerDatabase.EnsureNumberFor(GetType());
+#endif // PROFILER
 		}
 
 		private GestureList gestures;
@@ -1580,7 +1589,13 @@ namespace Lime
 			RegisterLegacyBehaviors(node);
 			var legacyEarlyBehaviorContainer = node.Components.Get<LegacyEarlyBehaviorContainer>();
 			if (legacyEarlyBehaviorContainer != null) {
+#if PROFILER
+				var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 				legacyEarlyBehaviorContainer.Update(delta);
+#if PROFILER
+				CpuUsageFinished(usageInfo, legacyEarlyBehaviorContainer);
+#endif // PROFILER
 			}
 			var visible = true;
 			if (node.AsWidget != null) {
@@ -1592,28 +1607,65 @@ namespace Lime
 				var animationComponent = node.Components.Get<AnimationComponent>();
 				if (animationComponent != null) {
 					foreach (var a in animationComponent.Animations) {
+#if PROFILER
+						var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 						a.Advance(delta);
+#if PROFILER
+						ProfilerDatabase.CpuUsageFinished(
+							usageInfo, animationComponent.Owner, CpuUsage.Reasons.NodeAnimation, Animation.TypeId);
+#endif // PROFILER
 					}
 				}
 				for (var child = node.FirstChild; child != null; child = child.NextSibling) {
+#if PROFILER
+					var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 					Update(child, delta * child.AnimationSpeed);
+#if PROFILER
+					ProfilerDatabase.CpuUsageFinished(
+						usageInfo, child, CpuUsage.Reasons.NodeUpdate, child.ProfilerTypeId);
+#endif // PROFILER
 				}
 			}
 			RegisterLegacyBehaviors(node);
 			var legacyLateBehaviorContainer = node.Components.Get<LegacyLateBehaviorContainer>();
 			if (legacyLateBehaviorContainer != null) {
+#if PROFILER
+				var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 				legacyLateBehaviorContainer.Update(delta);
+#if PROFILER
+				CpuUsageFinished(usageInfo, legacyLateBehaviorContainer);
+#endif // PROFILER
 			}
 			var boneArrayUpdaterBehavior = node.Components.Get<BoneArrayUpdaterBehavior>();
 			if (boneArrayUpdaterBehavior != null) {
+#if PROFILER
+				var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 				boneArrayUpdaterBehavior.Update(delta);
+#if PROFILER
+				CpuUsageFinished(usageInfo, boneArrayUpdaterBehavior);
+#endif // PROFILER
 			}
 			var updatableNodeBehavior = node.Components.Get<UpdatableNodeBehavior>();
 			if (updatableNodeBehavior != null) {
 				updatableNodeBehavior.CheckOwner();
+#if PROFILER
+				var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 				updatableNodeBehavior.Update(delta);
+#if PROFILER
+				CpuUsageFinished(usageInfo, updatableNodeBehavior);
+#endif // PROFILER
 			}
 		}
+
+#if PROFILER
+		private static void CpuUsageFinished(ProfilerDatabase.CpuUsageStartInfo usageInfo, BehaviorComponent component) =>
+			ProfilerDatabase.CpuUsageFinished(usageInfo, component.Owner, CpuUsage.Reasons.NodeUpdate, component.ProfilerTypeId);
+#endif // PROFILER
 	}
 
 	[MutuallyExclusiveDerivedComponents]

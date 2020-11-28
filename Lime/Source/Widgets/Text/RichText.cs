@@ -390,9 +390,11 @@ namespace Lime
 				foreach (var ro in Objects) {
 #if PROFILER
 					RenderObjectOwnerInfo.PushState(ro.OwnerInfo);
+					//var usageInfo = RenderObjectOwnerInfo.NodeRenderCpuUsageStarted();
 #endif // PROFILER
 					ro.Render();
 #if PROFILER
+					//Profiler.ProfilerDatabase.CpuUsageFinished(usageInfo, ro.GetType().GUID);
 					RenderObjectOwnerInfo.PopState();
 #endif // PROFILER
 				}

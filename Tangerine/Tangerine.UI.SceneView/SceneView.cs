@@ -264,11 +264,13 @@ namespace Tangerine.UI.SceneView
 				} else if (Document.Current.SlowMotion) {
 					delta *= 0.1f;
 				}
-				Document.Current.Manager.Update(delta);
-				if (documentChanged) {
-					documentChanged = false;
-					Document.Current.Animation.Frame = Document.Current.Animation.Frame;
-					Document.Current.RootNode.Update(0);
+				if (Application.Input.IsKeyPressed(Key.H)) {
+					Document.Current.Manager.Update(delta);
+					if (documentChanged) {
+						documentChanged = false;
+						Document.Current.Animation.Frame = Document.Current.Animation.Frame;
+						Document.Current.RootNode.Update(0);
+					}
 				}
 			}
 		}

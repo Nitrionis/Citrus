@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -120,6 +123,11 @@ namespace Lime
 			foreach (var (component, owner) in componentsToUnregister) {
 				UnregisterComponent(component, owner);
 			}
+#if PROFILER
+			foreach (var n in node.SelfAndDescendants) {
+				ReferenceTable.ObjectDetachedFromMainHierarchy(n);
+			}
+#endif // PROFILER
 			RaiseHierarchyChanged(new HierarchyChangedEventArgs(this, HierarchyAction.Unlink, node, parent));
 		}
 
@@ -175,7 +183,13 @@ namespace Lime
 		{
 			foreach (var p in Processors) {
 				ActiveProcessor = p;
+#if PROFILER
+				var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 				p.Update(delta);
+#if PROFILER
+				ProfilerDatabase.CpuUsageFinished(usageInfo, Owners.Empty, CpuUsage.Reasons.NodeProcessor, p.GetType());
+#endif // PROFILER
 			}
 			ActiveProcessor = null;
 		}

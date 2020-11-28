@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -18,6 +21,12 @@ namespace Lime
 		/// Determines if behavior is suspended.
 		/// </summary>
 		public bool Suspended => suspendCounter > 0;
+
+#if PROFILER
+		public readonly int ProfilerTypeId;
+
+		public BehaviorComponent() => ProfilerTypeId = ProfilerDatabase.EnsureNumberFor(GetType());
+#endif // PROFILER
 
 		/// <summary>
 		/// Start is called on the frame in which the component had added just before Update method is called first time.

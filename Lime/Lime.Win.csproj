@@ -426,10 +426,28 @@
     <Compile Include="Source\Profilers\NodeProfilerHelpers\UsageData.cs" />
     <Compile Include="Source\Profilers\NodeProfilerHelpers\UsageSummary.cs" />
     <Compile Include="Source\Profilers\TasksProfiler.cs" />
+    <Compile Include="Source\Profiler\CpuUsage.cs" />
+    <Compile Include="Source\Profiler\GpuUsage.cs" />
+    <Compile Include="Source\Profiler\IProfilerDatabase.cs" />
+    <Compile Include="Source\Profiler\ITypeIdProvider.cs" />
+    <Compile Include="Source\Profiler\TypesTable.cs" />
     <Compile Include="Source\Profiler\Graphics\Overdraw.cs" />
     <Compile Include="Source\Profiler\Graphics\RenderBatchProfilingInfo.cs" />
     <Compile Include="Source\Profiler\Graphics\RenderObjectOwnerInfo.cs" />
     <Compile Include="Source\Profiler\IProfileableObject.cs" />
+    <Compile Include="Source\Profiler\IProfiler.cs" />
+    <Compile Include="Source\Profiler\Network\Client.cs" />
+    <Compile Include="Source\Profiler\Network\IConnection.cs" />
+    <Compile Include="Source\Profiler\Formatting\IInterrupter.cs" />
+    <Compile Include="Source\Profiler\Network\MessageProcessor.cs" />
+    <Compile Include="Source\Profiler\Network\Server.cs" />
+    <Compile Include="Source\Profiler\NodesTiming.cs" />
+    <Compile Include="Source\Profiler\Owners.cs" />
+    <Compile Include="Source\Profiler\ProfiledFrame.cs" />
+    <Compile Include="Source\Profiler\ProfilerDatabase.cs" />
+    <Compile Include="Source\Profiler\ProfilerTerminal.cs" />
+    <Compile Include="Source\Profiler\ReferenceTable.cs" />
+    <Compile Include="Source\Profiler\RingPool.cs" />
     <Compile Include="Source\Profiler\SceneProfilingInfo.cs" />
     <Compile Include="Source\ReferenceEqualityComparer.cs" />
     <Compile Include="Source\ServiceProviderExtensions.cs" />
@@ -716,7 +734,9 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Source\Profiler\Connections\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>

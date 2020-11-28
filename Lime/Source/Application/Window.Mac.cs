@@ -8,6 +8,9 @@ using Lime.Platform;
 using AppKit;
 using Foundation;
 using CoreGraphics;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -470,6 +473,9 @@ namespace Lime
 		internal void HandleRenderFrame()
 		{
 			if (invalidated) {
+#if PROFILER
+				ProfilerDatabase.Rendering();
+#endif // PROFILER
 				fpsCounter.Refresh();
 				// Workaround macOS 10.14 issue: UpdateGLContext should be called on render frame, not on DidResize.
 				if (needUpdateGLContext) {
@@ -480,6 +486,9 @@ namespace Lime
 				RaiseRendering();
 				View.SwapBuffers();
 				invalidated = false;
+#if PROFILER
+				ProfilerDatabase.Rendered();
+#endif // PROFILER
 			}
 		}
 
@@ -503,6 +512,9 @@ namespace Lime
 
 		private void Update()
 		{
+#if PROFILER
+			ProfilerDatabase.Updating(this == Application.MainWindow);
+#endif // PROFILER
 			UnclampedDelta = (float)stopwatch.Elapsed.TotalSeconds;
 			stopwatch.Restart();
 			var delta = Mathf.Clamp(UnclampedDelta, 0, Application.MaxDelta);
@@ -530,6 +542,9 @@ namespace Lime
 				Input.ClearKeyState();
 			}
 			RaiseSync();
+#if PROFILER
+			ProfilerDatabase.Updated();
+#endif // PROFILER
 		}
 
 		public void WaitForRendering() { }
