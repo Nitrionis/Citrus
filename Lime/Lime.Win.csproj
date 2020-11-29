@@ -434,6 +434,7 @@
     <Compile Include="Source\Profiler\Graphics\RenderBatchProfilingInfo.cs" />
     <Compile Include="Source\Profiler\Graphics\RenderObjectOwnerInfo.cs" />
     <Compile Include="Source\Profiler\IProfileableObject.cs" />
+    <Compile Include="Source\Profiler\IProfilerDatabase.cs" />
     <Compile Include="Source\Profiler\ITypeIdentifierProvider.cs" />
     <Compile Include="Source\Profiler\Owners.cs" />
     <Compile Include="Source\Profiler\ProfiledFrame.cs" />
