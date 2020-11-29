@@ -570,7 +570,7 @@ namespace Lime
 
 		ReferenceTable.RowIndex IProfileableObject.RowIndex { get; set; } = ReferenceTable.RowIndex.Invalid;
 
-		int ITypeIdentifierProvider.Identifier { get; } = -1;
+		TypeIdentifier ITypeIdentifierProvider.Identifier { get => throw new NotImplementedException(); }
 #endif // PROFILER
 
 		/// <summary>
