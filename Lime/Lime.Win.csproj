@@ -429,6 +429,7 @@
     <Compile Include="Source\Profilers\NodeProfilerHelpers\UsageSummary.cs" />
     <Compile Include="Source\Profilers\TasksProfiler.cs" />
     <Compile Include="Source\Profiler\CpuUsage.cs" />
+    <Compile Include="Source\Profiler\GpuUsage.cs" />
     <Compile Include="Source\Profiler\Graphics\Overdraw.cs" />
     <Compile Include="Source\Profiler\Graphics\RenderBatchProfilingInfo.cs" />
     <Compile Include="Source\Profiler\Graphics\RenderObjectOwnerInfo.cs" />
