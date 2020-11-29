@@ -432,6 +432,7 @@
     <Compile Include="Source\Profiler\Graphics\RenderBatchProfilingInfo.cs" />
     <Compile Include="Source\Profiler\Graphics\RenderObjectOwnerInfo.cs" />
     <Compile Include="Source\Profiler\IProfileableObject.cs" />
+    <Compile Include="Source\Profiler\ReferenceTable.cs" />
     <Compile Include="Source\Profiler\RingPool.cs" />
     <Compile Include="Source\Profiler\SceneProfilingInfo.cs" />
     <Compile Include="Source\ReferenceEqualityComparer.cs" />
