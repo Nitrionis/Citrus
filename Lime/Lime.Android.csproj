@@ -286,10 +286,12 @@
     <Compile Include="Source\Profilers\NodeProfilerHelpers\UsageData.cs" />
     <Compile Include="Source\Profilers\NodeProfilerHelpers\UsageSummary.cs" />
     <Compile Include="Source\Profilers\TasksProfiler.cs" />
+    <Compile Include="Source\Profiler\CpuUsage.cs" />
     <Compile Include="Source\Profiler\Graphics\Overdraw.cs" />
     <Compile Include="Source\Profiler\Graphics\RenderBatchProfilingInfo.cs" />
     <Compile Include="Source\Profiler\Graphics\RenderObjectOwnerInfo.cs" />
     <Compile Include="Source\Profiler\IProfileableObject.cs" />
+    <Compile Include="Source\Profiler\ITypeIdentifierProvider.cs" />
     <Compile Include="Source\Profiler\Owners.cs" />
     <Compile Include="Source\Profiler\ReferenceTable.cs" />
     <Compile Include="Source\Profiler\RingPool.cs" />
