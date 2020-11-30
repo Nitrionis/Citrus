@@ -2,17 +2,24 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 #if PROFILER
+using Lime.Profiler;
 using Lime.Profiler.Graphics;
 #endif // PROFILER
 
 namespace Lime
 {
 	public abstract class RenderObject
+#if PROFILER
+		: ITypeIdentifierProvider
+#endif // PROFILER
 	{
 		internal bool Free = true;
 
 #if PROFILER
 		public RenderObjectOwnerInfo OwnerInfo;
+		private readonly TypeIdentifier typeIdentifier;
+		TypeIdentifier ITypeIdentifierProvider.Identifier => typeIdentifier;
+		public RenderObject() => typeIdentifier = ProfilerDatabase.EnsureNumberFor(GetType());
 #endif // PROFILER
 
 		public abstract void Render();
