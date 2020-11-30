@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 #if iOS
 using UIKit;
@@ -294,6 +297,9 @@ namespace Lime
 
 		private static void RunScheduledActions(float delta)
 		{
+#if PROFILER
+			var usage = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 			Action tmp = null;
 			lock (scheduledActionsSync) {
 				if (scheduledActions != null) {
@@ -302,6 +308,9 @@ namespace Lime
 				}
 			}
 			tmp?.Invoke();
+#if PROFILER
+			ProfilerDatabase.CpuUsageFinished(usage, Owners.Empty, CpuUsage.Reasons.RunScheduledActions, TypeIdentifier.Empty);
+#endif // PROFILER
 		}
 
 		/// <summary>
