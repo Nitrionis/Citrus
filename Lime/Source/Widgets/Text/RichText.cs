@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Lime.Text;
 #if PROFILER
+using Lime.Profiler;
 using Lime.Profiler.Graphics;
 #endif // PROFILER
 using Yuzu;
@@ -390,9 +391,11 @@ namespace Lime
 				foreach (var ro in Objects) {
 #if PROFILER
 					RenderObjectOwnerInfo.PushState(ro.OwnerInfo);
+					var usageInfo = ProfilerDatabase.CpuUsageStarted();
 #endif // PROFILER
 					ro.Render();
 #if PROFILER
+					RenderObject.RenderCpuUsageFinished(usageInfo, ro);
 					RenderObjectOwnerInfo.PopState();
 #endif // PROFILER
 				}
