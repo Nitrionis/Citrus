@@ -188,12 +188,18 @@ namespace Lime
 
 		private void NofityPendingActionsOnRendering()
 		{
+#if PROFILER
+			var usage = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 			Action usePendingActionsOnRendering;
 			lock (PendingActionsOnRenderingLock) {
 				usePendingActionsOnRendering = pendingActionsOnRendering;
 				pendingActionsOnRendering = null;
 			}
 			usePendingActionsOnRendering?.Invoke();
+#if PROFILER
+			ProfilerDatabase.CpuUsageFinished(usage, Owners.Empty, CpuUsage.Reasons.RunPendingActionsOnRendering, TypeIdentifier.Empty);
+#endif // PROFILER
 		}
 
 	}
