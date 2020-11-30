@@ -60,6 +60,9 @@ namespace Lime.Profiler
 
 		private ListDescriptor newestListDescriptor;
 
+		public event Action InternalStorageExpanding;
+		public event Action<int> InternalStorageExpanded;
+
 		public RingPool(int startCapacity = 1024)
 		{
 			if (startCapacity < 2) {
@@ -280,22 +283,28 @@ namespace Lime.Profiler
 		[MethodImpl(MethodImplOptions.NoInlining)]
 		private void ResizeListsItemsStorage(out uint index)
 		{
-			Array.Resize(ref listsItems, 2 * listsItems.Length);
+			InternalStorageExpanding?.Invoke();
+			int oldLength = listsItems.Length;
+			int NextListsItemsLength() =>
+				listsItems.Length < 262_144 ?
+				listsItems.Length * 2 : listsItems.Length * 3 / 2;
+			Array.Resize(ref listsItems, NextListsItemsLength());
 			if (nextItemIndex < oldestItemIndex) {
-				uint halfSize = (uint)listsItems.Length / 2u;
-				uint srcIndex = oldestItemIndex;
-				uint dstIndex = halfSize + oldestItemIndex;
-				uint length = halfSize - oldestItemIndex;
+				int shift = listsItems.Length - oldLength;
+				int srcIndex = (int)oldestItemIndex;
+				int dstIndex = shift + srcIndex;
+				int length = oldLength - srcIndex;
 				Array.Copy(listsItems, srcIndex, listsItems, dstIndex, length);
-				oldestItemIndex = dstIndex;
+				oldestItemIndex = (uint)dstIndex;
 				for (int i = 0; i < lists.Length; i++) {
 					ref var redirection = ref lists[i];
-					if (redirection.Offset >= srcIndex && redirection.IsAcquired) { // todo
-						redirection.Offset += halfSize;
+					if (redirection.Offset >= srcIndex && redirection.IsAcquired) {
+						redirection.Offset += (uint)shift;
 					}
 				}
 			}
 			index = nextItemIndex + 1;
+			InternalStorageExpanded?.Invoke(listsItems.Length);
 		}
 
 		public struct ListInfo

@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -58,7 +59,7 @@ namespace Lime.Profiler
 
 		private static bool isUpdateProfilerEnabled;
 		private static bool isRenderProfilerEnabled;
-		private static bool isProfilingRequired;
+		private static bool isProfilingRequired = true;
 
 		/// <inheritdoc/>
 		public bool ProfilerEnabled
@@ -290,7 +291,8 @@ namespace Lime.Profiler
 				if (
 					frame.DrawCommandsState == Frame.DrawCommandsExecution.Completed ||
 					frame.DrawCommandsState == Frame.DrawCommandsExecution.NotSubmittedToGpu
-					) {
+					)
+				{
 					long frameIdentifier = unfinishedFrames.Dequeue();
 					if (renderThreadTargetFrameIndex - 1 - frameIdentifier > MaxSwapchainBuffersCount) {
 						throw new System.Exception("Profiler: Incorrect behavior detected!");
@@ -392,6 +394,7 @@ namespace Lime.Profiler
 		{
 			var (cpuUsages, gpuUsages) = renderResourcesQueue.Dequeue();
 			var ownersPool = instance.RenderOwnersPool;
+			Console.WriteLine("Length {0}", instance.RenderCpuUsagesPool.GetLength(cpuUsages));
 			foreach (var usage in instance.RenderCpuUsagesPool.Enumerate(cpuUsages)) {
 				if (usage.Owners.IsListDescriptor) {
 					ownersPool.FreeOldestList(usage.Owners.AsListDescriptor);
@@ -437,12 +440,43 @@ namespace Lime.Profiler
 			NativeTypesTable = nativeTypesTable;
 			NativeReferenceTable = new ReferenceTable();
 			UpdateOwnersPool = new RingPool<ReferenceTable.RowIndex>();
+			UpdateOwnersPool.InternalStorageExpanding += OwnersPoolExpanding;
+			UpdateOwnersPool.InternalStorageExpanded += OwnersPoolExpanded;
 			RenderOwnersPool = new RingPool<ReferenceTable.RowIndex>();
+			RenderOwnersPool.InternalStorageExpanding += OwnersPoolExpanding;
+			RenderOwnersPool.InternalStorageExpanded += OwnersPoolExpanded;
 			UpdateCpuUsagesPool = new RingPool<CpuUsage>();
+			UpdateCpuUsagesPool.InternalStorageExpanding += UsagesPoolExpanding;
+			UpdateCpuUsagesPool.InternalStorageExpanded += UsagesPoolExpanded;
 			RenderCpuUsagesPool = new RingPool<CpuUsage>();
+			RenderCpuUsagesPool.InternalStorageExpanding += UsagesPoolExpanding;
+			RenderCpuUsagesPool.InternalStorageExpanded += UsagesPoolExpanded;
 			GpuUsagesPool = new RingPool<GpuUsage>();
 		}
 
+		private void OwnersPoolExpanding()
+		{
+			
+		}
+
+		private void OwnersPoolExpanded(int capacity)
+		{
+			if (capacity >= 500_000) {
+				GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+			}
+		}
+
+		private void UsagesPoolExpanding()
+		{
+			
+		}
+
+		private void UsagesPoolExpanded(int capacity)
+		{
+			if (capacity >= 262_144) {
+				GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+			}
+		}
 
 		private struct ThreadDependentData
 		{
