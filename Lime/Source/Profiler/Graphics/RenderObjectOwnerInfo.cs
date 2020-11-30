@@ -9,13 +9,17 @@ namespace Lime.Profiler.Graphics
 	public struct RenderObjectOwnerInfo
 	{
 		private static readonly Stack<RenderObjectOwnerInfo> descriptions;
+		private static readonly IProfileableObject emptyProfileableObject;
 
 		public static IProfileableObject CurrentNode { get; private set; }
+
+		public static Owners CurrentOwner => new Owners(CurrentNode.RowIndex);
 
 		static RenderObjectOwnerInfo()
 		{
 			descriptions = new Stack<RenderObjectOwnerInfo>();
-			descriptions.Push(new RenderObjectOwnerInfo { Node = new EmptyProfileableObject() });
+			emptyProfileableObject = new EmptyProfileableObject();
+			descriptions.Push(new RenderObjectOwnerInfo { Node = emptyProfileableObject });
 		}
 
 		public IProfileableObject Node { get; private set; }
@@ -46,6 +50,18 @@ namespace Lime.Profiler.Graphics
 		{
 			descriptions.Pop();
 			CurrentNode = descriptions.Peek().Node;
+		}
+
+		public static void GetRenderObjectCpuUsageFinished(
+			ProfilerDatabase.CpuUsageStartInfo startInfo,
+			IProfileableObject @object, ITypeIdentifierProvider renderObject)
+		{
+			@object = @object ?? emptyProfileableObject;
+			ProfilerDatabase.EnsureDescriptionFor(@object);
+			ProfilerDatabase.CpuUsageFinished(
+				startInfo, new Owners(@object.RowIndex),
+				CpuUsage.Reasons.NodeRenderPreparation,
+				renderObject.Identifier);
 		}
 
 		private class EmptyProfileableObject : IProfileableObject
