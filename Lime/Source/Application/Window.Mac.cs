@@ -547,7 +547,13 @@ namespace Lime
 #endif // PROFILER
 		}
 
-		public void WaitForRendering() { }
+		public void WaitForRendering()
+		{
+#if PROFILER
+			var usage = ProfilerDatabase.CpuUsageStarted();
+			ProfilerDatabase.CpuUsageFinished(usage, Owners.Empty, CpuUsage.Reasons.WaitForPreviousRendering, TypeIdentifier.Empty);
+#endif // PROFILER
+		}
 
 		private void RefreshMousePosition()
 		{
