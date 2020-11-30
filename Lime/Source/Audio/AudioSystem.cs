@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -73,7 +76,16 @@ namespace Lime
 
 		public static void StopGroup(AudioChannelGroup group, float fadeoutTime = 0) => PlatformAudioSystem.StopGroup(group, fadeoutTime);
 
-		public static void Update() => PlatformAudioSystem.Update();
+		public static void Update()
+		{
+#if PROFILER
+			var usage = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
+			PlatformAudioSystem.Update();
+#if PROFILER
+			ProfilerDatabase.CpuUsageFinished(usage, Owners.Empty, CpuUsage.Reasons.AudioSystemUpdate, TypeIdentifier.Empty);
+#endif // PROFILER
+		}
 
 		public static Sound Play(PlayParameters parameters) => PlatformAudioSystem.Play(parameters);
 
