@@ -39,7 +39,7 @@ namespace Lime
 		public Mesh<TVertex> Mesh { get; set; }
 
 #if PROFILER
-		public RenderBatchProfilingInfo ProfilingInfo;
+		internal RenderBatchProfilingInfo ProfilingInfo;
 #endif // PROFILER
 
 		private void Clear()
@@ -60,9 +60,7 @@ namespace Lime
 		public void Render()
 		{
 #if PROFILER
-			if (ProfilingInfo.IsInsideOverdrawMaterialScope) {
-				OverdrawMaterialScope.Enter();
-			}
+			ProfilingInfo.Rendering();
 #endif // PROFILER
 			PlatformRenderer.SetTexture(0, Texture1);
 			PlatformRenderer.SetTexture(1, Texture2);
@@ -71,9 +69,7 @@ namespace Lime
 				Mesh.DrawIndexed(StartIndex, LastIndex - StartIndex);
 			}
 #if PROFILER
-			if (ProfilingInfo.IsInsideOverdrawMaterialScope) {
-				OverdrawMaterialScope.Leave();
-			}
+			ProfilingInfo.Rendered();
 #endif // PROFILER
 		}
 
