@@ -267,7 +267,13 @@ namespace Lime
 		public void WaitForRendering()
 		{
 			if (AsyncRendering) {
+#if PROFILER
+				var usage = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 				renderCompleted.WaitOne();
+#if PROFILER
+				ProfilerDatabase.CpuUsageFinished(usage, Owners.Empty, CpuUsage.Reasons.WaitForPreviousRendering, TypeIdentifier.Empty);
+#endif // PROFILER
 			}
 		}
 
