@@ -33,6 +33,9 @@ namespace Lime
 				typedLastBatch.Material = material;
 				Batches.Add(typedLastBatch);
 				lastBatch = typedLastBatch;
+#if PROFILER
+				typedLastBatch.ProfilingInfo.UsageReasons = Profiler.CpuUsage.Reasons.BatchRender;
+#endif // PROFILER
 			}
 #if PROFILER
 			typedLastBatch.ProfilingInfo.ProcessNode(RenderObjectOwnerInfo.CurrentNode);
