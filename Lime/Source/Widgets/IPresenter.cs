@@ -1,5 +1,9 @@
 using System;
 using System.Collections.Generic;
+#if PROFILER
+using Lime.Profiler;
+using Lime.Profiler.Graphics;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -44,9 +48,13 @@ namespace Lime
 		{
 			var ro = RenderObjectPool<RenderObject>.Acquire();
 			for (var i = Count - 1; i >= 0; i--) {
+#if PROFILER
+				var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 				var obj = this[i].GetRenderObject(node);
 				if (obj != null) {
 #if PROFILER
+					RenderObjectOwnerInfo.GetRenderObjectCpuUsageFinished(usageInfo, node, obj);
 					obj.OwnerInfo.Initialize(node);
 #endif // PROFILER
 					ro.Objects.Add(obj);
