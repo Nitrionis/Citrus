@@ -324,7 +324,7 @@ namespace Lime.Profiler
 			isRenderMainWindowTarget = isMainWindowTarget;
 			if (!isMainWindowTarget) return;
 			threadInfo = isRenderProfilerEnabled ? ThreadInfo.Render : ThreadInfo.Unknown;
-			ownersPool = instance.RenderOwnersPool;
+			ownersPool = isRenderProfilerEnabled ? instance.RenderOwnersPool : null;
 			const long InvalidValue = long.MaxValue;
 			if (isRenderProfilerEnabled) {
 				var frame = CalculatedFramePlace(renderThreadTargetFrameIndex);
