@@ -348,6 +348,7 @@
     <Compile Include="Source\Profiler\ITypeIdentifierProvider.cs" />
     <Compile Include="Source\Profiler\Owners.cs" />
     <Compile Include="Source\Profiler\ProfiledFrame.cs" />
+    <Compile Include="Source\Profiler\ProfilerDatabase.cs" />
     <Compile Include="Source\Profiler\ReferenceTable.cs" />
     <Compile Include="Source\Profiler\RingPool.cs" />
     <Compile Include="Source\Profiler\SceneProfilingInfo.cs" />
