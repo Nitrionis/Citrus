@@ -570,7 +570,9 @@ namespace Lime
 
 		ReferenceTable.RowIndex IProfileableObject.RowIndex { get; set; } = ReferenceTable.RowIndex.Invalid;
 
-		TypeIdentifier ITypeIdentifierProvider.Identifier { get => throw new NotImplementedException(); }
+		private readonly TypeIdentifier typeIdentifier;
+
+		TypeIdentifier ITypeIdentifierProvider.Identifier => typeIdentifier;
 #endif // PROFILER
 
 		/// <summary>
@@ -586,6 +588,9 @@ namespace Lime
 			Presenter = DefaultPresenter.Instance;
 			RenderChainBuilder = this;
 			++CreatedCount;
+#if PROFILER
+			typeIdentifier = ProfilerDatabase.EnsureNumberFor(GetType());
+#endif // PROFILER
 		}
 
 		private GestureList gestures;
