@@ -5,6 +5,9 @@ using System.Diagnostics;
 using System.Text;
 using Foundation;
 using UIKit;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 #pragma warning disable 0067
 
@@ -135,6 +138,9 @@ namespace Lime
 			if (!Active || UIViewController.SoftKeyboardBeingShownOrHid) {
 				return;
 			}
+#if PROFILER
+			ProfilerDatabase.Updating(this == Application.MainWindow);
+#endif // PROFILER
 			UnclampedDelta = delta;
 			var clampedDelta = Math.Min(UnclampedDelta, Application.MaxDelta);
 			Input.ProcessPendingKeyEvents(clampedDelta);
@@ -142,6 +148,9 @@ namespace Lime
 			Input.CopyKeysState();
 			AudioSystem.Update();
 			RaiseSync();
+#if PROFILER
+			ProfilerDatabase.Updated();
+#endif // PROFILER
 		}
 
 		private void OnRenderFrame()
@@ -149,11 +158,17 @@ namespace Lime
 			if (!Active || UIViewController.SoftKeyboardBeingShownOrHid) {
 				return;
 			}
+#if PROFILER
+			ProfilerDatabase.Rendering(this == Application.MainWindow);
+#endif // PROFILER
 			var view = (IGameView)UIView;
 			view.MakeCurrent();
 			RaiseRendering();
 			view.SwapBuffers();
 			fpsCounter.Refresh();
+#if PROFILER
+			ProfilerDatabase.Rendered();
+#endif // PROFILER
 		}
 
 		private void OnStatusBarChanged(object sender, NSNotificationEventArgs e)

@@ -6,6 +6,9 @@ using System.Drawing;
 using System.Threading;
 using System.Windows.Forms;
 using WinFormsCloseReason = System.Windows.Forms.CloseReason;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -828,10 +831,16 @@ namespace Lime
 				if (renderThreadToken.IsCancellationRequested) {
 					return;
 				}
+#if PROFILER
+				ProfilerDatabase.Rendering(this == Application.MainWindow);
+#endif // PROFILER
 				renderControl.Begin();
 				RaiseRendering();
 				renderControl.SwapBuffers();
 				renderControl.UnbindContext();
+#if PROFILER
+				ProfilerDatabase.Rendered();
+#endif // PROFILER
 				renderCompleted.Set();
 			}
 		}
@@ -849,9 +858,15 @@ namespace Lime
 				case RenderingState.Updated:
 					PixelScale = CalcPixelScale(e.Graphics.DpiX);
 					if (!AsyncRendering && renderControl.IsHandleCreated && form.Visible && !renderControl.IsDisposed && renderControl.CanRender) {
+#if PROFILER
+						ProfilerDatabase.Rendering(this == Application.MainWindow);
+#endif // PROFILER
 						renderControl.Begin();
 						RaiseRendering();
 						renderControl.SwapBuffers();
+#if PROFILER
+						ProfilerDatabase.Rendered();
+#endif // PROFILER
 					}
 					renderingState = RenderingState.Rendered;
 					break;
@@ -870,6 +885,9 @@ namespace Lime
 			if (!form.Visible || !form.CanFocus || !renderControl.IsHandleCreated) {
 				return;
 			}
+#if PROFILER
+			ProfilerDatabase.Updating(this == Application.MainWindow);
+#endif // PROFILER
 			UnclampedDelta = (float)stopwatch.Elapsed.TotalSeconds;
 			float delta = Mathf.Clamp(UnclampedDelta, 0, Application.MaxDelta);
 			stopwatch.Restart();
@@ -911,6 +929,9 @@ namespace Lime
 					renderReady.Set();
 				}
 			}
+#if PROFILER
+			ProfilerDatabase.Updated();
+#endif // PROFILER
 		}
 
 		private static Key TranslateKey(Keys key)
