@@ -152,6 +152,11 @@ namespace Lime.Profiler
 			AudioSystemUpdate = 17,
 
 			/// <summary>
+			/// Describes cost of CommonWindow RaiseUpdatingHelper CommandHandlerList.Global.ProcessCommands().
+			/// </summary>
+			ProcessCommands = 19,
+
+			/// <summary>
 			/// Batch breaking due to the fact that there is no link to the previous batch.
 			/// </summary>
 			/// <remarks>

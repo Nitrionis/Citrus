@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Lime;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -41,6 +44,9 @@ namespace Lime
 
 		public void ProcessCommands()
 		{
+#if PROFILER
+			var usage = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 			// We are not using foreach because collection might be modified on command execution
 			for (int i = 0; i < items.Count; i++) {
 				var item = items[i];
@@ -54,6 +60,9 @@ namespace Lime
 					}
 				}
 			}
+#if PROFILER
+			ProfilerDatabase.CpuUsageFinished(usage, Owners.Empty, CpuUsage.Reasons.ProcessCommands, TypeIdentifier.Empty);
+#endif // PROFILER
 		}
 
 		class DelegateHandler : CommandHandler
