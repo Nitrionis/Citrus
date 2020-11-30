@@ -35,6 +35,13 @@ namespace Lime
 		}
 
 		protected virtual void OnRelease() { }
+
+#if PROFILER
+		public static void RenderCpuUsageFinished(
+			ProfilerDatabase.CpuUsageStartInfo usageInfo, ITypeIdentifierProvider typeProvider) =>
+				ProfilerDatabase.CpuUsageFinished(usageInfo, RenderObjectOwnerInfo.CurrentOwner,
+					CpuUsage.Reasons.NodeRender, typeProvider.Identifier);
+#endif // PROFILER
 	}
 
 	public class RenderObjectList : IReadOnlyList<RenderObject>, IEnumerable<RenderObject>
@@ -64,9 +71,11 @@ namespace Lime
 #if PROFILER
 				RenderObjectOwnerInfo.PushState(ro.OwnerInfo);
 				if (!OverdrawMaterialScope.IsInside || !RenderObjectOwnerInfo.CurrentNode.IsOverdrawForeground) {
+					var usageInfo = ProfilerDatabase.CpuUsageStarted();
 #endif // PROFILER
 					ro.Render();
 #if PROFILER
+					RenderObject.RenderCpuUsageFinished(usageInfo, ro);
 				}
 				RenderObjectOwnerInfo.PopState();
 #endif // PROFILER

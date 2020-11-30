@@ -275,9 +275,11 @@ namespace Lime
 						foreach (var obj in opaqueObjects) {
 #if PROFILER
 							RenderObjectOwnerInfo.PushState(obj.OwnerInfo);
+							var usageInfo = ProfilerDatabase.CpuUsageStarted();
 #endif // PROFILER
 							obj.Render();
 #if PROFILER
+							RenderObject.RenderCpuUsageFinished(usageInfo, obj);
 							RenderObjectOwnerInfo.PopState();
 #endif // PROFILER
 						}
@@ -286,9 +288,11 @@ namespace Lime
 						foreach (var obj in transparentObjects) {
 #if PROFILER
 							RenderObjectOwnerInfo.PushState(obj.OwnerInfo);
+							var usageInfo = ProfilerDatabase.CpuUsageStarted();
 #endif // PROFILER
 							obj.Render();
 #if PROFILER
+							RenderObject.RenderCpuUsageFinished(usageInfo, obj);
 							RenderObjectOwnerInfo.PopState();
 #endif // PROFILER
 						}
