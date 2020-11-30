@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -324,6 +327,9 @@ namespace Lime
 
 		public void IssueCommands()
 		{
+#if PROFILER
+			var usage = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 			if (items.Count != 0) {
 				var t = items.ToArray();
 				items.Clear();
@@ -331,6 +337,9 @@ namespace Lime
 					i.Issue();
 				}
 			}
+#if PROFILER
+			ProfilerDatabase.CpuUsageFinished(usage, Owners.Empty, CpuUsage.Reasons.IssueCommands, TypeIdentifier.Empty);
+#endif // PROFILER
 		}
 	}
 }
