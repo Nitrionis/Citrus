@@ -454,28 +454,28 @@ namespace Lime.Profiler
 			GpuUsagesPool = new RingPool<GpuUsage>();
 		}
 
-		private void OwnersPoolExpanding()
-		{
-			
-		}
+		private CpuUsageStartInfo ownersPoolExpandingCpuUsage;
+
+		private void OwnersPoolExpanding() => ownersPoolExpandingCpuUsage = CpuUsageStarted();
 
 		private void OwnersPoolExpanded(int capacity)
 		{
 			if (capacity >= 500_000) {
 				GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
 			}
+			CpuUsageFinished(ownersPoolExpandingCpuUsage, Owners.Empty, CpuUsage.Reasons.ProfilerDatabaseResizing, TypeIdentifier.Empty);
 		}
 
-		private void UsagesPoolExpanding()
-		{
-			
-		}
+		private CpuUsageStartInfo usagesPoolExpandingCpuUsage;
+
+		private void UsagesPoolExpanding() => usagesPoolExpandingCpuUsage = CpuUsageStarted();
 
 		private void UsagesPoolExpanded(int capacity)
 		{
 			if (capacity >= 262_144) {
 				GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
 			}
+			CpuUsageFinished(usagesPoolExpandingCpuUsage, Owners.Empty, CpuUsage.Reasons.ProfilerDatabaseResizing, TypeIdentifier.Empty);
 		}
 
 		private struct ThreadDependentData

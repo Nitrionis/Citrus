@@ -162,6 +162,11 @@ namespace Lime.Profiler
 			ProcessCommands = 19,
 
 			/// <summary>
+			/// Resizing the profiler database.
+			/// </summary>
+			ProfilerDatabaseResizing = 20,
+
+			/// <summary>
 			/// Batch breaking due to the fact that there is no link to the previous batch.
 			/// </summary>
 			/// <remarks>
