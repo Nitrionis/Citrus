@@ -22,7 +22,7 @@ namespace Lime.Profiler
 		}
 	}
 
-	internal class TypeId
+	public class TypeId
 	{
 		private static int counter;
 		public readonly int Value;
