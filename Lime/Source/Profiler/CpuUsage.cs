@@ -147,6 +147,11 @@ namespace Lime.Profiler
 			NodeDeserialization = 16,
 
 			/// <summary>
+			/// Describes cost of <see cref="AudioSystem.Update"/>.
+			/// </summary>
+			AudioSystemUpdate = 17,
+
+			/// <summary>
 			/// Batch breaking due to the fact that there is no link to the previous batch.
 			/// </summary>
 			/// <remarks>
