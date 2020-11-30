@@ -40,6 +40,9 @@ namespace Lime.Profiler
 		/// </summary>
 		public static RingPool<ReferenceTable.RowIndex> OwnersPool => ownersPool;
 
+		private static readonly ConditionalWeakTable<Type, TypeId> nativeTypesTable =
+			new ConditionalWeakTable<Type, TypeId>();
+
 		// Store thread-dependent data in arrays to access them by thread index.
 		private static readonly RingPool<CpuUsage>[] cpuUsagesPools = new RingPool<CpuUsage>[3];
 		private static readonly ThreadDependentData[] threadDependentData = new ThreadDependentData[3];
@@ -65,7 +68,7 @@ namespace Lime.Profiler
 		}
 
 		/// <inheritdoc/>
-		public int FrameLifespan { get; private set; }
+		public int FrameLifespan { get; }
 
 		/// <inheritdoc/>
 		public long ProfiledFramesCount { get; private set; }
@@ -74,25 +77,25 @@ namespace Lime.Profiler
 		public long LastAvailableFrame { get; private set; }
 
 		/// <inheritdoc/>
-		public ConditionalWeakTable<Type, TypeId> NativeTypesTable { get; private set; }
+		public ConditionalWeakTable<Type, TypeId> NativeTypesTable { get; }
 
 		/// <inheritdoc/>
-		public ReferenceTable NativeReferenceTable { get; private set; }
+		public ReferenceTable NativeReferenceTable { get; }
 
 		/// <inheritdoc/>
-		public RingPool<ReferenceTable.RowIndex> UpdateOwnersPool { get; private set; }
+		public RingPool<ReferenceTable.RowIndex> UpdateOwnersPool { get; }
 
 		/// <inheritdoc/>
-		public RingPool<ReferenceTable.RowIndex> RenderOwnersPool { get; private set; }
+		public RingPool<ReferenceTable.RowIndex> RenderOwnersPool { get; }
 
 		/// <inheritdoc/>
-		public RingPool<CpuUsage> UpdateCpuUsagesPool { get; private set; }
+		public RingPool<CpuUsage> UpdateCpuUsagesPool { get; }
 
 		/// <inheritdoc/>
-		public RingPool<CpuUsage> RenderCpuUsagesPool { get; private set; }
+		public RingPool<CpuUsage> RenderCpuUsagesPool { get; }
 
 		/// <inheritdoc/>
-		public RingPool<GpuUsage> GpuUsagesPool { get; private set; }
+		public RingPool<GpuUsage> GpuUsagesPool { get; }
 
 		/// <inheritdoc/>
 		public bool CanAccessFrame(long identifier) =>
@@ -198,7 +201,7 @@ namespace Lime.Profiler
 		/// Ensures that the specified type will be assigned some number.
 		/// </summary>
 		public static TypeIdentifier EnsureNumberFor(Type type) =>
-			new TypeIdentifier(instance.NativeTypesTable.GetOrCreateValue(type).Value);
+			new TypeIdentifier(nativeTypesTable.GetOrCreateValue(type).Value);
 
 		private static CpuUsageStartInfo fullUpdateCpuUsage;
 		private static bool isUpdateMainWindowTarget;
@@ -431,6 +434,7 @@ namespace Lime.Profiler
 			FrameLifespan = (int)frameLifespan;
 			ProfiledFramesCount = 0;
 			LastAvailableFrame = -1;
+			NativeTypesTable = nativeTypesTable;
 			NativeReferenceTable = new ReferenceTable();
 			UpdateOwnersPool = new RingPool<ReferenceTable.RowIndex>();
 			RenderOwnersPool = new RingPool<ReferenceTable.RowIndex>();

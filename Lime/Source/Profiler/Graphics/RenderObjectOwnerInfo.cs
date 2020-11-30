@@ -50,8 +50,12 @@ namespace Lime.Profiler.Graphics
 
 		private class EmptyProfileableObject : IProfileableObject
 		{
+			public string Name => null;
 			public bool IsPartOfScene => false;
 			public bool IsOverdrawForeground => false;
+			public IProfileableObject Parent => null;
+			public ReferenceTable.RowIndex RowIndex { get; set; } = ReferenceTable.RowIndex.Invalid;
+			public TypeIdentifier Identifier { get; } = ProfilerDatabase.EnsureNumberFor(typeof(EmptyProfileableObject));
 		}
 	}
 }
