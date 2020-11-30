@@ -8,6 +8,9 @@ using Android.Runtime;
 using Android.Views;
 using AndroidApp = Android.App.Application;
 using AndroidContext = Android.Content.Context;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 #pragma warning disable 0067
 
@@ -182,6 +185,9 @@ namespace Lime
 			var gw = ActivityDelegate.Instance.GameView;
 			prevFrameTime = frameTimeNanos;
 			if ((Active && gw.IsSurfaceCreated) || requestForRedraw) {
+#if PROFILER
+				ProfilerDatabase.Updating(this == Application.MainWindow);
+#endif // PROFILER
 				fpsCounter.Refresh();
 				gw.ProcessTextInput();
 				Update(delta);
@@ -201,6 +207,9 @@ namespace Lime
 					return true;
 				} else {
 					updateState = UpdateState.Update;
+#if PROFILER
+					ProfilerDatabase.Updated();
+#endif // PROFILER
 					return false;
 				}
 			}
@@ -214,13 +223,23 @@ namespace Lime
 			renderReady.Set();
 			requestForRedraw = false;
 			updateState = UpdateState.Update;
+#if PROFILER
+			ProfilerDatabase.Updated();
+#endif // PROFILER
 			return false;
 		}
 		
 		bool HandleUpdateState_RenderSync()
 		{
 			RaiseSync();
+#if PROFILER
+			ProfilerDatabase.Updated();
+			ProfilerDatabase.Rendering(this == Application.MainWindow);
+#endif // PROFILER
 			Render();
+#if PROFILER
+			ProfilerDatabase.Rendered();
+#endif // PROFILER
 			requestForRedraw = false;
 			updateState = UpdateState.Update;
 			return false;
@@ -257,7 +276,13 @@ namespace Lime
 			while (true) {
 				renderReady.WaitOne();
 				renderReady.Reset();
+#if PROFILER
+				ProfilerDatabase.Rendering(this == Application.MainWindow);
+#endif // PROFILER
 				Render();
+#if PROFILER
+				ProfilerDatabase.Rendered();
+#endif // PROFILER
 				renderCompleted.Set();
 			}
 		}

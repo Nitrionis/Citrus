@@ -1,5 +1,8 @@
 using System;
 using System.Threading;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -49,6 +52,11 @@ namespace Lime
 				Current = (IWindow)this;
 			}
 			Context = new Context(Property.Create(() => Current, (v) => Current = v), this);
+#if PROFILER
+			if (Application.MainWindow == null) {
+				ProfilerDatabase.Reinitialize();
+			}
+#endif // PROFILER
 		}
 
 		protected void RaiseActivated()
@@ -102,9 +110,15 @@ namespace Lime
 
 		protected void RaiseSync()
 		{
+#if PROFILER
+			ProfilerDatabase.SyncStarted(this == Application.MainWindow);
+#endif // PROFILER
 			using (Context.Activate().Scoped()) {
 				Sync?.Invoke();
 			}
+#if PROFILER
+			ProfilerDatabase.SyncFinishing();
+#endif // PROFILER
 		}
 
 		protected void RaiseSafeAreaInsetsChanged()
