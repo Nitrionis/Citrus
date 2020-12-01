@@ -1318,6 +1318,9 @@ namespace Lime
 			}
 			scenesBeingLoaded.Value.Add(fullPath);
 			try {
+#if PROFILER
+				var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 				if (stream != null) {
 					instance = InternalPersistence.Instance.ReadObject<Node>(fullPath, stream, instance);
 				} else {
@@ -1329,6 +1332,10 @@ namespace Lime
 				if (!ignoreExternals) {
 					instance.LoadExternalScenes();
 				}
+#if PROFILER
+				ProfilerDatabase.EnsureDescriptionFor(instance);
+				ProfilerDatabase.CpuUsageFinished(usageInfo, instance, CpuUsage.Reasons.NodeDeserialization, instance);
+#endif // PROFILER
 			} finally {
 				scenesBeingLoaded.Value.Remove(fullPath);
 			}
@@ -1363,7 +1370,14 @@ namespace Lime
 		{
 			if (string.IsNullOrEmpty(ContentsPath)) {
 				foreach (var child in Nodes) {
+#if PROFILER
+					var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 					child.LoadExternalScenes();
+#if PROFILER
+					ProfilerDatabase.EnsureDescriptionFor(child);
+					ProfilerDatabase.CpuUsageFinished(usageInfo, child, CpuUsage.Reasons.LoadExternalScenes, child);
+#endif // PROFILER
 				}
 			} else if (ResolveScenePath(ContentsPath) != null) {
 				var content = LoadHelper(ContentsPath, null, external: true);
