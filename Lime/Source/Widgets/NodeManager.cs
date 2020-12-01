@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -120,6 +123,11 @@ namespace Lime
 			foreach (var (component, owner) in componentsToUnregister) {
 				UnregisterComponent(component, owner);
 			}
+#if PROFILER
+			foreach (var n in node.SelfAndDescendants) {
+				ReferenceTable.ObjectDetachedFromMainHierarchy(n);
+			}
+#endif // PROFILER
 			RaiseHierarchyChanged(new HierarchyChangedEventArgs(this, HierarchyAction.Unlink, node, parent));
 		}
 
