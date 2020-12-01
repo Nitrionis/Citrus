@@ -183,7 +183,13 @@ namespace Lime
 		{
 			foreach (var p in Processors) {
 				ActiveProcessor = p;
+#if PROFILER
+				var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 				p.Update(delta);
+#if PROFILER
+				ProfilerDatabase.CpuUsageFinished(usageInfo, Owners.Empty, CpuUsage.Reasons.NodeProcessor, p);
+#endif // PROFILER
 			}
 			ActiveProcessor = null;
 		}
