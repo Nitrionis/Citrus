@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -225,7 +228,14 @@ namespace Lime
 		{
 			var b = behaviors[index];
 			if (b != null) {
+#if PROFILER
+				ProfilerDatabase.EnsureDescriptionFor(b.Owner);
+				var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 				b.Update(delta * b.Owner.EffectiveAnimationSpeed);
+#if PROFILER
+				ProfilerDatabase.CpuUsageFinished(usageInfo, b.Owner, CpuUsage.Reasons.BehaviorComponentUpdate, b);
+#endif // PROFILER
 				return true;
 			}
 			b = behaviors[behaviors.Count - 1];
