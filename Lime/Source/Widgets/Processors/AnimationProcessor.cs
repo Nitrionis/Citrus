@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -117,7 +120,15 @@ namespace Lime
 			while (currQueue.Count > 0) {
 				var animation = currQueue.Dequeue().Value;
 				nextQueue.Enqueue(animation.Owner.Depth, animation.QueueNode);
+#if PROFILER
+				var owner = animation.Owner.Owner;
+				ProfilerDatabase.EnsureDescriptionFor(owner);
+				var usageInfo = ProfilerDatabase.CpuUsageStarted();
+#endif // PROFILER
 				animation.Advance(delta * animation.OwnerNode.EffectiveAnimationSpeed);
+#if PROFILER
+				ProfilerDatabase.CpuUsageFinished(usageInfo, owner, CpuUsage.Reasons.NodeAnimation, animation);
+#endif // PROFILER
 			}
 			Toolbox.Swap(ref currQueue, ref nextQueue);
 		}
