@@ -2,10 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Yuzu;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
 	public class Animation
+#if PROFILER
+		: ITypeIdentifierProvider
+#endif // PROFILER
 	{
 		public const string ZeroPoseId = "ZeroPose";
 		public readonly static int ZeroPoseIdComparisonCode = Toolbox.StringUniqueCodeGenerator.Generate(ZeroPoseId);
@@ -281,6 +287,10 @@ namespace Lime
 			}
 			return hasEasings.Value;
 		}
+
+#if PROFILER
+		TypeIdentifier ITypeIdentifierProvider.Identifier { get; } = ProfilerDatabase.EnsureNumberFor(typeof(Animation));
+#endif // PROFILER
 
 		public class AnimationData
 		{
