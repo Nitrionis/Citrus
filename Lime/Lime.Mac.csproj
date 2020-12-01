@@ -350,6 +350,7 @@
     <Compile Include="Source\Profiler\Network\Client.cs" />
     <Compile Include="Source\Profiler\Network\IConnection.cs" />
     <Compile Include="Source\Profiler\Network\MessageProcessor.cs" />
+    <Compile Include="Source\Profiler\Network\Server.cs" />
     <Compile Include="Source\Profiler\Owners.cs" />
     <Compile Include="Source\Profiler\ProfiledFrame.cs" />
     <Compile Include="Source\Profiler\ProfilerDatabase.cs" />
