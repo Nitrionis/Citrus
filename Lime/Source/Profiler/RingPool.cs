@@ -60,7 +60,14 @@ namespace Lime.Profiler
 
 		private ListDescriptor newestListDescriptor;
 
+		/// <remarks>
+		/// The ring pool should not be accessed within this event. This will cause undefined behavior.
+		/// </remarks>
 		public event Action InternalStorageExpanding;
+
+		/// <remarks>
+		/// The ring pool should not be accessed within this event. This will cause undefined behavior.
+		/// </remarks>
 		public event Action<int> InternalStorageExpanded;
 
 		public RingPool(int startCapacity = 1024)

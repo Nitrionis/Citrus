@@ -217,6 +217,10 @@ namespace Lime.Profiler
 			ownersPool = instance.UpdateOwnersPool;
 			const long InvalidValue = long.MaxValue;
 			if (isUpdateProfilerEnabled) {
+				while (poolExpandingCpuUsages != null && poolExpandingCpuUsages.Count > 0) {
+					instance.UpdateCpuUsagesPool.AddToNewestList(poolExpandingCpuUsages.Dequeue());
+				}
+
 				var frame = CalculatedFramePlace(instance.ProfiledFramesCount);
 				FreeResourcesForNextUpdate(frame);
 
@@ -329,6 +333,10 @@ namespace Lime.Profiler
 			ownersPool = isRenderProfilerEnabled ? instance.RenderOwnersPool : null;
 			const long InvalidValue = long.MaxValue;
 			if (isRenderProfilerEnabled) {
+				while (poolExpandingCpuUsages != null && poolExpandingCpuUsages.Count > 0) {
+					instance.UpdateCpuUsagesPool.AddToNewestList(poolExpandingCpuUsages.Dequeue());
+				}
+
 				var frame = CalculatedFramePlace(renderThreadTargetFrameIndex);
 				FreeResourcesForNextRender();
 
@@ -394,7 +402,6 @@ namespace Lime.Profiler
 		{
 			var (cpuUsages, gpuUsages) = renderResourcesQueue.Dequeue();
 			var ownersPool = instance.RenderOwnersPool;
-			Console.WriteLine("Length {0}", instance.RenderCpuUsagesPool.GetLength(cpuUsages));
 			foreach (var usage in instance.RenderCpuUsagesPool.Enumerate(cpuUsages)) {
 				if (usage.Owners.IsListDescriptor) {
 					ownersPool.FreeOldestList(usage.Owners.AsListDescriptor);
@@ -454,28 +461,44 @@ namespace Lime.Profiler
 			GpuUsagesPool = new RingPool<GpuUsage>();
 		}
 
-		private CpuUsageStartInfo ownersPoolExpandingCpuUsage;
+		[ThreadStatic]
+		private static Queue<CpuUsage> poolExpandingCpuUsages;
 
-		private void OwnersPoolExpanding() => ownersPoolExpandingCpuUsage = CpuUsageStarted();
+		[ThreadStatic]
+		private static long poolExpandingTimestamp;
+
+		private static void PoolExpanded()
+		{
+			if (poolExpandingCpuUsages == null) {
+				poolExpandingCpuUsages = new Queue<CpuUsage>();
+			}
+			poolExpandingCpuUsages.Enqueue(new CpuUsage {
+				Reason = CpuUsage.Reasons.ProfilerDatabaseResizing,
+				Owners = Owners.Empty,
+				TypeIdentifier = TypeIdentifier.Empty,
+				StartTime = poolExpandingTimestamp,
+				FinishTime = Stopwatch.GetTimestamp()
+			});
+		}
+
+		private void OwnersPoolExpanding() => poolExpandingTimestamp = Stopwatch.GetTimestamp();
 
 		private void OwnersPoolExpanded(int capacity)
 		{
 			if (capacity >= 500_000) {
 				GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
 			}
-			CpuUsageFinished(ownersPoolExpandingCpuUsage, Owners.Empty, CpuUsage.Reasons.ProfilerDatabaseResizing, TypeIdentifier.Empty);
+			PoolExpanded();
 		}
 
-		private CpuUsageStartInfo usagesPoolExpandingCpuUsage;
-
-		private void UsagesPoolExpanding() => usagesPoolExpandingCpuUsage = CpuUsageStarted();
+		private void UsagesPoolExpanding() => poolExpandingTimestamp = Stopwatch.GetTimestamp();
 
 		private void UsagesPoolExpanded(int capacity)
 		{
 			if (capacity >= 262_144) {
 				GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
 			}
-			CpuUsageFinished(usagesPoolExpandingCpuUsage, Owners.Empty, CpuUsage.Reasons.ProfilerDatabaseResizing, TypeIdentifier.Empty);
+			PoolExpanded();
 		}
 
 		private struct ThreadDependentData
