@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime;
 using System.Runtime.CompilerServices;
-using System.Threading;
 
 namespace Lime.Profiler
 {
@@ -122,7 +121,7 @@ namespace Lime.Profiler
 		/// </remarks>
 		public static void EnsureDescriptionFor(IProfileableObject @object)
 		{
-			if (@object == null) return;
+			if (@object == null || threadInfo != ThreadInfo.Update) return;
 			var nativeReferenceTable = instance.NativeReferenceTable;
 			nativeReferenceTable.EnsureDescriptionFor(@object);
 			nativeReferenceTable.UpdateFrameIndexFor(@object.RowIndex, instance.ProfiledFramesCount);
