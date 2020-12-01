@@ -437,6 +437,7 @@
     <Compile Include="Source\Profiler\IProfileableObject.cs" />
     <Compile Include="Source\Profiler\IProfilerDatabase.cs" />
     <Compile Include="Source\Profiler\ITypeIdentifierProvider.cs" />
+    <Compile Include="Source\Profiler\Network\Client.cs" />
     <Compile Include="Source\Profiler\Network\IConnection.cs" />
     <Compile Include="Source\Profiler\Network\MessageProcessor.cs" />
     <Compile Include="Source\Profiler\Owners.cs" />
