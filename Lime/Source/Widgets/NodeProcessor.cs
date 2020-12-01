@@ -1,8 +1,14 @@
 using System;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
 	public class NodeProcessor
+#if PROFILER
+		: ITypeIdentifierProvider
+#endif // PROFILER
 	{
 		public NodeManager Manager { get; internal set; }
 
@@ -11,6 +17,14 @@ namespace Lime
 		public virtual void Stop(NodeManager manager) { }
 
 		public virtual void Update(float delta) { }
+
+#if PROFILER
+		private readonly TypeIdentifier typeIdentifier;
+
+		TypeIdentifier ITypeIdentifierProvider.Identifier => typeIdentifier;
+
+		public NodeProcessor() => typeIdentifier = ProfilerDatabase.EnsureNumberFor(GetType());
+#endif // PROFILER
 	}
 
 	public abstract class NodeComponentProcessor : NodeProcessor
