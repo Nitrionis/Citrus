@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+#if PROFILER
+using Lime.Profiler;
+#endif // PROFILER
 
 namespace Lime
 {
@@ -7,6 +10,9 @@ namespace Lime
 	/// BehaviorComponent is NodeComponent that used for scripting node behavior.
 	/// </summary>
 	public class BehaviorComponent : NodeComponent
+#if PROFILER
+		, ITypeIdentifierProvider
+#endif // PROFILER
 	{
 		private int suspendCounter;
 
@@ -69,6 +75,14 @@ namespace Lime
 			}
 			return false;
 		}
+
+#if PROFILER
+		private readonly TypeIdentifier typeIdentifier;
+
+		TypeIdentifier ITypeIdentifierProvider.Identifier => typeIdentifier;
+
+		public BehaviorComponent() => typeIdentifier = ProfilerDatabase.EnsureNumberFor(GetType());
+#endif // PROFILER
 	}
 
 	/// <summary>
