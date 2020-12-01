@@ -165,6 +165,15 @@ namespace Lime.Profiler
 		/// Create and saves the CpuUsage structure in the database.
 		/// </summary>
 		/// <remarks>Can be called from render and update threads.</remarks>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static void CpuUsageFinished(CpuUsageStartInfo usageInfo, Owners owners,
+			CpuUsage.Reasons reason, ITypeIdentifierProvider typeIdentifierProvider) =>
+			CpuUsageFinished(usageInfo, owners, reason, typeIdentifierProvider.Identifier);
+
+		/// <summary>
+		/// Create and saves the CpuUsage structure in the database.
+		/// </summary>
+		/// <remarks>Can be called from render and update threads.</remarks>
 		public static void CpuUsageFinished(CpuUsageStartInfo usageInfo, Owners owners,
 			CpuUsage.Reasons reason, TypeIdentifier typeIdentifier)
 		{
