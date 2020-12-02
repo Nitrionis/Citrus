@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 #if PROFILER
+using Lime.Profiler;
 using Lime.Profiler.Graphics;
 #endif // PROFILER
 
@@ -27,6 +28,9 @@ namespace Lime
 				typedLastBatch.Material != material ||
 				typedLastBatch.Material.PassCount != 1
 			) {
+#if PROFILER
+				var batchBreakReasons = GetBatchBreakReasons();
+#endif // PROFILER
 				typedLastBatch = RenderBatch<TVertex>.Acquire(needMesh ? null : typedLastBatch);
 				typedLastBatch.Texture1 = atlas1;
 				typedLastBatch.Texture2 = atlas2;
@@ -34,13 +38,37 @@ namespace Lime
 				Batches.Add(typedLastBatch);
 				lastBatch = typedLastBatch;
 #if PROFILER
-				typedLastBatch.ProfilingInfo.UsageReasons = Profiler.CpuUsage.Reasons.BatchRender;
+				typedLastBatch.ProfilingInfo.UsageReasons = CpuUsage.Reasons.BatchRender;
 #endif // PROFILER
 			}
 #if PROFILER
 			typedLastBatch.ProfilingInfo.ProcessNode(RenderObjectOwnerInfo.CurrentNode);
 #endif // PROFILER
 			return typedLastBatch;
+#if PROFILER
+			CpuUsage.Reasons GetBatchBreakReasons()
+			{
+				var usageReason = CpuUsage.Reasons.BatchRender;
+				if (ProfilerDatabase.IsBatchBreakReasonsRequired) {
+					if (typedLastBatch == null) {
+						usageReason |= CpuUsage.Reasons.BatchBreakNullLastBatch;
+					} else {
+						bool isVertexBufferOverflow =
+							typedLastBatch.LastVertex + vertexCount > RenderBatchLimits.MaxVertices;
+						bool isIndexBufferOverflow =
+							typedLastBatch.LastIndex + indexCount > RenderBatchLimits.MaxIndices;
+						usageReason |=
+							(isVertexBufferOverflow ? CpuUsage.Reasons.BatchBreakVertexBufferOverflow : 0) |
+							(isIndexBufferOverflow ? CpuUsage.Reasons.BatchBreakIndexBufferOverflow : 0) |
+							(typedLastBatch.Texture1 != atlas1 ? CpuUsage.Reasons.BatchBreakDifferentAtlasOne : 0) |
+							(typedLastBatch.Texture2 != atlas2 ? CpuUsage.Reasons.BatchBreakDifferentAtlasTwo : 0) |
+							(typedLastBatch.Material != material ? CpuUsage.Reasons.BatchBreakDifferentMaterials : 0) |
+							(typedLastBatch.Material.PassCount != 1 ? CpuUsage.Reasons.BatchBreakMaterialPassCount : 0);
+					}
+				}
+				return usageReason;
+			}
+#endif // PROFILER
 		}
 
 		public void Render()
