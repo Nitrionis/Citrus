@@ -37,6 +37,11 @@ namespace Lime.Profiler
 		bool ProfilerEnabled { get; set; }
 
 		/// <summary>
+		/// If requested, the profiler will collect batch break reasons.
+		/// </summary>
+		bool BatchBreakReasonsRequired { get; set; }
+
+		/// <summary>
 		/// The number of frames during which the profiled frame data is stored in the database.
 		/// </summary>
 		int FrameLifespan { get; }

@@ -68,6 +68,13 @@ namespace Lime.Profiler
 		}
 
 		/// <inheritdoc/>
+		public bool BatchBreakReasonsRequired
+		{
+			get => IsBatchBreakReasonsRequired;
+			set => isBatchBreakReasonsRequired = value;
+		}
+
+		/// <inheritdoc/>
 		public int FrameLifespan { get; }
 
 		/// <inheritdoc/>
@@ -112,6 +119,11 @@ namespace Lime.Profiler
 		/// </summary>
 		private static Frame CalculatedFramePlace(long identifier) =>
 			profiledFrames[identifier % profiledFrames.Length];
+
+		private static bool isBatchBreakReasonsRequired;
+
+		/// <remarks>Access only from render thread.</remarks>
+		public static bool IsBatchBreakReasonsRequired { get; private set; }
 
 		/// <summary>
 		/// Ensures that a description has been created for this object.
@@ -339,6 +351,7 @@ namespace Lime.Profiler
 			if (!isMainWindowTarget) return;
 			threadInfo = isRenderProfilerEnabled ? ThreadInfo.Render : ThreadInfo.Unknown;
 			ownersPool = isRenderProfilerEnabled ? instance.RenderOwnersPool : null;
+			IsBatchBreakReasonsRequired = isBatchBreakReasonsRequired;
 			const long InvalidValue = long.MaxValue;
 			if (isRenderProfilerEnabled) {
 				while (poolExpandingCpuUsages != null && poolExpandingCpuUsages.Count > 0) {
