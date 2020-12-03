@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -428,6 +428,7 @@
     <Compile Include="Source\Profilers\NodeProfilerHelpers\UsageData.cs" />
     <Compile Include="Source\Profilers\NodeProfilerHelpers\UsageSummary.cs" />
     <Compile Include="Source\Profilers\TasksProfiler.cs" />
+    <Compile Include="Source\Profiler\Contexts\IConnection.cs" />
     <Compile Include="Source\Profiler\CpuUsage.cs" />
     <Compile Include="Source\Profiler\Formatting\IInterrupter.cs" />
     <Compile Include="Source\Profiler\GpuUsage.cs" />
@@ -438,8 +439,11 @@
     <Compile Include="Source\Profiler\IProfilerDatabase.cs" />
     <Compile Include="Source\Profiler\ITypeIdentifierProvider.cs" />
     <Compile Include="Source\Profiler\Network\Client.cs" />
+    <Compile Include="Source\Profiler\Network\FrameDataQuery.cs" />
+    <Compile Include="Source\Profiler\Network\ICommand.cs" />
     <Compile Include="Source\Profiler\Network\IConnection.cs" />
     <Compile Include="Source\Profiler\Network\MessageProcessor.cs" />
+    <Compile Include="Source\Profiler\Network\ObjectsDataQuery.cs" />
     <Compile Include="Source\Profiler\Network\Server.cs" />
     <Compile Include="Source\Profiler\Owners.cs" />
     <Compile Include="Source\Profiler\ProfiledFrame.cs" />

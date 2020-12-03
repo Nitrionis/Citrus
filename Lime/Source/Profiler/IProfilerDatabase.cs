@@ -29,7 +29,7 @@ namespace Lime.Profiler
 		public TypeId() => Value = Interlocked.Increment(ref counter);
 	}
 
-	internal interface IProfilerDatabase
+	public interface IProfilerDatabase
 	{
 		/// <summary>
 		/// Allows you to enable or disable the profiler.
