@@ -8,29 +8,30 @@ namespace Lime.Profiler
 	public struct Owners
 	{
 		private const uint ListBitMask = 0x_8000_0000;
-		private const uint FlagsBitMask = ListBitMask;
 
-		private const uint InvalidData = ~FlagsBitMask;
+		public const uint InvalidData = ~ListBitMask;
 
 		/// <summary>
 		/// Use to initialize an empty instance of the Owners structure.
 		/// </summary>
-		public static Owners Empty => new Owners { PackedData = InvalidData };
+		public static Owners Empty => new Owners { packedData = InvalidData };
 
-		private uint PackedData;
+		private uint packedData;
+
+		public uint PackedData => packedData;
 
 		/// <summary>
 		/// If true, then Owners is neither RingPool.ListDescriptor nor ReferenceTable.RowIndex.
 		/// </summary>
-		public bool IsEmpty => (PackedData & InvalidData) == InvalidData;
+		public bool IsEmpty => (packedData & InvalidData) == InvalidData;
 
 		/// <summary>
 		/// If true, then Owners is ReferenceTable list descriptor. 
 		/// </summary>
 		public bool IsListDescriptor
 		{
-			get => (PackedData & ListBitMask) == ListBitMask;
-			set => PackedData = value ? PackedData | ListBitMask : PackedData & ~ListBitMask;
+			get => (packedData & ListBitMask) == ListBitMask;
+			set => packedData = value ? packedData | ListBitMask : packedData & ~ListBitMask;
 		}
 
 		/// <summary>
@@ -41,8 +42,8 @@ namespace Lime.Profiler
 		/// </remarks>
 		public RingPool.ListDescriptor AsListDescriptor
 		{
-			get => (RingPool.ListDescriptor)(PackedData & ~FlagsBitMask);
-			set => PackedData = (uint)value | PackedData & FlagsBitMask;
+			get => (RingPool.ListDescriptor)(packedData & ~ListBitMask);
+			set => packedData = (uint)value | packedData & ListBitMask;
 		}
 
 		/// <summary>
@@ -53,15 +54,17 @@ namespace Lime.Profiler
 		/// </remarks>
 		public ReferenceTable.RowIndex AsIndex
 		{
-			get => (ReferenceTable.RowIndex)(PackedData & ~FlagsBitMask);
-			set => PackedData = (uint)value | PackedData & FlagsBitMask;
+			get => (ReferenceTable.RowIndex)(packedData & ~ListBitMask);
+			set => packedData = (uint)value | packedData & ListBitMask;
 		}
 
-		public Owners(ReferenceTable.RowIndex rowIndex) => PackedData = (uint)rowIndex;
+		public Owners(ReferenceTable.RowIndex rowIndex) => packedData = (uint)rowIndex;
 
 		public Owners(IProfileableObject @object) : this(@object?.RowIndex ?? ReferenceTable.RowIndex.Invalid) { }
 
-		public Owners(RingPool.ListDescriptor descriptor) => PackedData = (uint)descriptor | ListBitMask;
+		public Owners(RingPool.ListDescriptor descriptor) => packedData = (uint)descriptor | ListBitMask;
+
+		internal Owners(uint value) => packedData = value;
 	}
 }
 #endif // PROFILER
