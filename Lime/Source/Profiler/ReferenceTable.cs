@@ -11,8 +11,8 @@ namespace Lime.Profiler
 	/// </summary>
 	public class ReferenceTable
 	{
-		private TableRow[] rows;
-		private readonly Queue<RowIndex> freeRows;
+		protected TableRow[] rows;
+		protected readonly Queue<RowIndex> freeRows;
 
 		/// <summary>
 		/// The number of new descriptions in the table since the last garbage collection.
@@ -70,7 +70,7 @@ namespace Lime.Profiler
 					Reference = new WeakReference<IProfileableObject>(@object),
 					ParentRowIndex = RowIndex.Invalid,
 					Type = @object.GetType(),
-					Name = @object.Name,
+					ObjectName = @object.Name,
 					IsPartOfScene = @object.IsPartOfScene
 				};
 				rows[rowIndex.Value] = new TableRow {
@@ -139,7 +139,7 @@ namespace Lime.Profiler
 			NewDescriptionsCount = 0;
 		}
 
-		private struct TableRow
+		protected struct TableRow
 		{
 			/// <summary>
 			/// The index of frame in which the line was updated or created.
@@ -174,12 +174,12 @@ namespace Lime.Profiler
 			/// <summary>
 			/// Object name for which this description was created.
 			/// </summary>
-			string Name { get; }
+			string ObjectName { get; }
 
 			/// <summary>
 			/// Object type for which this description was created.
 			/// </summary>
-			Type Type { get; }
+			string TypeName { get; }
 
 			/// <summary>
 			/// True if at least one owner belongs to the scene.
@@ -195,9 +195,15 @@ namespace Lime.Profiler
 		private class ObjectDescription : IObjectDescription
 		{
 			public RowIndex ParentRowIndex { get; set; }
-			public string Name { get; set; }
+
+			public string ObjectName { get; set; }
+
 			public Type Type { get; set; }
+
+			public string TypeName => Type.FullName;
+
 			public bool IsPartOfScene { get; set; }
+
 			public WeakReference<IProfileableObject> Reference { get; set; }
 		}
 
