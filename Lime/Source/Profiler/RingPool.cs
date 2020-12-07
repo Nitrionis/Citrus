@@ -116,6 +116,16 @@ namespace Lime.Profiler
 		public Enumerable Enumerate(ListDescriptor descriptor) => new Enumerable(descriptor, this);
 
 		/// <summary>
+		/// Returns an reversed enumerator for listing all objects in the list.
+		/// </summary>
+		/// <param name="descriptor">List descriptor acquired from this pool.</param>
+		/// <remarks>
+		/// After changing the capacity of the pool, the enumerator will be invalid.
+		/// </remarks>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public ReverseEnumerable Reversed(ListDescriptor descriptor) => new ReverseEnumerable(descriptor, this);
+
+		/// <summary>
 		/// Returns the i-th element of the list.
 		/// </summary>
 		/// <param name="descriptor">List handle acquired from this pool.</param>
@@ -371,6 +381,51 @@ namespace Lime.Profiler
 				{
 					Current = items[itemIndex];
 					itemIndex = (itemIndex + 1) % items.Length;
+					return ++processedItemsCount < itemsCount;
+				}
+			}
+		}
+
+		public struct ReverseEnumerable
+		{
+			public ListDescriptor Descriptor;
+			public RingPool<ListItemType> Pool;
+
+			public ReverseEnumerable(ListDescriptor descriptor, RingPool<ListItemType> pool)
+			{
+				Descriptor = descriptor;
+				Pool = pool;
+			}
+
+			public void Reverse() { }
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public Enumerator GetEnumerator() => new Enumerator(Descriptor, Pool);
+
+			public struct Enumerator
+			{
+				private ListItemType[] items;
+				private int processedItemsCount;
+				private int itemIndex;
+				private int itemsCount;
+
+				public ListItemType Current { get; private set; }
+
+				public Enumerator(ListDescriptor descriptor, RingPool<ListItemType> pool)
+				{
+					items = pool.listsItems;
+					var redirection = pool.lists[descriptor.Value];
+					itemsCount = (int)redirection.Length;
+					itemIndex = (int)redirection.Offset + itemsCount - 1;
+					processedItemsCount = -1;
+					Current = new ListItemType();
+				}
+
+				[MethodImpl(MethodImplOptions.AggressiveInlining)]
+				public bool MoveNext()
+				{
+					Current = items[itemIndex];
+					itemIndex = (itemIndex + items.Length - 1) % items.Length;
 					return ++processedItemsCount < itemsCount;
 				}
 			}
