@@ -412,7 +412,10 @@ namespace Lime.Profiler
 				var ownersPool = instance.UpdateOwnersPool;
 				foreach (var usage in usagesPool.Enumerate(frame.UpdateCpuUsagesList)) {
 					if (usage.Owners.IsListDescriptor) {
-						ownersPool.FreeOldestList(usage.Owners.AsListDescriptor);
+						var list = usage.Owners.AsListDescriptor;
+						if (!list.IsNull) {
+							ownersPool.FreeOldestList(list);
+						}
 					}
 				}
 				usagesPool.FreeOldestList(frame.UpdateCpuUsagesList);
@@ -421,17 +424,20 @@ namespace Lime.Profiler
 
 		private static void FreeResourcesForNextRender()
 		{
-			var (cpuUsages, gpuUsages) = renderResourcesQueue.Dequeue();
-			var ownersPool = instance.RenderOwnersPool;
-			foreach (var usage in instance.RenderCpuUsagesPool.Enumerate(cpuUsages)) {
-				if (usage.Owners.IsListDescriptor) {
-					ownersPool.FreeOldestList(usage.Owners.AsListDescriptor);
+			void FreeOwnersList(Owners owners) {
+				if (owners.IsListDescriptor) {
+					var list = owners.AsListDescriptor;
+					if (!list.IsNull) {
+						instance.RenderOwnersPool.FreeOldestList(list);
+					}
 				}
 			}
+			var (cpuUsages, gpuUsages) = renderResourcesQueue.Dequeue();
+			foreach (var usage in instance.RenderCpuUsagesPool.Enumerate(cpuUsages)) {
+				FreeOwnersList(usage.Owners);
+			}
 			foreach (var usage in instance.GpuUsagesPool.Enumerate(gpuUsages)) {
-				if (usage.Owners.IsListDescriptor) {
-					ownersPool.FreeOldestList(usage.Owners.AsListDescriptor);
-				}
+				FreeOwnersList(usage.Owners);
 			}
 			instance.RenderCpuUsagesPool.FreeOldestList(cpuUsages);
 			instance.GpuUsagesPool.FreeOldestList(gpuUsages);
