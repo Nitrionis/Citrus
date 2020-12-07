@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -431,6 +431,7 @@
     <Compile Include="Source\Profiler\Contexts\FrameClipboard.cs" />
     <Compile Include="Source\Profiler\CpuUsage.cs" />
     <Compile Include="Source\Profiler\Formatting\IInterrupter.cs" />
+    <Compile Include="Source\Profiler\Contexts\IRequest.cs" />
     <Compile Include="Source\Profiler\GpuUsage.cs" />
     <Compile Include="Source\Profiler\Graphics\Overdraw.cs" />
     <Compile Include="Source\Profiler\Graphics\RenderBatchProfilingInfo.cs" />
