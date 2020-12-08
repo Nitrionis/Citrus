@@ -9,7 +9,7 @@ namespace Lime.Profiler.Contexts
 	/// </summary>
 	public class FrameClipboard
 	{
-		public readonly Dictionary<TypeIdentifier, string> TypesDictionary;
+		public Dictionary<int, string> TypesDictionary;
 
 		public readonly ReferenceTable ReferenceTable;
 
@@ -22,7 +22,7 @@ namespace Lime.Profiler.Contexts
 
 		public FrameClipboard()
 		{
-			TypesDictionary = new Dictionary<TypeIdentifier, string>();
+			TypesDictionary = new Dictionary<int, string>();
 			ReferenceTable = new ReferenceTable();
 			UpdateOwnersPool = new RingPool<ReferenceTable.RowIndex>();
 			RenderOwnersPool = new RingPool<ReferenceTable.RowIndex>();
