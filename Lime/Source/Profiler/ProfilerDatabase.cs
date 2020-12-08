@@ -8,6 +8,8 @@ using System.Runtime.CompilerServices;
 
 namespace Lime.Profiler
 {
+	using IProfilerContext = Contexts.IProfilerContext;
+
 	/// <summary>
 	/// Performs terminal requests.
 	/// </summary>
@@ -19,6 +21,18 @@ namespace Lime.Profiler
 		private const uint MaxSwapchainBuffersCount = 10;
 
 		private static ProfilerDatabase instance;
+
+		private static IProfilerContext activeContext;
+		private static volatile IProfilerContext requestedContext;
+
+		/// <summary>
+		/// Responsible for the data flow from the database to the terminal and vice versa.
+		/// </summary>
+		internal static IProfilerContext Context
+		{
+			get => activeContext;
+			set => requestedContext = (value ?? throw new InvalidOperationException());
+		}
 
 		[ThreadStatic]
 		private static ThreadInfo threadInfo;
@@ -227,6 +241,13 @@ namespace Lime.Profiler
 		private static CpuUsageStartInfo fullUpdateCpuUsage;
 		private static bool isUpdateMainWindowTarget;
 
+		/// <summary>
+		/// Called before updating the main application window.
+		/// </summary>
+		internal static event Action MainWindowUpdating;
+
+		private const long InvalidElapsedTime = long.MaxValue;
+
 		internal static void Updating(bool isMainWindowTarget)
 		{
 			isUpdateMainWindowTarget = isMainWindowTarget;
@@ -235,7 +256,6 @@ namespace Lime.Profiler
 			// From Static to ThreadStatic.
 			threadInfo = isUpdateProfilerEnabled ? ThreadInfo.Update : ThreadInfo.Unknown;
 			ownersPool = instance.UpdateOwnersPool;
-			const long InvalidValue = long.MaxValue;
 			if (isUpdateProfilerEnabled) {
 				while (poolExpandingCpuUsages != null && poolExpandingCpuUsages.Count > 0) {
 					instance.UpdateCpuUsagesPool.AddToNewestList(poolExpandingCpuUsages.Dequeue());
@@ -245,7 +265,7 @@ namespace Lime.Profiler
 				FreeResourcesForNextUpdate(frame);
 
 				frame.CommonData.Identifier = instance.ProfiledFramesCount;
-				frame.CommonData.UpdateThreadElapsedTime = InvalidValue;
+				frame.CommonData.UpdateThreadElapsedTime = InvalidElapsedTime;
 				frame.CommonData.UpdateThreadStartTime = Stopwatch.GetTimestamp();
 
 				frame.DrawCommandsState = Frame.DrawCommandsExecution.NotSubmittedToGpu;
@@ -255,14 +275,22 @@ namespace Lime.Profiler
 
 				++instance.ProfiledFramesCount;
 				fullUpdateCpuUsage = CpuUsageStarted();
+				unfinishedFrames.Enqueue(frame.CommonData.Identifier);
 			}
 			if (instance.ProfiledFramesCount > 1) {
 				var previousFrame = CalculatedFramePlace(instance.ProfiledFramesCount - 2);
-				if (previousFrame.CommonData.UpdateThreadElapsedTime == InvalidValue) {
+				if (previousFrame.CommonData.UpdateThreadElapsedTime == InvalidElapsedTime) {
 					previousFrame.CommonData.UpdateThreadElapsedTime =
 						Stopwatch.GetTimestamp() - previousFrame.CommonData.UpdateThreadStartTime;
 				}
 			}
+			if (activeContext != requestedContext) {
+				activeContext?.Detached();
+				activeContext = requestedContext;
+				activeContext.Attached(instance);
+			}
+			activeContext?.MainWindowUpdating();
+			MainWindowUpdating?.Invoke();
 		}
 
 		internal static void Updated()
@@ -313,15 +341,16 @@ namespace Lime.Profiler
 			while (unfinishedFrames.Count > 0) {
 				var frame = CalculatedFramePlace(unfinishedFrames.Peek());
 				if (
+					frame.CommonData.UpdateThreadElapsedTime != InvalidElapsedTime && (
 					frame.DrawCommandsState == Frame.DrawCommandsExecution.Completed ||
-					frame.DrawCommandsState == Frame.DrawCommandsExecution.NotSubmittedToGpu
+					frame.DrawCommandsState == Frame.DrawCommandsExecution.NotSubmittedToGpu)
 					)
 				{
 					long frameIdentifier = unfinishedFrames.Dequeue();
 					if (renderThreadTargetFrameIndex - 1 - frameIdentifier > MaxSwapchainBuffersCount) {
 						throw new System.Exception("Profiler: Incorrect behavior detected!");
 					}
-					instance.LastAvailableFrame = frame.CommonData.Identifier;
+					instance.LastAvailableFrame = frameIdentifier;
 				} else {
 					break;
 				}
@@ -352,7 +381,6 @@ namespace Lime.Profiler
 			threadInfo = isRenderProfilerEnabled ? ThreadInfo.Render : ThreadInfo.Unknown;
 			ownersPool = isRenderProfilerEnabled ? instance.RenderOwnersPool : null;
 			IsBatchBreakReasonsRequired = isBatchBreakReasonsRequired;
-			const long InvalidValue = long.MaxValue;
 			if (isRenderProfilerEnabled) {
 				while (poolExpandingCpuUsages != null && poolExpandingCpuUsages.Count > 0) {
 					instance.UpdateCpuUsagesPool.AddToNewestList(poolExpandingCpuUsages.Dequeue());
@@ -362,7 +390,7 @@ namespace Lime.Profiler
 				FreeResourcesForNextRender();
 
 				frame.CommonData.RenderThreadStartTime = Stopwatch.GetTimestamp();
-				frame.CommonData.RenderThreadElapsedTime = InvalidValue;
+				frame.CommonData.RenderThreadElapsedTime = InvalidElapsedTime;
 
 				frame.RenderCpuUsagesList = instance.RenderCpuUsagesPool.AcquireList();
 				frame.DrawingGpuUsagesList = instance.GpuUsagesPool.AcquireList();
@@ -372,7 +400,7 @@ namespace Lime.Profiler
 			}
 			if (renderThreadTargetFrameIndex > 0) {
 				var previousFrame = CalculatedFramePlace(renderThreadTargetFrameIndex - 1);
-				if (previousFrame.CommonData.RenderThreadElapsedTime == InvalidValue) {
+				if (previousFrame.CommonData.RenderThreadElapsedTime == InvalidElapsedTime) {
 					previousFrame.CommonData.RenderThreadElapsedTime =
 						Stopwatch.GetTimestamp() - previousFrame.CommonData.RenderThreadStartTime;
 				}

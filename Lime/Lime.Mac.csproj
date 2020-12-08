@@ -340,6 +340,7 @@
     <Compile Include="Source\Profilers\TasksProfiler.cs" />
     <Compile Include="Source\Profiler\Contexts\FrameClipboard.cs" />
     <Compile Include="Source\Profiler\Contexts\FrameDataRequest.cs" />
+    <Compile Include="Source\Profiler\Contexts\IProfilerContext.cs" />
     <Compile Include="Source\Profiler\Contexts\IRequest.cs" />
     <Compile Include="Source\Profiler\CpuUsage.cs" />
     <Compile Include="Source\Profiler\Formatting\IInterrupter.cs" />
