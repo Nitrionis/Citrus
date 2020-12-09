@@ -57,7 +57,7 @@ namespace Lime.Profiler
 		long LastAvailableFrame { get; }
 
 		/// <summary>
-		/// Allows you to get a type by GUID.
+		/// Allows you to get a type by identifier.
 		/// </summary>
 		ConditionalWeakTable<Type, TypeId> NativeTypesTable { get; }
 

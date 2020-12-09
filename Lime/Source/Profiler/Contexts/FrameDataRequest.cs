@@ -3,8 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
 using Yuzu;
 using Yuzu.Binary;
 
@@ -14,19 +12,10 @@ namespace Lime.Profiler.Contexts
 
 	internal class FrameDataRequest : IDataSelectionRequest
 	{
-		private static readonly Regex ignoredAssemblies;
-		private static readonly TypesDictionary typesDictionary;
-
-		private static bool typesReloadRequired;
 		private static bool[] requiredDescriptions;
 
 		static FrameDataRequest()
 		{
-			ignoredAssemblies = new Regex(
-				"^(System.*|mscorlib.*|Microsoft.*)",
-				RegexOptions.Compiled
-			);
-			typesDictionary = new TypesDictionary();
 			// 100.000 is just start capacity
 			requiredDescriptions = new bool[100_000];
 		}
@@ -68,51 +57,50 @@ namespace Lime.Profiler.Contexts
 					}
 				}
 			}
-			void SerializeCpuUsage(CpuUsage usage, RingPool<ReferenceTable.RowIndex> pool) {
-				EnsureKeyValuePairFor(usage.TypeIdentifier);
-				writer.Write((uint)usage.Reason);
-				writer.Write(usage.TypeIdentifier.Value);
-				writer.Write(usage.Owners.PackedData);
-				writer.Write(usage.StartTime);
-				writer.Write(usage.FinishTime);
-				SerializeOwners(usage.Owners, pool);
-			}
-			void SerializeGpuUsage(GpuUsage usage, RingPool<ReferenceTable.RowIndex> pool) {
-				EnsureKeyValuePairFor(usage.MaterialTypeIdentifier);
-				writer.Write(usage.MaterialTypeIdentifier.Value);
-				writer.Write(usage.RenderPassIndex);
-				writer.Write(usage.Owners.PackedData);
-				writer.Write(usage.StartTime);
-				writer.Write(usage.AllPreviousFinishTime);
-				writer.Write(usage.FinishTime);
-				writer.Write(usage.TrianglesCount);
-				writer.Write(usage.VerticesCount);
-				SerializeOwners(usage.Owners, pool);
-			}
 			var serializer = new BinarySerializer();
 			bool canAccessFrame = database.CanAccessFrame(FrameIdentifier);
 			serializer.ToWriter(new FrameDataResponse(canAccessFrame, FrameIdentifier), writer);
 			if (canAccessFrame) {
-				var frame = database.GetFrame(FrameIdentifier);
-				for (int i = 0; i < requiredDescriptions.Length; i++) {
-					requiredDescriptions[i] = false;
-				}
-				writer.Write(database.UpdateCpuUsagesPool.GetLength(frame.UpdateCpuUsagesList));
-				foreach (var usage in database.UpdateCpuUsagesPool.Enumerate(frame.UpdateCpuUsagesList)) {
-					SerializeCpuUsage(usage, database.UpdateOwnersPool);
-				}
-				writer.Write(database.RenderCpuUsagesPool.GetLength(frame.RenderCpuUsagesList));
-				foreach (var usage in database.RenderCpuUsagesPool.Enumerate(frame.RenderCpuUsagesList)) {
-					SerializeCpuUsage(usage, database.RenderOwnersPool);
-				}
-				writer.Write(database.GpuUsagesPool.GetLength(frame.DrawingGpuUsagesList));
-				foreach (var usage in database.GpuUsagesPool.Enumerate(frame.DrawingGpuUsagesList)) {
-					SerializeGpuUsage(usage, database.RenderOwnersPool);
-				}
-				if (typesReloadRequired) {
-					ReloadTypes(database);
-				}
-				serializer.ToWriter(typesDictionary, writer);
+				NumberedTypesDictionary.SafeExecute((dictionary) => {
+					void SerializeCpuUsage(CpuUsage usage, RingPool<ReferenceTable.RowIndex> pool) {
+						dictionary.EnsureKeyValuePairFor(usage.TypeIdentifier);
+						writer.Write((uint)usage.Reason);
+						writer.Write(usage.TypeIdentifier.Value);
+						writer.Write(usage.Owners.PackedData);
+						writer.Write(usage.StartTime);
+						writer.Write(usage.FinishTime);
+						SerializeOwners(usage.Owners, pool);
+					}
+					void SerializeGpuUsage(GpuUsage usage, RingPool<ReferenceTable.RowIndex> pool) {
+						dictionary.EnsureKeyValuePairFor(usage.MaterialTypeIdentifier);
+						writer.Write(usage.MaterialTypeIdentifier.Value);
+						writer.Write(usage.RenderPassIndex);
+						writer.Write(usage.Owners.PackedData);
+						writer.Write(usage.StartTime);
+						writer.Write(usage.AllPreviousFinishTime);
+						writer.Write(usage.FinishTime);
+						writer.Write(usage.TrianglesCount);
+						writer.Write(usage.VerticesCount);
+						SerializeOwners(usage.Owners, pool);
+					}
+					var frame = database.GetFrame(FrameIdentifier);
+					for (int i = 0; i < requiredDescriptions.Length; i++) {
+						requiredDescriptions[i] = false;
+					}
+					writer.Write(database.UpdateCpuUsagesPool.GetLength(frame.UpdateCpuUsagesList));
+					foreach (var usage in database.UpdateCpuUsagesPool.Enumerate(frame.UpdateCpuUsagesList)) {
+						SerializeCpuUsage(usage, database.UpdateOwnersPool);
+					}
+					writer.Write(database.RenderCpuUsagesPool.GetLength(frame.RenderCpuUsagesList));
+					foreach (var usage in database.RenderCpuUsagesPool.Enumerate(frame.RenderCpuUsagesList)) {
+						SerializeCpuUsage(usage, database.RenderOwnersPool);
+					}
+					writer.Write(database.GpuUsagesPool.GetLength(frame.DrawingGpuUsagesList));
+					foreach (var usage in database.GpuUsagesPool.Enumerate(frame.DrawingGpuUsagesList)) {
+						SerializeGpuUsage(usage, database.RenderOwnersPool);
+					}
+					serializer.ToWriter(dictionary.FindAndGetTypeNames(database), writer);
+				});
 				for (uint i = 0; i < requiredDescriptions.Length; i++) {
 					if (requiredDescriptions[i]) {
 						writer.Write(i);
@@ -125,25 +113,6 @@ namespace Lime.Profiler.Contexts
 				}
 				// End of descriptions.
 				writer.Write(uint.MaxValue);
-			}
-		}
-
-		private static void EnsureKeyValuePairFor(TypeIdentifier identifier) =>
-			typesReloadRequired |= !typesDictionary.ContainsKey(identifier.Value);
-
-		private static IEnumerable<Type> GetTypes() =>
-			AppDomain.CurrentDomain.GetAssemblies()
-			.Where(a => !ignoredAssemblies.IsMatch(a.FullName))
-			.SelectMany(s => s.GetTypes());
-
-		private static void ReloadTypes(IProfilerDatabase database)
-		{
-			foreach (var t in GetTypes()) {
-				if (database.NativeTypesTable.TryGetValue(t, out var identifier)) {
-					if (!typesDictionary.ContainsKey(identifier.Value)) {
-						typesDictionary.Add(identifier.Value, t.FullName);
-					}
-				}
 			}
 		}
 	}

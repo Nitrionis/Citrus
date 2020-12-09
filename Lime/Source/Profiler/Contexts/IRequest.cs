@@ -8,13 +8,7 @@ namespace Lime.Profiler.Contexts
 	/// <summary>
 	/// Basic interface for all requests.
 	/// </summary>
-	internal interface IRequest
-	{
-		/// <summary>
-		/// This is the  <see cref="ProfiledFrame.Identifier"/>.
-		/// </summary>
-		long FrameIdentifier { get; }
-	}
+	internal interface IRequest { }
 
 	/// <summary>
 	/// Used to change profiling options.
@@ -57,14 +51,7 @@ namespace Lime.Profiler.Contexts
 		[YuzuMember]
 		private bool value;
 
-		[YuzuMember]
-		public long FrameIdentifier { get; }
-
-		public ChangeProfilerEnabled(bool value, long frameIdentifier)
-		{
-			this.value = value;
-			FrameIdentifier = frameIdentifier;
-		}
+		public ChangeProfilerEnabled(bool value) => this.value = value;
 
 		/// <inheritdoc/>
 		public void Execute(IProfilerDatabase database) => database.ProfilerEnabled = value;
@@ -75,14 +62,7 @@ namespace Lime.Profiler.Contexts
 		[YuzuMember]
 		private bool value;
 
-		[YuzuMember]
-		public long FrameIdentifier { get; }
-
-		public ChangeBatchBreakReasonsRequired(bool value, long frameIdentifier)
-		{
-			this.value = value;
-			FrameIdentifier = frameIdentifier;
-		}
+		public ChangeBatchBreakReasonsRequired(bool value) => this.value = value;
 
 		/// <inheritdoc/>
 		public void Execute(IProfilerDatabase database) => database.BatchBreakReasonsRequired = value;
