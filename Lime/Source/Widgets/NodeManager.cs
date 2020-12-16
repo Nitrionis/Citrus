@@ -181,6 +181,9 @@ namespace Lime
 
 		public void Update(float delta)
 		{
+#if PROFILER
+			if (ProfilerDatabase.MustSkipSceneUpdate && SceneProfilingInfo.NodeManager == this) return;
+#endif // PROFILER
 			foreach (var p in Processors) {
 				ActiveProcessor = p;
 #if PROFILER

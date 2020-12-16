@@ -13,9 +13,15 @@ namespace Lime.Profiler.Network
 
 	internal class Server : IConnection
 	{
-		private MessageProcessor messageProcessor;
+		private readonly MessageProcessor messageProcessor;
+		private volatile bool isRemoteDeviceHasBeenConnected;
 		private volatile bool isCloseRequested;
 
+		/// <summary>
+		/// Whether a remote device has been connected.
+		/// </summary>
+		public bool IsRemoteDeviceHasBeenConnected => isRemoteDeviceHasBeenConnected;
+		
 		/// <inheritdoc/>
 		public bool IsAlive => messageProcessor.IsAlive;
 
@@ -47,6 +53,7 @@ namespace Lime.Profiler.Network
 					}
 					client = listener.AcceptTcpClient();
 					listener.Stop();
+					isRemoteDeviceHasBeenConnected = true;
 					Connection.Decorate(client);
 					messageProcessor.RunOverConnection(client, interrupter);
 				} catch (System.Exception exception) {
@@ -60,13 +67,20 @@ namespace Lime.Profiler.Network
 		}
 
 		/// <inheritdoc/>
-		public void LazySend(IMessage message) => messageProcessor?.LazySend(message);
+		public void LazySend(IMessage message)
+		{
+			if (messageProcessor.IsAlive) {
+				messageProcessor.LazySend(message);
+			}
+		}
 
 		/// <inheritdoc/>
 		public void RequestClose()
 		{
 			isCloseRequested = true;
-			messageProcessor?.RequestClose();
+			if (messageProcessor.IsAlive) {
+				messageProcessor.RequestClose();
+			}
 		}
 	}
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Lime;
 #if PROFILER
+using Lime.Profiler;
 using Lime.Profiler.Graphics;
 #endif // PROFILER
 using Tangerine.Common.FilesDropHandlers;
@@ -179,6 +180,8 @@ namespace Tangerine.UI.SceneView
 					var sceneTransform2 = LocalToWorldTransform * Renderer.Transform2;
 					Renderer.Transform2 = sceneTransform2;
 #if PROFILER
+					Renderer.Flush();
+					SceneRenderScope.Enter();
 					RenderTargetQueue renderTargetQueue = null;
 					RenderTexture renderTexture = null;
 					if (Overdraw.EnabledAtRenderThread) {
@@ -226,6 +229,8 @@ namespace Tangerine.UI.SceneView
 						OverdrawForeground.Render();
 						Renderer.PopState();
 					}
+					Renderer.Flush();
+					SceneRenderScope.Leave();
 #endif // PROFILER
 				}
 

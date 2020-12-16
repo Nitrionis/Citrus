@@ -9,20 +9,23 @@ namespace Lime.Profiler.Contexts
 	/// </summary>
 	public class FrameClipboard
 	{
-		public readonly Dictionary<TypeIdentifier, string> TypesDictionary;
+		public long FrameIdentifier;
 
-		public readonly ReferenceTable ReferenceTable;
+		public Dictionary<int, string> TypesDictionary;
 
-		public readonly RingPool<ReferenceTable.RowIndex> UpdateOwnersPool;
-		public readonly RingPool<ReferenceTable.RowIndex> RenderOwnersPool;
+		public ReferenceTable ReferenceTable;
 
-		public readonly List<CpuUsage> UpdateCpuUsages;
-		public readonly List<CpuUsage> RenderCpuUsages;
-		public readonly List<GpuUsage> GpuUsages;
+		public RingPool<ReferenceTable.RowIndex> UpdateOwnersPool;
+		public RingPool<ReferenceTable.RowIndex> RenderOwnersPool;
+
+		public List<CpuUsage> UpdateCpuUsages;
+		public List<CpuUsage> RenderCpuUsages;
+		public List<GpuUsage> GpuUsages;
 
 		public FrameClipboard()
 		{
-			TypesDictionary = new Dictionary<TypeIdentifier, string>();
+			FrameIdentifier = -1;
+			TypesDictionary = new Dictionary<int, string>();
 			ReferenceTable = new ReferenceTable();
 			UpdateOwnersPool = new RingPool<ReferenceTable.RowIndex>();
 			RenderOwnersPool = new RingPool<ReferenceTable.RowIndex>();

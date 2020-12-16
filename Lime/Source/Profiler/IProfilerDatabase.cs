@@ -6,6 +6,8 @@ using System.Runtime.CompilerServices;
 
 namespace Lime.Profiler
 {
+	using Task = System.Threading.Tasks.Task;
+
 	public class Frame
 	{
 		public ProfiledFrame CommonData;
@@ -29,7 +31,7 @@ namespace Lime.Profiler
 		public TypeId() => Value = Interlocked.Increment(ref counter);
 	}
 
-	internal interface IProfilerDatabase
+	public interface IProfilerDatabase
 	{
 		/// <summary>
 		/// Allows you to enable or disable the profiler.
@@ -40,6 +42,16 @@ namespace Lime.Profiler
 		/// If requested, the profiler will collect batch break reasons.
 		/// </summary>
 		bool BatchBreakReasonsRequired { get; set; }
+
+		/// <summary>
+		/// If true, you must to skip the scene update.
+		/// </summary>
+		bool IsSceneUpdateFrozen { get; }
+
+		/// <summary>
+		/// Use to change <see cref="IsSceneUpdateFrozen"/>.
+		/// </summary>
+		void SetSceneUpdateFrozen(UpdateSkipOptions options);
 
 		/// <summary>
 		/// The number of frames during which the profiled frame data is stored in the database.
@@ -57,7 +69,7 @@ namespace Lime.Profiler
 		long LastAvailableFrame { get; }
 
 		/// <summary>
-		/// Allows you to get a type by GUID.
+		/// Allows you to get a type by identifier.
 		/// </summary>
 		ConditionalWeakTable<Type, TypeId> NativeTypesTable { get; }
 
@@ -105,6 +117,11 @@ namespace Lime.Profiler
 		/// Returns the frame with specified identifier or null if it is impossible to obtain.
 		/// </summary>
 		Frame GetFrame(long identifier);
+
+		/// <summary>
+		/// Prevents the profiler from turning on until the task is completed.
+		/// </summary>
+		void PreventProfilingWhileRunning(Task task);
 	}
 }
 

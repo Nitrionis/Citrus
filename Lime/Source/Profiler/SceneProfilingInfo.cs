@@ -8,5 +8,22 @@ namespace Lime.Profiler
 		/// </summary>
 		public static object NodeManager;
 	}
+	
+	public static class SceneRenderScope
+	{
+		private static int scopeCount = 0;
+
+		/// <summary>
+		/// Indicates whether we are inside the OverdrawMaterialScope or not.
+		/// </summary>
+#if TANGERINE 
+		public static bool IsInside => scopeCount > 0;
+#else
+		public static bool IsInside => true;
+#endif // TANGERINE
+		
+		public static void Enter() => ++scopeCount;
+		public static void Leave() => --scopeCount;
+	}
 }
 #endif // PROFILER

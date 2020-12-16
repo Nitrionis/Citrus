@@ -38,7 +38,7 @@ namespace Lime
 				Batches.Add(typedLastBatch);
 				lastBatch = typedLastBatch;
 #if PROFILER
-				typedLastBatch.ProfilingInfo.UsageReasons = CpuUsage.Reasons.BatchRender;
+				typedLastBatch.ProfilingInfo.UsageReasons = batchBreakReasons;
 #endif // PROFILER
 			}
 #if PROFILER

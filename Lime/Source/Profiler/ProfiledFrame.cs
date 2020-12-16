@@ -2,6 +2,7 @@
 
 using System;
 using System.Diagnostics;
+using Lime.Profiler.Network;
 using Yuzu;
 
 namespace Lime.Profiler
@@ -13,7 +14,7 @@ namespace Lime.Profiler
 	/// <para>In cases where objects are not rendered after updating, some parameters will be set to 0.</para>
 	/// <para>When we talk about an update or render, we mean an update or render of only the main window.</para>
 	/// </remarks>
-	public struct ProfiledFrame
+	public struct ProfiledFrame : IMessage
 	{
 		/// <summary>
 		/// Unique identifier (number) of the frame.

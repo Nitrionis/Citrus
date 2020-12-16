@@ -287,7 +287,7 @@ namespace Tangerine.Core
 			Format = format;
 			Path = string.Format(untitledPathFormat, untitledCounter++);
 			if (rootType == null) {
-				Container = RootNodeUnwrapped = RootNode = new Frame { Size = defaultSceneSize };
+				Container = RootNodeUnwrapped = RootNode = new Lime.Frame { Size = defaultSceneSize };
 			} else {
 				var constructor = rootType.GetConstructor(Type.EmptyTypes);
 				Container = RootNodeUnwrapped = RootNode = (Node)constructor.Invoke(new object[] { });

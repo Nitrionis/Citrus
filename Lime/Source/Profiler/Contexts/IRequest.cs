@@ -1,6 +1,8 @@
 #if PROFILER
 
 using System.IO;
+using Lime.Profiler.Graphics;
+using Lime.Profiler.Network;
 using Yuzu;
 
 namespace Lime.Profiler.Contexts
@@ -8,18 +10,12 @@ namespace Lime.Profiler.Contexts
 	/// <summary>
 	/// Basic interface for all requests.
 	/// </summary>
-	internal interface IRequest
-	{
-		/// <summary>
-		/// This is the  <see cref="ProfiledFrame.Identifier"/>.
-		/// </summary>
-		long FrameIdentifier { get; }
-	}
+	public interface IRequest { }
 
 	/// <summary>
 	/// Used to change profiling options.
 	/// </summary>
-	internal interface IOptionsChangeRequest : IRequest
+	internal interface IOptionsChangeRequest : IRequest, IMessage
 	{
 		/// <remarks>
 		/// <para>This method should not access data in the database.</para>
@@ -31,25 +27,56 @@ namespace Lime.Profiler.Contexts
 	/// <summary>
 	/// Used to query data from IProfilerDatabase.
 	/// </summary>
-	internal interface IDataSelectionRequest : IRequest
+	internal interface IDataSelectionRequest : IRequest, IMessage
 	{
+		/// <summary>
+		/// Allows you to determine if processing of this request has started.
+		/// </summary>
+		bool IsRunning { get; set; }
+
+		/// <summary>
+		/// Handles response of the data selection request on the terminal side.
+		/// </summary>
+		IResponseProcessor ResponseProcessor { get; set; }
+
+		/// <summary>
+		/// Fetch data on a database side.
+		/// </summary>
 		/// <remarks>
-		/// <para>After executing this method, this object will be sent back.</para>
-		/// <para>Profiling data collection and scene update will be paused before this method starts executing.</para>
+		/// Profiling data collection and scene update will be paused before this method starts executing.
 		/// </remarks>
-		void Execute(IProfilerDatabase database, BinaryWriter writer);
+		void FetchData(IProfilerDatabase database, BinaryWriter writer);
 	}
 
 	/// <summary>
+	/// Processes a response to a data selection request.
+	/// </summary>
+	public interface IResponseProcessor
+	{
+		/// <summary>
+		/// Handles the response on the terminal side.
+		/// </summary>
+		void ProcessResponse(object response);
+	}
+
+	/// <summary>
+	/// Common interface for all responses.
+	/// </summary>
+	public interface IDataSelectionResponse
+	{
+		bool IsSuccessed { get; set; }
+	}
+	
+	/// <summary>
 	/// Basic interface for all responses containing data.
 	/// </summary>
-	internal interface IDataSelectionResponse
+	internal interface IDataSelectionResponseBuilder
 	{
 		/// <summary>
 		/// <para>Called immediately after this object is deserialized.</para>
 		/// <para>Allows you to custom deserialize data following an object.</para>
 		/// </summary>
-		void DeserializeTail(FrameClipboard clipboard, BinaryReader reader);
+		IDataSelectionResponse Build(FrameClipboard clipboard, BinaryReader reader);
 	}
 
 	internal class ChangeProfilerEnabled : IOptionsChangeRequest
@@ -57,14 +84,7 @@ namespace Lime.Profiler.Contexts
 		[YuzuMember]
 		private bool value;
 
-		[YuzuMember]
-		public long FrameIdentifier { get; }
-
-		public ChangeProfilerEnabled(bool value, long frameIdentifier)
-		{
-			this.value = value;
-			FrameIdentifier = frameIdentifier;
-		}
+		public ChangeProfilerEnabled(bool value) => this.value = value;
 
 		/// <inheritdoc/>
 		public void Execute(IProfilerDatabase database) => database.ProfilerEnabled = value;
@@ -75,18 +95,37 @@ namespace Lime.Profiler.Contexts
 		[YuzuMember]
 		private bool value;
 
-		[YuzuMember]
-		public long FrameIdentifier { get; }
-
-		public ChangeBatchBreakReasonsRequired(bool value, long frameIdentifier)
-		{
-			this.value = value;
-			FrameIdentifier = frameIdentifier;
-		}
+		public ChangeBatchBreakReasonsRequired(bool value) => this.value = value;
 
 		/// <inheritdoc/>
 		public void Execute(IProfilerDatabase database) => database.BatchBreakReasonsRequired = value;
 	}
+
+	internal class ChangeSceneUpdateFrozen : IOptionsChangeRequest
+	{
+		[YuzuMember]
+		private UpdateSkipOptions value;
+
+		public ChangeSceneUpdateFrozen(UpdateSkipOptions value) => this.value = value;
+
+		/// <inheritdoc/>
+		public void Execute(IProfilerDatabase database) => database.SetSceneUpdateFrozen(value);
+	}
+
+	internal class ChangeOverdrawEnabled : IOptionsChangeRequest
+	{
+		[YuzuMember]
+		private bool value;
+
+		public ChangeOverdrawEnabled(bool value) => this.value = value;
+
+		/// <inheritdoc/>
+		public void Execute(IProfilerDatabase database) => Overdraw.Enabled = value;
+	}
+	
+	internal interface IContextOptionsChangeRequest : IMessage {}
+	
+	internal class ContinueSendProfilerOptions : IContextOptionsChangeRequest {}
 }
 
 #endif // PROFILER

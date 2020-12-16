@@ -15,7 +15,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug</OutputPath>
-    <DefineConstants>DEBUG;WIN</DefineConstants>
+    <DefineConstants>DEBUG;WIN;PROFILER</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -30,7 +30,7 @@
     <WarningLevel>4</WarningLevel>
     <ConsolePause>false</ConsolePause>
     <Prefer32Bit>false</Prefer32Bit>
-    <DefineConstants>WIN</DefineConstants>
+    <DefineConstants>WIN;PROFILER</DefineConstants>
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <ItemGroup>

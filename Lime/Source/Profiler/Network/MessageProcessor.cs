@@ -39,8 +39,10 @@ namespace Lime.Profiler.Network
 		private CancellationTokenSource cancellationTokenSource;
 		private bool isRemoteCancellationRequest;
 
+		private volatile bool isAlive;
+		
 		/// <inheritdoc/>
-		public bool IsAlive { get; private set; }
+		public bool IsAlive { get => isAlive; private set => isAlive = value; }
 
 		/// <inheritdoc/>
 		public event Action Closed;
@@ -98,24 +100,17 @@ namespace Lime.Profiler.Network
 						if (isRemoteCancellationRequest) {
 							break;
 						}
-						bool isSomethingSent = false;
 						while (!interrupter.IsSerializationPaused && !awaitingSend.IsEmpty) {
 							if (awaitingSend.TryDequeue(out IMessage message)) {
 								serializer.ToWriter(message, outputStream);
 								interrupter.AfterSerialization(outputStream, message);
-								isSomethingSent = true;
 							} else {
 								throw new InvalidOperationException("Invalid processing order!");
 							}
 						}
-						if (!isSomethingSent) {
-							serializer.ToWriter(new ServiceMessage(), outputStream);
-						}
 						outputStream.Flush();
 						await Task.Delay(IterationDelay);
 					}
-				} catch (TaskCanceledException) {
-					// Suppress
 				} catch (System.Exception exception) {
 					// Suppress
 					System.Console.WriteLine(exception);

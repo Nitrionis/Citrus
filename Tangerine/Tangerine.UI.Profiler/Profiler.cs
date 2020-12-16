@@ -21,12 +21,14 @@ namespace Tangerine.UI
 			RootWidget = new Widget {
 				Layout = new VBoxLayout {
 					Spacing = 6
-				}
+				},
+				Anchors = Anchors.LeftRight
 			};
 			panel.ContentWidget.AddNode(RootWidget);
 #if PROFILER
 			var tabs = new ThemedTabbedWidget();
 			tabs.AddTab("Overdraw", new OverdrawController(), isActive: true);
+			tabs.AddTab("Profiler", new ProfilerUI(), isActive: false);
 			RootWidget.AddNode(tabs);
 #endif // PROFILER
 		}

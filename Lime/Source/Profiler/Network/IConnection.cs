@@ -60,7 +60,7 @@ namespace Lime.Profiler.Network
 		/// <summary>
 		/// Connection timeout in milliseconds.
 		/// </summary>
-		public const int Timeout = 5000;
+		public const int Timeout = 1000;
 
 		public static void Decorate(TcpClient client)
 		{

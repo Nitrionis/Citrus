@@ -48,10 +48,20 @@ namespace Lime.Profiler.Network
 		}
 
 		/// <inheritdoc/>
-		public void LazySend(IMessage message) => messageProcessor?.LazySend(message);
+		public void LazySend(IMessage message)
+		{
+			if (messageProcessor.IsAlive) {
+				messageProcessor.LazySend(message);
+			}
+		}
 
 		/// <inheritdoc/>
-		public void RequestClose() => messageProcessor?.RequestClose();
+		public void RequestClose()
+		{
+			if (messageProcessor.IsAlive) {
+				messageProcessor.RequestClose();
+			}
+		}
 	}
 }
 
