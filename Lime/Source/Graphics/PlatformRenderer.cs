@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Lime.Graphics.Platform;
 #if PROFILER
+using Lime.Profiler;
 using Lime.Profiler.Graphics;
 #endif // PROFILER
 
@@ -300,6 +301,9 @@ namespace Lime
 		{
 			DrawCount = 0;
 			Reset();
+#if PROFILER
+			PlatformRendererStatistics.Instance = new PlatformRendererStatistics();
+#endif // PROFILER
 		}
 
 		public static void SetTextureLegacy(int slot, ITexture texture)
@@ -475,6 +479,9 @@ namespace Lime
 			PreDraw(topology);
 			Context.Draw(startVertex, vertexCount);
 			DrawCount++;
+#if PROFILER
+			PlatformRendererStatistics.Instance.UpdateFrameStatistics(topology, vertexCount);
+#endif // PROFILER
 		}
 
 		public static void DrawIndexed(PrimitiveTopology topology, int startIndex, int indexCount, int baseVertex = 0)
@@ -482,6 +489,9 @@ namespace Lime
 			PreDraw(topology);
 			Context.DrawIndexed(startIndex, indexCount, baseVertex);
 			DrawCount++;
+#if PROFILER
+			PlatformRendererStatistics.Instance.UpdateFrameStatistics(topology, indexCount);
+#endif // PROFILER
 		}
 
 		public static byte[] GetPipelineCacheData()

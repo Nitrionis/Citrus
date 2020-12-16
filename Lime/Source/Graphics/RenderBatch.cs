@@ -60,7 +60,7 @@ namespace Lime
 		public void Render()
 		{
 #if PROFILER
-			ProfilingInfo.Rendering();
+			ProfilingInfo.Rendering(Material.PassCount);
 #endif // PROFILER
 			PlatformRenderer.SetTexture(0, Texture1);
 			PlatformRenderer.SetTexture(1, Texture2);

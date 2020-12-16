@@ -4,6 +4,18 @@ using System;
 
 namespace Lime.Profiler.Graphics
 {
+	internal class RenderBatchStatistics
+	{
+		public static int FullSavedByBatching;
+		public static int SceneSavedByBatching;
+
+		public static void Reset()
+		{
+			FullSavedByBatching = 0;
+			SceneSavedByBatching = 0;
+		}
+	}
+	
 	/// <summary>
 	/// Used to accumulate profiling information from render calls to various objects.
 	/// </summary>
@@ -44,10 +56,15 @@ namespace Lime.Profiler.Graphics
 			ownersBuffer[currentOwnersCount++] = node.RowIndex;
 		}
 
-		public void Rendering()
+		public void Rendering(int materialPassCount)
 		{
 			if (IsInsideOverdrawMaterialScope) {
 				OverdrawMaterialScope.Enter();
+			}
+			int savedByBatching = Math.Max(0, (int)currentOwnersCount - 1);
+			RenderBatchStatistics.FullSavedByBatching += savedByBatching;
+			if (SceneRenderScope.IsInside) {
+				RenderBatchStatistics.SceneSavedByBatching += savedByBatching;
 			}
 			usageStartInfo = ProfilerDatabase.CpuUsageStarted();
 		}

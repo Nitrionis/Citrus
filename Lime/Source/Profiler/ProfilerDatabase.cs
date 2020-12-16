@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Lime.Profiler.Graphics;
 
 namespace Lime.Profiler
 {
@@ -371,6 +372,7 @@ namespace Lime.Profiler
 				}
 				frame.CommonData.UpdateThreadGarbageCollections = garbageCollections;
 				frame.CommonData.EndOfUpdateMemory = GC.GetTotalMemory(forceFullCollection: false);
+				// It takes a long time to get this parameter.
 				//frame.CommonData.EndOfUpdatePhysicalMemory = Process.GetCurrentProcess().WorkingSet64;
 				frame.CommonData.UpdateBodyElapsedTime =
 					Stopwatch.GetTimestamp() - frame.CommonData.UpdateThreadStartTime;
@@ -436,6 +438,7 @@ namespace Lime.Profiler
 		{
 			isRenderMainWindowTarget = isMainWindowTarget;
 			if (!isMainWindowTarget) return;
+			RenderBatchStatistics.Reset();
 			threadInfo = isRenderProfilerEnabled ? ThreadInfo.Render : ThreadInfo.Unknown;
 			ownersPool = isRenderProfilerEnabled ? instance.RenderOwnersPool : null;
 			IsBatchBreakReasonsRequired = isBatchBreakReasonsRequired;
@@ -477,9 +480,20 @@ namespace Lime.Profiler
 				}
 				frame.CommonData.RenderThreadGarbageCollections = garbageCollections;
 				frame.CommonData.EndOfRenderMemory = GC.GetTotalMemory(forceFullCollection: false);
+				// It takes a long time to get this parameter.
 				//frame.CommonData.EndOfRenderPhysicalMemory = Process.GetCurrentProcess().WorkingSet64;
 				frame.CommonData.RenderBodyElapsedTime =
 					Stopwatch.GetTimestamp() - frame.CommonData.RenderThreadStartTime;
+				frame.CommonData.FullSavedByBatching = RenderBatchStatistics.FullSavedByBatching;
+				frame.CommonData.SceneSavedByBatching = RenderBatchStatistics.SceneSavedByBatching;
+				var rendererStatistics = PlatformRendererStatistics.Instance;
+				frame.CommonData.FullDrawCallCount = rendererStatistics.FullDrawCallsCount;
+				frame.CommonData.SceneDrawCallCount = rendererStatistics.SceneDrawCallsCount;
+				frame.CommonData.FullVerticesCount = rendererStatistics.FullVertexCount;
+				frame.CommonData.SceneVerticesCount = rendererStatistics.SceneVertexCount;
+				frame.CommonData.FullTrianglesCount = rendererStatistics.FullTrianglesCount;
+				frame.CommonData.SceneTrianglesCount = rendererStatistics.SceneTrianglesCount;
+
 				CpuUsageFinished(fullRenderCpuUsage, Owners.Empty, CpuUsage.Reasons.FullRender, TypeIdentifier.Empty);
 			}
 			DenyInputFromThread();
