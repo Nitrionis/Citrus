@@ -56,13 +56,16 @@
     <Reference Include="Xamarin.Mac" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChartsPanel.cs" />
     <Compile Include="FixedCapacityQueue.cs" />
+    <Compile Include="IconMaterial.cs" />
     <Compile Include="IpDialog.cs" />
     <Compile Include="Charts\ChartsCommon.cs" />
     <Compile Include="Charts\FixedHorizontalSpacingCharts.cs" />
     <Compile Include="Charts\FixedSpacingChartsExtension.cs" />
     <Compile Include="Charts\LineCharts.cs" />
     <Compile Include="Charts\StackedAreaCharts.cs" />
+    <Compile Include="OptionsPanel.cs" />
     <Compile Include="OverdrawController.cs" />
     <Compile Include="Charts\ChartsLegend.cs" />
     <Compile Include="Charts\ChartsMaterial.cs" />
