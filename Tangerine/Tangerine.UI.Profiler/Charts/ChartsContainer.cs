@@ -1,3 +1,5 @@
+#if PROFILER
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -38,7 +40,7 @@ namespace Tangerine.UI.Charts
 			get { return slotIndex; }
 			set {
 				if (slotIndex != -1) {
-					throw new NotImplementedException();
+					throw new InvalidOperationException();
 				}
 				slotIndex = value;
 			}
@@ -167,3 +169,5 @@ namespace Tangerine.UI.Charts
 		}
 	}
 }
+
+#endif // PROFILER

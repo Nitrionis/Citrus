@@ -1,3 +1,5 @@
+#if PROFILER
+
 using System;
 using System.Collections.ObjectModel;
 using Lime;
@@ -188,3 +190,5 @@ namespace Tangerine.UI.Charts
 		}
 	}
 }
+
+#endif // PROFILER

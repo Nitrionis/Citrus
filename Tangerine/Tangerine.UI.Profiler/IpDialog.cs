@@ -1,3 +1,5 @@
+#if PROFILER
+
 using System.Net;
 using Lime;
 
@@ -102,3 +104,5 @@ namespace Tangerine.UI
 		}
 	}
 }
+
+#endif // PROFILER

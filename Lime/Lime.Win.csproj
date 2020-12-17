@@ -442,6 +442,7 @@
     <Compile Include="Source\Profiler\Contexts\IRequest.cs" />
     <Compile Include="Source\Profiler\GpuUsage.cs" />
     <Compile Include="Source\Profiler\Graphics\Overdraw.cs" />
+    <Compile Include="Source\Profiler\Graphics\PlatformRendererStatistics.cs" />
     <Compile Include="Source\Profiler\Graphics\RenderBatchProfilingInfo.cs" />
     <Compile Include="Source\Profiler\Graphics\RenderObjectOwnerInfo.cs" />
     <Compile Include="Source\Profiler\IProfileableObject.cs" />

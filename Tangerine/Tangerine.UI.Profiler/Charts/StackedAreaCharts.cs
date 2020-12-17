@@ -1,3 +1,5 @@
+#if PROFILER
+
 using Lime;
 using System;
 
@@ -121,3 +123,5 @@ namespace Tangerine.UI.Charts
 		}
 	}
 }
+
+#endif // PROFILER

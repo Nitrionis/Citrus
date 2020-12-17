@@ -1,3 +1,5 @@
+#if PROFILER
+
 using System;
 using static Tangerine.UI.Charts.FixedHorizontalSpacingCharts;
 
@@ -45,3 +47,5 @@ namespace Tangerine.UI.Charts
 		}
 	}
 }
+
+#endif // PROFILER

@@ -1,3 +1,5 @@
+#if PROFILER
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,7 +41,7 @@ namespace Tangerine.UI.Charts
 				labelsContainer.AddNode(labelWidget);
 				valuesContainer.AddNode(valueWidget);
 			}
-			Layout = new HBoxLayout() { Spacing = 4 };
+			Layout = new HBoxLayout { Spacing = 4 };
 			DecorateContainer(checkboxesContainer);
 			DecorateContainer(labelsContainer);
 			DecorateContainer(valuesContainer);
@@ -73,3 +75,5 @@ namespace Tangerine.UI.Charts
 		}
 	}
 }
+
+#endif // PROFILER

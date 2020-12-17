@@ -1,3 +1,5 @@
+#if PROFILER
+
 using System.Collections;
 using System.Collections.Generic;
 
@@ -81,3 +83,5 @@ namespace Tangerine.UI
 		}
 	}
 }
+
+#endif // PROFILER
