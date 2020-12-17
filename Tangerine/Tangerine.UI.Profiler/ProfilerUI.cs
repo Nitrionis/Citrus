@@ -1,10 +1,12 @@
 #if PROFILER
 
+using System;
 using Lime;
 using Lime.Profiler;
 using Lime.Profiler.Contexts;
 using Lime.Profiler.Graphics;
 using Tangerine.Core;
+using Tangerine.UI.Charts;
 
 namespace Tangerine.UI
 {
@@ -96,12 +98,56 @@ namespace Tangerine.UI
 			var optionsPanel = new OptionsPanel();
 			optionsButton.Clicked += () => optionsPanel.Visible = !optionsPanel.Visible;
 			Nodes.Add(optionsPanel);
-			var (chartsSearchButton, chartsSearchMaterial) = CreateButton("Profiler.Search");
-			var (timelineSearchButton, timelineSearchMaterial) = CreateButton("Profiler.Search");
-			chartsSearchButton.Enabled = false;
-			timelineSearchButton.Enabled = false;
-			chartsSearchMaterial.Color = defaultButtonColor;
-			timelineSearchMaterial.Color = defaultButtonColor;
+			Image CreateSearchIcon() => new Image(IconPool.GetTexture("Profiler.Search")) {
+				Material = new IconMaterial {
+					Color = defaultButtonColor
+				},
+				Padding = new Thickness(2),
+				MinMaxSize = new Vector2(22, 22),
+				Size = new Vector2(22, 22),
+			};
+			var chartsParameters = new FixedHorizontalSpacingCharts.Parameters {
+				ControlPointsCount = 160,
+				ChartsCount = 2,
+				ControlPointsSpacing = 5
+			};
+			var chartsGroup = new StackedAreaCharts(chartsParameters);
+			var chartsLegend = new ChartsLegend(new [] { chartsGroup }, new [] {
+				new ChartsLegend.ItemDescription {
+					Label = "Update",
+					ValueFormat = "0.##"
+				}, 
+				new ChartsLegend.ItemDescription {
+					Label = "Selected",
+					ValueFormat = "0.##"
+				}
+			});
+			var chartsPanel = new Widget {
+				Layout = new HBoxLayout(),
+				Padding = new Thickness(4, 4, 2, 0),
+				Nodes = {
+					new Widget {
+						Layout = new VBoxLayout(),
+						Padding = new Thickness(0, 8, 4, 4),
+						Nodes = {
+							new ThemedSimpleText("Main Thread"),
+							chartsLegend,
+						}
+					},
+					new ChartsContainer(new [] { chartsGroup }) {
+						BackgroundColor = new Color4(63, 63, 63),
+						MinMaxHeight = 64
+					}
+				}
+			};
+			var r = new Random();
+			chartsGroup.Updating += delta => {
+				foreach (var chart in chartsGroup.Charts) {
+					chart.Enqueue(r.RandomFloat());
+				}
+				chartsGroup.Rebuild();
+			};
+			
 			Nodes.Add(new Widget {
 				Presenter = new WidgetFlatFillPresenter(
 					ColorTheme.Current.IsDark ?
@@ -118,10 +164,13 @@ namespace Tangerine.UI
 							new ThemedSimpleText("Charts") {
 								Padding = new Thickness(0, 21, 2, 0),
 							},
-							chartsSearchButton,
+							CreateSearchIcon(),
 							new ThemedEditBox()
 						}
 					},
+					chartsPanel,
+					new ThemedSimpleText("Render Thread Charts"),
+					new ThemedSimpleText("Gpu Charts"),
 					new Widget {
 						Layout = new HBoxLayout(),
 						Padding = new Thickness(4, 4, 0, 0),
@@ -129,7 +178,7 @@ namespace Tangerine.UI
 							new ThemedSimpleText("Timelines") {
 								Padding = new Thickness(0, 4, 2, 0),
 							},
-							timelineSearchButton,
+							CreateSearchIcon(),
 							new ThemedEditBox()
 						}
 					}

@@ -44,6 +44,9 @@ namespace Lime.Profiler.Contexts
 
 		public RemoteTerminalContext(IPEndPoint ipEndPoint)
 		{
+#if !TANGERINE
+			throw new InvalidOperationException();
+#endif // !TANGERINE
 			requests = new Queue<IRequest>();
 			responses = new ConcurrentQueue<object>();
 			frameClipboard = new FrameClipboard();

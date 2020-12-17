@@ -9,6 +9,16 @@ namespace Tangerine.UI.Charts
 	{
 		private readonly ChartsGroupMeshBuilder meshBuilder;
 
+		/// <summary>
+		/// The maximum value of the charts of the last rebuild.
+		/// </summary>
+		public float LastRebuildChartsMaxValue => meshBuilder.LastRebuildChartsMaxValue;
+		
+		/// <summary>
+		/// Scaling factor of the charts of the last rebuild.
+		/// </summary>
+		public float LastRebuildScaleCoefficient => meshBuilder.LastRebuildScaleCoefficient;
+		
 		public StackedAreaCharts(Parameters parameters) : base(parameters)
 		{
 			if (parameters.ControlPointsCount < 2) {
@@ -18,6 +28,9 @@ namespace Tangerine.UI.Charts
 			Presenter = new ChartsCommon.Presenter(this, meshBuilder);
 		}
 
+		/// <summary>
+		/// Rebuilds the mesh charts. It doesn't happen automatically
+		/// </summary>
 		public void Rebuild() => meshBuilder.Rebuild();
 
 		/// <inheritdoc/>
@@ -30,6 +43,10 @@ namespace Tangerine.UI.Charts
 			/// </summary>
 			private const float ChartsScaleFactor = 0.9f;
 
+			public float LastRebuildChartsMaxValue { get; private set; }
+		
+			public float LastRebuildScaleCoefficient { get; private set; }
+			
 			private readonly FixedHorizontalSpacingCharts chartsGroup;
 			private readonly ChartsCommon.SwappableVertexStorage vertexStorage;
 			private readonly float[] accumulatedHeights;
@@ -105,9 +122,10 @@ namespace Tangerine.UI.Charts
 				}
 				VisibleVertexCount *= GetChartVertexCount(heightsRange);
 				MeshDirtyFlags = MeshDirtyFlags.Vertices;
-				float scaleCoefficient = containerHeight * ChartsScaleFactor / Mathf.Max(chartsMaxValue, 1e-6f);
+				LastRebuildChartsMaxValue = chartsMaxValue;
+				LastRebuildScaleCoefficient = containerHeight * ChartsScaleFactor / Mathf.Max(chartsMaxValue, 1e-6f);
 				ExtraTransform =
-					Matrix44.CreateScale(1, -scaleCoefficient, 1) *
+					Matrix44.CreateScale(1, -LastRebuildScaleCoefficient, 1) *
 					Matrix44.CreateTranslation(0, containerHeight, 0);
 				IsRebuildRequired = false;
 			}

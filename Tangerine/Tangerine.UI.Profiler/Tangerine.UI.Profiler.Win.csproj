@@ -36,6 +36,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChartsPanel.cs" />
     <Compile Include="Charts\ChartsCommon.cs" />
     <Compile Include="Charts\FixedHorizontalSpacingCharts.cs" />
     <Compile Include="Charts\FixedSpacingChartsExtension.cs" />
