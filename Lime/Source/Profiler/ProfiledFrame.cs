@@ -25,7 +25,13 @@ namespace Lime.Profiler
 		/// </remarks>
 		[YuzuMember]
 		public long Identifier;
-
+		
+		/// <summary>
+		/// <see cref="Stopwatch.Frequency"/> on database side.
+		/// </summary>
+		[YuzuMember]
+		public long StopwatchFrequency;
+		
 		/// <summary>
 		/// The Stopwatch ticks spent on performing one update
 		/// starting at <see cref="UpdateThreadStartTime"/>.
@@ -41,7 +47,7 @@ namespace Lime.Profiler
 		/// The frame processing start is <see cref="UpdateThreadStartTime"/>.
 		/// </remarks>
 		[YuzuMember]
-		public long UpdateThreadElapsedTime;
+		public long UpdateThreadElapsedTicks;
 
 		/// <summary>
 		/// Stopwatch ticks at the start of frame processing in the update thread.
@@ -64,7 +70,7 @@ namespace Lime.Profiler
 		/// The frame processing start is <see cref="RenderThreadStartTime"/>.
 		/// </remarks>
 		[YuzuMember]
-		public long RenderThreadElapsedTime;
+		public long RenderThreadElapsedTicks;
 
 		/// <summary>
 		/// Stopwatch ticks at the start of frame processing in the render thread.
@@ -80,7 +86,7 @@ namespace Lime.Profiler
 		/// and stops when all GPU commands from the current frame have finished executing.
 		/// </remarks>
 		[YuzuMember]
-		public long GpuElapsedTime;
+		public long GpuElapsedTicks;
 
 		/// <summary>
 		/// The number of garbage collections for each generation of objects since application launch.

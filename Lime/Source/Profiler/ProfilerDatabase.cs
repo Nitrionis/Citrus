@@ -324,7 +324,8 @@ namespace Lime.Profiler
 				FreeResourcesForNextUpdate(frame);
 
 				frame.CommonData.Identifier = instance.ProfiledFramesCount;
-				frame.CommonData.UpdateThreadElapsedTime = InvalidElapsedTime;
+				frame.CommonData.StopwatchFrequency = Stopwatch.Frequency;
+				frame.CommonData.UpdateThreadElapsedTicks = InvalidElapsedTime;
 				frame.CommonData.UpdateThreadStartTime = Stopwatch.GetTimestamp();
 
 				frame.DrawCommandsState = Frame.DrawCommandsExecution.NotSubmittedToGpu;
@@ -338,8 +339,8 @@ namespace Lime.Profiler
 			}
 			if (instance.ProfiledFramesCount > 1) {
 				var previousFrame = CalculatedFramePlace(instance.ProfiledFramesCount - 2);
-				if (previousFrame.CommonData.UpdateThreadElapsedTime == InvalidElapsedTime) {
-					previousFrame.CommonData.UpdateThreadElapsedTime =
+				if (previousFrame.CommonData.UpdateThreadElapsedTicks == InvalidElapsedTime) {
+					previousFrame.CommonData.UpdateThreadElapsedTicks =
 						Stopwatch.GetTimestamp() - previousFrame.CommonData.UpdateThreadStartTime;
 				}
 			}
@@ -366,7 +367,7 @@ namespace Lime.Profiler
 			if (isUpdateProfilerEnabled) {
 				var frame = CalculatedFramePlace(instance.ProfiledFramesCount - 1);
 				var garbageCollections =
-					frame.CommonData.UpdateThreadGarbageCollections ?? new int[GC.MaxGeneration];
+					frame.CommonData.UpdateThreadGarbageCollections ?? new int[GC.MaxGeneration + 1];
 				for (int i = 0; i < garbageCollections.Length; i++) {
 					garbageCollections[i] = GC.CollectionCount(i);
 				}
@@ -401,7 +402,7 @@ namespace Lime.Profiler
 			while (unfinishedFrames.Count > 0) {
 				var frame = CalculatedFramePlace(unfinishedFrames.Peek());
 				if (
-					frame.CommonData.UpdateThreadElapsedTime != InvalidElapsedTime && (
+					frame.CommonData.UpdateThreadElapsedTicks != InvalidElapsedTime && (
 					frame.DrawCommandsState == Frame.DrawCommandsExecution.Completed ||
 					frame.DrawCommandsState == Frame.DrawCommandsExecution.NotSubmittedToGpu)
 					)
@@ -451,7 +452,7 @@ namespace Lime.Profiler
 				FreeResourcesForNextRender();
 
 				frame.CommonData.RenderThreadStartTime = Stopwatch.GetTimestamp();
-				frame.CommonData.RenderThreadElapsedTime = InvalidElapsedTime;
+				frame.CommonData.RenderThreadElapsedTicks = InvalidElapsedTime;
 
 				frame.RenderCpuUsagesList = instance.RenderCpuUsagesPool.AcquireList();
 				frame.DrawingGpuUsagesList = instance.GpuUsagesPool.AcquireList();
@@ -461,8 +462,8 @@ namespace Lime.Profiler
 			}
 			if (renderThreadTargetFrameIndex > 0) {
 				var previousFrame = CalculatedFramePlace(renderThreadTargetFrameIndex - 1);
-				if (previousFrame.CommonData.RenderThreadElapsedTime == InvalidElapsedTime) {
-					previousFrame.CommonData.RenderThreadElapsedTime =
+				if (previousFrame.CommonData.RenderThreadElapsedTicks == InvalidElapsedTime) {
+					previousFrame.CommonData.RenderThreadElapsedTicks =
 						Stopwatch.GetTimestamp() - previousFrame.CommonData.RenderThreadStartTime;
 				}
 			}
@@ -474,7 +475,7 @@ namespace Lime.Profiler
 			if (isRenderProfilerEnabled) {
 				var frame = CalculatedFramePlace(renderThreadTargetFrameIndex);
 				var garbageCollections =
-					frame.CommonData.RenderThreadGarbageCollections ?? new int[GC.MaxGeneration];
+					frame.CommonData.RenderThreadGarbageCollections ?? new int[GC.MaxGeneration + 1];
 				for (int i = 0; i < garbageCollections.Length; i++) {
 					garbageCollections[i] = GC.CollectionCount(i);
 				}

@@ -14,7 +14,8 @@ namespace Tangerine.UI
 		public Action<bool> GpuChartsSetVisible;
 		public Action<bool> SceneGeometryChartsSetVisible;
 		public Action<bool> FullGeometryChartsSetVisible;
-		public Action<bool> GarbageCollectorChartsSetVisible;
+		public Action<bool> UpdateGcChartsSetVisible;
+		public Action<bool> RenderGcChartsSetVisible;
 	}
 
 	internal struct TimelineVisibilityControllers
@@ -69,7 +70,8 @@ namespace Tangerine.UI
 							CreateCheckBox("GPU (In developing)", out var gpuChartsCheckBox),
 							CreateCheckBox("Scene Geometry", out var sceneGeometryChartsCheckBox),
 							CreateCheckBox("Full Geometry", out var fullGeometryChartsCheckBox),
-							CreateCheckBox("Garbage Collector", out var garbageCollectorChartsCheckBox),
+							CreateCheckBox("Update Thread GC", out var updateGcChartsCheckBox),
+							CreateCheckBox("Render Thread GC", out var renderGcChartsCheckBox),
 						}
 					}
 				}
@@ -127,8 +129,10 @@ namespace Tangerine.UI
 				this.chartVisibilityControllers.SceneGeometryChartsSetVisible(args.Value);
 			fullGeometryChartsCheckBox.Changed += args =>
 				this.chartVisibilityControllers.FullGeometryChartsSetVisible(args.Value);
-			garbageCollectorChartsCheckBox.Changed += args =>
-				this.chartVisibilityControllers.GarbageCollectorChartsSetVisible(args.Value);
+			updateGcChartsCheckBox.Changed += args =>
+				this.chartVisibilityControllers.UpdateGcChartsSetVisible(args.Value);
+			renderGcChartsCheckBox.Changed += args =>
+				this.chartVisibilityControllers.RenderGcChartsSetVisible(args.Value);
 			mainTheadTimelineCheckBox.Changed += args =>
 				this.timelineVisibilityControllers.MainThreadTimelineSetVisible(args.Value);
 			renderTheadTimelineCheckBox.Changed += args =>

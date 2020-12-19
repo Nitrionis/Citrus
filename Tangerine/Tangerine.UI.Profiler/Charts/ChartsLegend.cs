@@ -50,15 +50,8 @@ namespace Tangerine.UI.Charts
 			AddNode(valuesContainer);
 		}
 
-		public void SetValues(float[] values)
-		{
-			if (values.Length != items.Length) {
-				throw new InvalidOperationException("ChartsLegend: wrong number of parameters!");
-			}
-			for (int i = 0; i < items.Length; i++) {
-				items[i].ValueWidget.Text = string.Format(items[i].ValueFormat, values[i]);
-			}
-		}
+		public void SetValue(float value, int chartIndex) => 
+			items[chartIndex].ValueWidget.Text = string.Format(items[chartIndex].ValueFormat, value);
 
 		public struct ItemDescription
 		{

@@ -107,7 +107,7 @@ namespace Tangerine.UI.Charts
 				VisibleVertexCount *= GetChartVertexCount(heightsRange);
 				MeshDirtyFlags = MeshDirtyFlags.Vertices;
 				ExtraTransform =
-					Matrix44.CreateScale(1, -1, 1) *
+					Matrix44.CreateScale(1, -1 * ChartsScaleFactor, 1) *
 					Matrix44.CreateTranslation(0, chartsGroup.Height, 0);
 				IsRebuildRequired = false;
 			}
