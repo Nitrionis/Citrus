@@ -95,9 +95,6 @@ namespace Tangerine.UI
 					Spacer.HFill()
 				}
 			});
-			var optionsPanel = new OptionsPanel();
-			optionsButton.Clicked += () => optionsPanel.Visible = !optionsPanel.Visible;
-			Nodes.Add(optionsPanel);
 			Image CreateSearchIcon() => new Image(IconPool.GetTexture("Profiler.Search")) {
 				Material = new IconMaterial {
 					Color = defaultButtonColor
@@ -106,84 +103,15 @@ namespace Tangerine.UI
 				MinMaxSize = new Vector2(22, 22),
 				Size = new Vector2(22, 22),
 			};
-			var chartsParameters = new FixedHorizontalSpacingCharts.Parameters {
-				ControlPointsCount = 160,
-				ChartsCount = 2,
-				ControlPointsSpacing = 5
-			};
-			var chartsGroup = new StackedAreaCharts(chartsParameters);
-			var chartsLegend = new ChartsLegend(new [] { chartsGroup }, new [] {
-				new ChartsLegend.ItemDescription {
-					Label = "Update",
-					ValueFormat = "0.##"
-				}, 
-				new ChartsLegend.ItemDescription {
-					Label = "Selected",
-					ValueFormat = "0.##"
-				}
+			var chartsPanel = new ChartsPanel(CreateSearchIcon, out var chartVisibilityControllers);
+			var optionsPanel = new OptionsPanel(chartVisibilityControllers, new TimelineVisibilityControllers {
+				MainThreadTimelineSetVisible = (b => { }),
+				RenderThreadTimelineSetVisible = (b => {}),
+				GpuTimelineSetVisible = (b => {})
 			});
-			var chartsPanel = new Widget {
-				Layout = new HBoxLayout(),
-				Padding = new Thickness(4, 4, 2, 0),
-				Nodes = {
-					new Widget {
-						Layout = new VBoxLayout(),
-						Padding = new Thickness(0, 8, 4, 4),
-						Nodes = {
-							new ThemedSimpleText("Main Thread"),
-							chartsLegend,
-						}
-					},
-					new ChartsContainer(new [] { chartsGroup }) {
-						BackgroundColor = new Color4(63, 63, 63),
-						MinMaxHeight = 64
-					}
-				}
-			};
-			var r = new Random();
-			chartsGroup.Updating += delta => {
-				foreach (var chart in chartsGroup.Charts) {
-					chart.Enqueue(r.RandomFloat());
-				}
-				chartsGroup.Rebuild();
-			};
-			
-			Nodes.Add(new Widget {
-				Presenter = new WidgetFlatFillPresenter(
-					ColorTheme.Current.IsDark ?
-						Theme.Colors.GrayBackground.Lighten(0.1f) : 
-						Theme.Colors.GrayBackground.Darken(0.06f)
-				),
-				Layout = new VBoxLayout(),
-				Padding = new Thickness(4, 4, 0, 4),
-				Nodes = {
-					new Widget {
-						Layout = new HBoxLayout(),
-						Padding = new Thickness(4, 4, 0, 0),
-						Nodes = {
-							new ThemedSimpleText("Charts") {
-								Padding = new Thickness(0, 21, 2, 0),
-							},
-							CreateSearchIcon(),
-							new ThemedEditBox()
-						}
-					},
-					chartsPanel,
-					new ThemedSimpleText("Render Thread Charts"),
-					new ThemedSimpleText("Gpu Charts"),
-					new Widget {
-						Layout = new HBoxLayout(),
-						Padding = new Thickness(4, 4, 0, 0),
-						Nodes = {
-							new ThemedSimpleText("Timelines") {
-								Padding = new Thickness(0, 4, 2, 0),
-							},
-							CreateSearchIcon(),
-							new ThemedEditBox()
-						}
-					}
-				}
-			});
+			optionsButton.Clicked += () => optionsPanel.Visible = !optionsPanel.Visible;
+			Nodes.Add(optionsPanel);
+			Nodes.Add(chartsPanel);
 			Updating += delta => {
 				recordMaterial.Color = 
 					ProfilerTerminal.ProfilerEnabled ? recordButtonColor : defaultButtonColor;

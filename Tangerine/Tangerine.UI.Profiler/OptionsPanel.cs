@@ -1,15 +1,40 @@
 ﻿#if PROFILER
 
+using System;
 using Lime;
 using Lime.Profiler;
 using Lime.Profiler.Graphics;
 
 namespace Tangerine.UI
 {
+	internal struct ChartVisibilityControllers
+	{
+		public Action<bool> MainThreadChartsSetVisible;
+		public Action<bool> RenderThreadChartsSetVisible;
+		public Action<bool> GpuChartsSetVisible;
+		public Action<bool> SceneGeometryChartsSetVisible;
+		public Action<bool> FullGeometryChartsSetVisible;
+		public Action<bool> GarbageCollectorChartsSetVisible;
+	}
+
+	internal struct TimelineVisibilityControllers
+	{
+		public Action<bool> MainThreadTimelineSetVisible;
+		public Action<bool> RenderThreadTimelineSetVisible;
+		public Action<bool> GpuTimelineSetVisible;
+	}
+	
 	internal class OptionsPanel : Widget
 	{
-		public OptionsPanel()
+		private ChartVisibilityControllers chartVisibilityControllers;
+		private TimelineVisibilityControllers timelineVisibilityControllers;
+		
+		public OptionsPanel(
+			ChartVisibilityControllers chartVisibilityControllers, 
+			TimelineVisibilityControllers timelineVisibilityControllers)
 		{
+			this.chartVisibilityControllers = chartVisibilityControllers;
+			this.timelineVisibilityControllers = timelineVisibilityControllers;
 			Presenter = new WidgetFlatFillPresenter(
 				ColorTheme.Current.IsDark
 					? Theme.Colors.GrayBackground.Lighten(0.06f)
@@ -44,6 +69,7 @@ namespace Tangerine.UI
 							CreateCheckBox("GPU (In developing)", out var gpuChartsCheckBox),
 							CreateCheckBox("Scene Geometry", out var sceneGeometryChartsCheckBox),
 							CreateCheckBox("Full Geometry", out var fullGeometryChartsCheckBox),
+							CreateCheckBox("Garbage Collector", out var garbageCollectorChartsCheckBox),
 						}
 					}
 				}
@@ -91,6 +117,24 @@ namespace Tangerine.UI
 				ProfilerTerminal.BatchBreakReasonsRequired = !ProfilerTerminal.BatchBreakReasonsRequired;
 			overdrawModeCheckBox.Clicked += () =>
 				ProfilerTerminal.OverdrawEnabled = !ProfilerTerminal.OverdrawEnabled;
+			mainTheadChartsCheckBox.Changed += args =>
+				this.chartVisibilityControllers.MainThreadChartsSetVisible(args.Value);
+			renderTheadChartsCheckBox.Changed += args =>
+				this.chartVisibilityControllers.RenderThreadChartsSetVisible(args.Value);
+			gpuChartsCheckBox.Changed += args =>
+				this.chartVisibilityControllers.GpuChartsSetVisible(args.Value);
+			sceneGeometryChartsCheckBox.Changed += args =>
+				this.chartVisibilityControllers.SceneGeometryChartsSetVisible(args.Value);
+			fullGeometryChartsCheckBox.Changed += args =>
+				this.chartVisibilityControllers.FullGeometryChartsSetVisible(args.Value);
+			garbageCollectorChartsCheckBox.Changed += args =>
+				this.chartVisibilityControllers.GarbageCollectorChartsSetVisible(args.Value);
+			mainTheadTimelineCheckBox.Changed += args =>
+				this.timelineVisibilityControllers.MainThreadTimelineSetVisible(args.Value);
+			renderTheadTimelineCheckBox.Changed += args =>
+				this.timelineVisibilityControllers.RenderThreadTimelineSetVisible(args.Value);
+			gpuTimelineCheckBox.Changed += args =>
+				this.timelineVisibilityControllers.GpuTimelineSetVisible(args.Value);
 		}
 	}
 }
