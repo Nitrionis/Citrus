@@ -70,15 +70,19 @@ namespace Tangerine.UI.Charts
 				Anchors = Anchors.LeftRightTopBottom,
 				HitTestTarget = true,
 				HitTestMethod = HitTestMethod.BoundingRect,
-				Clicked = () => {
-					int index = Math.Min(
-						ControlPointsCount - 1,
-						((int)LocalMousePosition().X + ControlPointsSpacing / 2) / ControlPointsSpacing);
-					SliceSelected?.Invoke(GetSlice(index));
-				}
+				Clicked = SelectSliceUnderCursor
 			});
 		}
 
+		/// <summary>
+		/// Invoke <see cref="SliceSelected"/> for slice under cursor.
+		/// </summary>
+		public void SelectSliceUnderCursor()
+		{
+			int index = ((int)LocalMousePosition().X + ControlPointsSpacing / 2) / ControlPointsSpacing;
+			SliceSelected?.Invoke(GetSlice(Math.Min(ControlPointsCount - 1, index)));
+		}
+		
 		/// <inheritdoc/>
 		public abstract void Invalidate();
 

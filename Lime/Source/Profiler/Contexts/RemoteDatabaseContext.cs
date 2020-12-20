@@ -14,7 +14,7 @@ namespace Lime.Profiler.Contexts
 {
 	using Task = System.Threading.Tasks.Task;
 	
-	public class RemoteDatabaseContext : IProfilerContext, IInterrupter
+	public sealed class RemoteDatabaseContext : IProfilerContext, IInterrupter
 	{
 		private readonly Client client;
 		private readonly ConcurrentQueue<object> requests;

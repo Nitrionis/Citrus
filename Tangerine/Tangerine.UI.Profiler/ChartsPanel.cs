@@ -1,7 +1,6 @@
 ﻿#if PROFILER
 
 using System;
-using System.Threading;
 using Lime;
 using Lime.Profiler;
 using Tangerine.UI.Charts;
@@ -12,16 +11,22 @@ namespace Tangerine.UI
 	
 	internal class ChartsPanel : Widget
 	{
-		private int[] previousUpdateGC = new int[3];
-		private int[] previousRenderGC = new int[3];
+		private const int HistorySize = 160;
+
+		private readonly FixedCapacityQueue<ProfiledFrame> history;
+		private readonly int[] previousUpdateGC = new int[3];
+		private readonly int[] previousRenderGC = new int[3];
+
+		private volatile int requestedSliceIndex = -1;
 		
 		public ChartsPanel(Func<Image> SearchIconBuilder, out ChartVisibilityControllers visibilityControllers)
 		{
+			history = new FixedCapacityQueue<ProfiledFrame>(HistorySize);
 			Layout = new VBoxLayout();
 			Anchors = Anchors.LeftRight;
 			FixedHorizontalSpacingCharts.Parameters GetParameters(int chartsCount) => 
 				new FixedHorizontalSpacingCharts.Parameters {
-					ControlPointsCount = 160,
+					ControlPointsCount = HistorySize,
 					ChartsCount = chartsCount,
 					ControlPointsSpacing = 5
 				};
@@ -47,6 +52,7 @@ namespace Tangerine.UI
 				var chartsGroup = new LineCharts(GetParameters(items.Length));
 				var groupList = new [] { chartsGroup };
 				var chartsLegend = new ChartsLegend(groupList, items);
+				chartsGroup.SliceSelected += BeginSliceSelect;
 				return new ChartsInfo<LineCharts> {
 					ChartsGroup = chartsGroup,
 					ChartsLegend = chartsLegend,
@@ -60,6 +66,7 @@ namespace Tangerine.UI
 				var chartsGroup = new StackedAreaCharts(GetParameters(items.Length));
 				var groupList = new [] { chartsGroup };
 				var chartsLegend = new ChartsLegend(groupList, items);
+				chartsGroup.SliceSelected += BeginSliceSelect;
 				return new ChartsInfo<StackedAreaCharts> {
 					ChartsGroup = chartsGroup,
 					ChartsLegend = chartsLegend,
@@ -170,9 +177,11 @@ namespace Tangerine.UI
 				}
 			};
 			ProfilerTerminal.FrameProfilingFinished += frame => {
+				history.Enqueue(frame);
 				RemoteStopwatchExtension.Frequency = frame.StopwatchFrequency;
+				
 				var charts = updateCharts.ChartsGroup.Charts;
-				charts[0].Enqueue(frame.UpdateThreadElapsedTicks.TicksToMilliseconds());
+				charts[0].Enqueue(Logarithm(frame.UpdateThreadElapsedTicks.TicksToMilliseconds()));
 				charts[1].Enqueue(0);
 				var legend = updateCharts.ChartsLegend;
 				legend.SetValue(frame.UpdateThreadElapsedTicks.TicksToMilliseconds(), 0);
@@ -180,7 +189,7 @@ namespace Tangerine.UI
 				updateCharts.ChartsGroup.Rebuild();
 				
 				charts = renderCharts.ChartsGroup.Charts;
-				charts[0].Enqueue(frame.RenderThreadElapsedTicks.TicksToMilliseconds());
+				charts[0].Enqueue(Logarithm(frame.RenderThreadElapsedTicks.TicksToMilliseconds()));
 				charts[1].Enqueue(0);
 				legend = renderCharts.ChartsLegend;
 				legend.SetValue(frame.RenderThreadElapsedTicks.TicksToMilliseconds(), 0);
@@ -188,7 +197,7 @@ namespace Tangerine.UI
 				renderCharts.ChartsGroup.Rebuild();
 				
 				charts = gpuCharts.ChartsGroup.Charts;
-				charts[0].Enqueue(frame.GpuElapsedTicks.TicksToMilliseconds());
+				charts[0].Enqueue(Logarithm(frame.GpuElapsedTicks.TicksToMilliseconds()));
 				charts[1].Enqueue(0);
 				legend = gpuCharts.ChartsLegend;
 				legend.SetValue(frame.GpuElapsedTicks.TicksToMilliseconds(), 0);
@@ -256,6 +265,18 @@ namespace Tangerine.UI
 				renderGcCharts.ChartsGroup.Rebuild();
 			};
 		}
+
+		private void BeginSliceSelect(FixedHorizontalSpacingCharts.VerticalSlice slice)
+		{
+			requestedSliceIndex = slice.Index;
+			ProfilerTerminal.Context.RunRequest();
+		}
+		
+		private static float Logarithm(float value) => value <= 33.3f ? value :
+			33.3f + (float)Math.Log((value - 33.3) / 16.0 + 1.0, 2);
+
+		private static float UnLogarithm(float value) => value <= 33.3f ? value :
+			33.3f + ((float)Math.Pow(2, value - 33.3) - 1f) * 16.0f;
 		
 		private struct ChartsInfo<ChartsType> where ChartsType : Widget, IChartsGroup
 		{

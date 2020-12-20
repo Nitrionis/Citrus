@@ -1,6 +1,7 @@
 #if PROFILER
 
 using System;
+using System.Linq;
 using Lime;
 
 namespace Tangerine.UI.Charts
@@ -9,6 +10,20 @@ namespace Tangerine.UI.Charts
 	{
 		private readonly ChartsGroupMeshBuilder meshBuilder;
 
+		/// <summary>
+		/// If set to true the charts will scale independently of each other.
+		/// </summary>
+		public bool IndependentScaling
+		{
+			get => meshBuilder.IndependentScaling; 
+			set => meshBuilder.IndependentScaling = value;
+		}
+		
+		/// <summary>
+		/// The last scaling option for the specified chart.
+		/// </summary>
+		public float GetScale(int chartIndex) => meshBuilder.Scales[chartIndex];
+		
 		public LineCharts(Parameters parameters) : base(parameters)
 		{
 			if (parameters.ControlPointsCount < 2) {
@@ -32,8 +47,10 @@ namespace Tangerine.UI.Charts
 
 			private readonly FixedHorizontalSpacingCharts chartsGroup;
 			private readonly ChartsCommon.SwappableVertexStorage vertexStorage;
-			private readonly float[] accumulatedHeights;
 
+			public bool IndependentScaling;
+			public readonly float[] Scales;
+			
 			/// <inheritdoc/>
 			public Vector3[] Vertices => vertexStorage.Vertices;
 
@@ -55,10 +72,10 @@ namespace Tangerine.UI.Charts
 			public ChartsGroupMeshBuilder(FixedHorizontalSpacingCharts chartsGroup)
 			{
 				this.chartsGroup = chartsGroup;
-				accumulatedHeights = new float[chartsGroup.ControlPointsCount];
 				int chartVertexCount = GetChartVertexCount(chartsGroup.ControlPointsCount);
 				int capacity = chartsGroup.Charts.Count * chartVertexCount;
 				vertexStorage = new ChartsCommon.SwappableVertexStorage(capacity, buffersCount: 2);
+				Scales = new float[chartsGroup.Charts.Count];
 				Rebuild();
 			}
 
@@ -77,23 +94,30 @@ namespace Tangerine.UI.Charts
 				VisibleVertexCount = 0;
 				var vertexBuffer = Vertices;
 				unchecked {
+					for (int i = 0; i < Scales.Length; i++) {
+						Scales[i] = scaledContainerHeight / Math.Max(
+							1e-6f, chartsGroup.Charts[i].MaxValue());
+					}
+					if (!IndependentScaling) {
+						float minValue = Scales.Min();
+						for (int i = 0; i < Scales.Length; i++) {
+							Scales[i] = minValue;
+						}
+					}
+					int chartIndex = 0;
 					foreach (var chart in chartsGroup.Charts) {
 						if (chart.Visible) {
 							var heights = chart.Heights;
-							var scale = scaledContainerHeight / Math.Max(1e-6f, chart.MaxValue());
+							var scale = Scales[chartIndex++];
 							int step = (1 - visibleChartParity) * 2 - 1;
 							int start = visibleChartParity * (heightsRange - 1);
 							int end = (1 - visibleChartParity) * heightsRange - (1 - visibleChartParity);
 							for (int i = start; i != end; i += step) {
 								float p1 = heights[heightIndexOffset + i];
 								float p2 = heights[heightIndexOffset + i + step];
-								Vector2 a = new Vector2(
-									x: i * controlPointsSpacing,
-									y: p1 * scale);
-								Vector2 b = new Vector2(
-									x: (i + step) * controlPointsSpacing,
-									y: p2 * scale);
-								Vector2 n = GetNormal((b - a).Normalized * 0.5f) * lineWidthScale;
+								var a = new Vector2(x: i * controlPointsSpacing, y: p1 * scale);
+								var b = new Vector2(x: (i + step) * controlPointsSpacing, y: p2 * scale);
+								var n = GetNormal((b - a).Normalized * 0.5f) * lineWidthScale;
 								vertexBuffer[vertexIndex++] = new Vector3(a - n, chart.ColorIndex);
 								vertexBuffer[vertexIndex++] = new Vector3(a + n, chart.ColorIndex);
 								vertexBuffer[vertexIndex++] = new Vector3(b - n, chart.ColorIndex);

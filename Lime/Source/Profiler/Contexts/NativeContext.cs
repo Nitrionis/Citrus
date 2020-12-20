@@ -10,7 +10,7 @@ namespace Lime.Profiler.Contexts
 {
 	using Task = System.Threading.Tasks.Task;
 
-	public class NativeContext : IProfilerContext
+	public sealed class NativeContext : IProfilerContext
 	{
 		private readonly MemoryStream memoryStream;
 		private readonly BinaryWriter binaryWriter;

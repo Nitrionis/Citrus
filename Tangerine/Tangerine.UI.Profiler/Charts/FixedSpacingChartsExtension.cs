@@ -25,8 +25,8 @@ namespace Tangerine.UI.Charts
 			float value = float.NegativeInfinity;
 			var heights = chart.Heights;
 			unchecked {
-				for (int i = 0; i < heights.Length; i++) {
-					value = Math.Max(value, heights[i]);
+				foreach (float t in heights) {
+					value = Math.Max(value, t);
 				}
 			}
 			return value;

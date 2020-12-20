@@ -28,6 +28,12 @@ namespace Lime.Profiler
 			}
 		}
 
+		public static void GetFrame(long frameIdentifer, IResponseProcessor responseProcessor) =>
+			Context.RunRequest(new FrameDataRequest(frameIdentifer) { ResponseProcessor = responseProcessor });
+
+		public static void SelectTime(string filter, IResponseProcessor responseProcessor) => 
+			Context.RunRequest(new ObjectsSummaryRequest(filter) { ResponseProcessor = responseProcessor });
+
 		private static bool cachedProfilerEnabled;
 
 		/// <summary>

@@ -13,7 +13,7 @@ namespace Lime.Profiler.Contexts
 {
 	using Task = System.Threading.Tasks.Task;
 	
-	public class RemoteTerminalContext : IProfilerContext, IInterrupter
+	public sealed class RemoteTerminalContext : IProfilerContext, IInterrupter
 	{
 		private readonly Server server;
 		private readonly Queue<IRequest> requests;
