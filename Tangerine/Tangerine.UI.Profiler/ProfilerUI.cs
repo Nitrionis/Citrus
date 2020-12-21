@@ -103,7 +103,7 @@ namespace Tangerine.UI
 				MinMaxSize = new Vector2(22, 22),
 				Size = new Vector2(22, 22),
 			};
-			var chartsPanel = new ChartsPanel(CreateSearchIcon, out var chartVisibilityControllers);
+			var chartsPanel = new ChartsPanel(out var chartVisibilityControllers);
 			var optionsPanel = new OptionsPanel(chartVisibilityControllers, new TimelineVisibilityControllers {
 				MainThreadTimelineSetVisible = (b => { }),
 				RenderThreadTimelineSetVisible = (b => {}),

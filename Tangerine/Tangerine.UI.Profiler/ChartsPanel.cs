@@ -16,10 +16,8 @@ namespace Tangerine.UI
 		private readonly FixedCapacityQueue<ProfiledFrame> history;
 		private readonly int[] previousUpdateGC = new int[3];
 		private readonly int[] previousRenderGC = new int[3];
-
-		private volatile int requestedSliceIndex = -1;
 		
-		public ChartsPanel(Func<Image> SearchIconBuilder, out ChartVisibilityControllers visibilityControllers)
+		public ChartsPanel(out ChartVisibilityControllers visibilityControllers)
 		{
 			history = new FixedCapacityQueue<ProfiledFrame>(HistorySize);
 			Layout = new VBoxLayout();
@@ -268,8 +266,8 @@ namespace Tangerine.UI
 
 		private void BeginSliceSelect(FixedHorizontalSpacingCharts.VerticalSlice slice)
 		{
-			requestedSliceIndex = slice.Index;
-			ProfilerTerminal.Context.RunRequest();
+			//requestedSliceIndex = slice.Index;
+			//ProfilerTerminal.Context.RunRequest();
 		}
 		
 		private static float Logarithm(float value) => value <= 33.3f ? value :
@@ -277,7 +275,7 @@ namespace Tangerine.UI
 
 		private static float UnLogarithm(float value) => value <= 33.3f ? value :
 			33.3f + ((float)Math.Pow(2, value - 33.3) - 1f) * 16.0f;
-		
+
 		private struct ChartsInfo<ChartsType> where ChartsType : Widget, IChartsGroup
 		{
 			public Widget LegendWrapper;

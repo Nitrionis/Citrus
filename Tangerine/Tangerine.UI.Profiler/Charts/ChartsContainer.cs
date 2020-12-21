@@ -158,13 +158,13 @@ namespace Tangerine.UI.Charts
 			set => presenter.Color = value;
 		}
 
-		public ChartsContainer(IEnumerable<IChartsGroup> groups)
+		public ChartsContainer(IEnumerable<Widget> groups)
 		{
 			presenter = new WidgetFlatFillPresenter(Color4.Black);
 			CompoundPresenter.Add(presenter);
 			Layout = new StackLayout();
 			foreach (var group in groups) {
-				AddNode(group.Container);
+				AddNode(group);
 			}
 		}
 	}

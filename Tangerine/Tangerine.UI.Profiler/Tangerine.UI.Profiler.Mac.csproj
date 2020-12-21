@@ -57,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ChartsPanel.cs" />
+    <Compile Include="Charts\LinesContainer.cs" />
     <Compile Include="FixedCapacityQueue.cs" />
     <Compile Include="IconMaterial.cs" />
     <Compile Include="IpDialog.cs" />
