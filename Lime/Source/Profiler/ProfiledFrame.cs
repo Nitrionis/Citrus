@@ -86,7 +86,7 @@ namespace Lime.Profiler
 		/// and stops when all GPU commands from the current frame have finished executing.
 		/// </remarks>
 		[YuzuMember]
-		public long GpuElapsedTicks;
+		public long GpuElapsedTime;
 
 		/// <summary>
 		/// The number of garbage collections for each generation of objects since application launch.

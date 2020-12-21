@@ -5,9 +5,9 @@ using Lime;
 
 namespace Tangerine.UI.Charts
 {
-	internal interface ChartScaleProvider
+	internal interface IChartScaleProvider
 	{
-		float GetScale(int chartIndex);
+		float GetScale(int lineIndex);
 	}
 	
 	internal struct Line
@@ -22,13 +22,13 @@ namespace Tangerine.UI.Charts
 	{
 		private readonly Line[][] lines;
 		private readonly float[][] scales;
-		private readonly ChartScaleProvider scaleProvider;
+		private readonly IChartScaleProvider scaleProvider;
 
 		private int writeTargetIndex;
 
 		public Line[] Lines => lines[writeTargetIndex];
 
-		public LinesContainer(int linesCount, ChartScaleProvider scaleProvider)
+		public LinesContainer(int linesCount, IChartScaleProvider scaleProvider)
 		{
 			lines = new Line[2][];
 			lines[0] = new Line[linesCount];
