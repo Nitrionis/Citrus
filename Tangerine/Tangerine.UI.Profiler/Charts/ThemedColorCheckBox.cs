@@ -15,9 +15,12 @@ namespace Tangerine.UI.Charts
 			AddNode(new Button {
 				Id = "Button",
 				LayoutCell = new LayoutCell(Alignment.Center),
-				MinMaxSize = Theme.Metrics.CheckBoxSize,
+				MinMaxSize = new Vector2(12),
+				Size = new Vector2(12),
 				TabTravesable = null
 			});
+			MinMaxSize = new Vector2(12);
+			Size = new Vector2(12);
 			TabTravesable = new TabTraversable();
 			LateTasks.Add(Theme.MouseHoverInvalidationTask(this));
 			State = CheckBoxState.Checked;

@@ -43,7 +43,7 @@ namespace Tangerine.UI.Charts
 			/// <summary>
 			/// Provides free space above сharts.
 			/// </summary>
-			private const float ChartsScaleFactor = 0.9f;
+			private const float ChartsScaleFactor = 0.7f;
 
 			private readonly FixedHorizontalSpacingCharts chartsGroup;
 			private readonly ChartsCommon.SwappableVertexStorage vertexStorage;
@@ -82,8 +82,8 @@ namespace Tangerine.UI.Charts
 			/// <inheritdoc/>
 			public void Rebuild()
 			{
-				float scaledContainerHeight = chartsGroup.Height/* * Window.Current.PixelScale*/;
-				float lineWidthScale = 1;
+				float scaledContainerHeight = chartsGroup.Height;
+				float lineWidthScale = 2;
 				int controlPointsSpacing = chartsGroup.ControlPointsSpacing;
 				int vertexIndex = 0;
 				int visibleChartParity = 0;
@@ -108,7 +108,7 @@ namespace Tangerine.UI.Charts
 					foreach (var chart in chartsGroup.Charts) {
 						if (chart.Visible) {
 							var heights = chart.Heights;
-							var scale = Scales[chartIndex++];
+							var scale = Scales[chartIndex];
 							int step = (1 - visibleChartParity) * 2 - 1;
 							int start = visibleChartParity * (heightsRange - 1);
 							int end = (1 - visibleChartParity) * heightsRange - (1 - visibleChartParity);
@@ -126,6 +126,7 @@ namespace Tangerine.UI.Charts
 							visibleChartParity = 1 - visibleChartParity;
 							++VisibleVertexCount;
 						}
+						++chartIndex;
 					}
 				}
 				VisibleVertexCount *= GetChartVertexCount(heightsRange);

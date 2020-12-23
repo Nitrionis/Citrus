@@ -484,7 +484,13 @@ namespace Lime
 				}
 				View.MakeCurrent();
 				RaiseRendering();
+#if PROFILER
+				ProfilerDatabase.SwappingSwapchainBuffer();
+#endif // PROFILER
 				View.SwapBuffers();
+#if PROFILER
+				ProfilerDatabase.SwappedSwapchainBuffer();
+#endif // PROFILER
 				invalidated = false;
 #if PROFILER
 				ProfilerDatabase.Rendered();

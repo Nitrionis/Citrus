@@ -836,7 +836,13 @@ namespace Lime
 #endif // PROFILER
 				renderControl.Begin();
 				RaiseRendering();
+#if PROFILER
+				ProfilerDatabase.SwappingSwapchainBuffer();
+#endif // PROFILER
 				renderControl.SwapBuffers();
+#if PROFILER
+				ProfilerDatabase.SwappedSwapchainBuffer();
+#endif // PROFILER
 				renderControl.UnbindContext();
 #if PROFILER
 				ProfilerDatabase.Rendered();
@@ -869,8 +875,12 @@ namespace Lime
 #endif // PROFILER
 						renderControl.Begin();
 						RaiseRendering();
+#if PROFILER
+						ProfilerDatabase.SwappingSwapchainBuffer();
+#endif // PROFILER
 						renderControl.SwapBuffers();
 #if PROFILER
+						ProfilerDatabase.SwappedSwapchainBuffer();
 						ProfilerDatabase.Rendered();
 #endif // PROFILER
 					}

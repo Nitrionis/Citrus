@@ -94,7 +94,9 @@ namespace Tangerine.UI.Charts
 				VisibleVertexCount = 0;
 				var vertexBuffer = Vertices;
 				unchecked {
-					foreach (var chart in chartsGroup.Charts) {
+					var charts = chartsGroup.Charts;
+					for (int ci = charts.Count - 1; ci >= 0; --ci) {
+						var chart = charts[ci];
 						if (chart.Visible) {
 							var heights = chart.Heights;
 							int step = (1 - visibleChartParity) * 2 - 1;

@@ -37,7 +37,7 @@ namespace Lime.Profiler
 		/// starting at <see cref="UpdateThreadStartTime"/>.
 		/// </summary>
 		[YuzuMember]
-		public long UpdateBodyElapsedTime;
+		public long UpdateBodyElapsedTicks;
 
 		/// <summary>
 		/// The Stopwatch ticks elapsed between the start of processing
@@ -60,7 +60,7 @@ namespace Lime.Profiler
 		/// starting at <see cref="RenderThreadStartTime"/>.
 		/// </summary>
 		[YuzuMember]
-		public long RenderBodyElapsedTime;
+		public long RenderBodyElapsedTicks;
 
 		/// <summary>
 		/// The Stopwatch ticks elapsed between the start of processing
@@ -79,7 +79,13 @@ namespace Lime.Profiler
 		public long RenderThreadStartTime;
 
 		/// <summary>
-		/// The time elapsed between the start and finish of rendering this frame on GPU.
+		/// See <see cref="CpuUsage.Reason.WaitForAcquiringSwapchainBuffer"/>.
+		/// </summary>
+		[YuzuMember] 
+		public long WaitForAcquiringSwapchainBuffer;
+		
+		/// <summary>
+		/// The time in microseconds elapsed between the start and finish of rendering this frame on GPU.
 		/// </summary>
 		/// <remarks>
 		/// The timer starts when all GPU commands from the previous frame have finished executing

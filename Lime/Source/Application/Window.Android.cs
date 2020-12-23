@@ -308,7 +308,13 @@ namespace Lime
 			var gw = ActivityDelegate.Instance.GameView;
 			gw.MakeCurrent();
 			base.RaiseRendering();
+#if PROFILER
+			ProfilerDatabase.SwappingSwapchainBuffer();
+#endif // PROFILER
 			gw.SwapBuffers();
+#if PROFILER
+			ProfilerDatabase.SwappedSwapchainBuffer();
+#endif // PROFILER
 			gw.UnbindContext();
 		}
 

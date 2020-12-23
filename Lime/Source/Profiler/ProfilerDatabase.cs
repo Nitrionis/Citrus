@@ -323,10 +323,14 @@ namespace Lime.Profiler
 				var frame = CalculatedFramePlace(instance.ProfiledFramesCount);
 				FreeResourcesForNextUpdate(frame);
 
-				frame.CommonData.Identifier = instance.ProfiledFramesCount;
-				frame.CommonData.StopwatchFrequency = Stopwatch.Frequency;
-				frame.CommonData.UpdateThreadElapsedTicks = InvalidElapsedTime;
-				frame.CommonData.UpdateThreadStartTime = Stopwatch.GetTimestamp();
+				frame.CommonData = new ProfiledFrame {
+					Identifier = instance.ProfiledFramesCount,
+					StopwatchFrequency = Stopwatch.Frequency,
+					UpdateThreadElapsedTicks = InvalidElapsedTime,
+					UpdateThreadStartTime = Stopwatch.GetTimestamp(),
+					UpdateThreadGarbageCollections = frame.CommonData.UpdateThreadGarbageCollections,
+					RenderThreadGarbageCollections = frame.CommonData.RenderThreadGarbageCollections
+				};
 
 				frame.DrawCommandsState = Frame.DrawCommandsExecution.NotSubmittedToGpu;
 				frame.UpdateCpuUsagesList = instance.UpdateCpuUsagesPool.AcquireList();
@@ -375,7 +379,7 @@ namespace Lime.Profiler
 				frame.CommonData.EndOfUpdateMemory = GC.GetTotalMemory(forceFullCollection: false);
 				// It takes a long time to get this parameter.
 				//frame.CommonData.EndOfUpdatePhysicalMemory = Process.GetCurrentProcess().WorkingSet64;
-				frame.CommonData.UpdateBodyElapsedTime =
+				frame.CommonData.UpdateBodyElapsedTicks =
 					Stopwatch.GetTimestamp() - frame.CommonData.UpdateThreadStartTime;
 				CpuUsageFinished(fullUpdateCpuUsage, Owners.Empty, CpuUsage.Reasons.FullUpdate, TypeIdentifier.Empty);
 			}
@@ -399,19 +403,25 @@ namespace Lime.Profiler
 			isRenderProfilerEnabled = isUpdateProfilerEnabled;
 			// Passing the index of the current frame to the rendering thread.
 			renderThreadTargetFrameIndex = instance.ProfiledFramesCount - 1;
+			if (renderThreadTargetFrameIndex > 1) {
+				var previousFrame = CalculatedFramePlace(renderThreadTargetFrameIndex - 2);
+				if (previousFrame.CommonData.RenderThreadElapsedTicks == InvalidElapsedTime) {
+					previousFrame.CommonData.RenderThreadElapsedTicks = previousFrame.CommonData.RenderBodyElapsedTicks;
+				}
+			}
 			while (unfinishedFrames.Count > 0) {
+				if (unfinishedFrames.Count > MaxSwapchainBuffersCount) {
+					throw new System.Exception("Profiler: Incorrect behavior detected!");
+				}
 				var frame = CalculatedFramePlace(unfinishedFrames.Peek());
 				if (
-					frame.CommonData.UpdateThreadElapsedTicks != InvalidElapsedTime && (
+					frame.CommonData.UpdateThreadElapsedTicks != InvalidElapsedTime &&
+					frame.CommonData.RenderThreadElapsedTicks != InvalidElapsedTime && (
 					frame.DrawCommandsState == Frame.DrawCommandsExecution.Completed ||
 					frame.DrawCommandsState == Frame.DrawCommandsExecution.NotSubmittedToGpu)
 					)
 				{
-					long frameIdentifier = unfinishedFrames.Dequeue();
-					if (renderThreadTargetFrameIndex - 1 - frameIdentifier > MaxSwapchainBuffersCount) {
-						throw new System.Exception("Profiler: Incorrect behavior detected!");
-					}
-					instance.LastAvailableFrame = frameIdentifier;
+					instance.LastAvailableFrame = unfinishedFrames.Dequeue();
 				} else {
 					break;
 				}
@@ -483,7 +493,7 @@ namespace Lime.Profiler
 				frame.CommonData.EndOfRenderMemory = GC.GetTotalMemory(forceFullCollection: false);
 				// It takes a long time to get this parameter.
 				//frame.CommonData.EndOfRenderPhysicalMemory = Process.GetCurrentProcess().WorkingSet64;
-				frame.CommonData.RenderBodyElapsedTime =
+				frame.CommonData.RenderBodyElapsedTicks =
 					Stopwatch.GetTimestamp() - frame.CommonData.RenderThreadStartTime;
 				frame.CommonData.FullSavedByBatching = RenderBatchStatistics.FullSavedByBatching;
 				frame.CommonData.SceneSavedByBatching = RenderBatchStatistics.SceneSavedByBatching;
@@ -500,6 +510,17 @@ namespace Lime.Profiler
 			DenyInputFromThread();
 		}
 
+		private static CpuUsageStartInfo swapBufferCpuUsage;
+
+		internal static void SwappingSwapchainBuffer() => swapBufferCpuUsage = CpuUsageStarted();
+
+		internal static void SwappedSwapchainBuffer()
+		{
+			var frame = CalculatedFramePlace(renderThreadTargetFrameIndex);
+			CpuUsageFinished(swapBufferCpuUsage, Owners.Empty, CpuUsage.Reasons.WaitForPreviousRendering, TypeIdentifier.Empty);
+			frame.CommonData.WaitForAcquiringSwapchainBuffer = Stopwatch.GetTimestamp() - swapBufferCpuUsage.StartTime;
+		}
+		
 		private static void DenyInputFromThread()
 		{
 			threadInfo = ThreadInfo.Unknown;

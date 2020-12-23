@@ -170,7 +170,13 @@ namespace Lime
 			var view = (IGameView)UIView;
 			view.MakeCurrent();
 			RaiseRendering();
+#if PROFILER
+			ProfilerDatabase.SwappingSwapchainBuffer();
+#endif // PROFILER
 			view.SwapBuffers();
+#if PROFILER
+			ProfilerDatabase.SwappedSwapchainBuffer();
+#endif // PROFILER
 			fpsCounter.Refresh();
 #if PROFILER
 			ProfilerDatabase.Rendered();

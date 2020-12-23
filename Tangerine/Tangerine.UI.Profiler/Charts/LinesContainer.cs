@@ -41,8 +41,8 @@ namespace Tangerine.UI.Charts
 			Updating += delta => {
 				int srcIndex = writeTargetIndex;
 				int dstIndex = 1 - writeTargetIndex;
-				Array.Copy(lines[srcIndex], lines[dstIndex], lines.Length);
-				Array.Copy(scales[srcIndex], scales[dstIndex], scales.Length);
+				Array.Copy(lines[srcIndex], lines[dstIndex], linesCount);
+				Array.Copy(scales[srcIndex], scales[dstIndex], linesCount);
 				writeTargetIndex = dstIndex;
 			};
 		}
@@ -77,8 +77,8 @@ namespace Tangerine.UI.Charts
 					for (int i = 0; i < Lines.Length; i++) {
 						var line = Lines[i];
 						var scale = Scales[i];
-						var a = new Vector2(line.Start.X, line.Start.Y * scale);
-						var b = new Vector2(line.End.X, line.End.Y * scale);
+						var a = new Vector2(line.Start.X, ContainerSize.Y - line.Start.Y * scale);
+						var b = new Vector2(line.End.X, ContainerSize.Y - line.End.Y * scale);
 						if (
 							((a.X >= 0 & a.X <= ContainerSize.X) & (a.Y >= 0 & a.Y <= ContainerSize.Y)) ||
 							((b.X >= 0 & b.X <= ContainerSize.X) & (b.Y >= 0 & b.Y <= ContainerSize.Y))

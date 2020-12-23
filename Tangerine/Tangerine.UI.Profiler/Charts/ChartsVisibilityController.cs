@@ -25,7 +25,6 @@ namespace Tangerine.UI.Charts
 			Layout = new VBoxLayout();
 			int checkboxIndex = 0;
 			foreach (var group in groups) {
-				int groupFirstCheckBoxIndex = checkboxIndex;
 				foreach (var chart in group.Charts) {
 					var color = group.Colors[chart.ColorIndex];
 					var checkBox = new ThemedColorCheckBox(color, Color4.Black);

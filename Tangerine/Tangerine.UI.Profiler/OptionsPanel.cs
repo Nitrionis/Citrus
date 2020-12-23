@@ -46,7 +46,7 @@ namespace Tangerine.UI
 			Anchors = Anchors.LeftRight;
 			MaxHeight = 128;
 			Widget CreateCheckBox(string name, out ThemedCheckBox checkBox) {
-				checkBox = new ThemedCheckBox();
+				checkBox = new ThemedCheckBox { Checked = true };
 				return new Widget {
 					Layout = new HBoxLayout { Spacing = 4 },
 					Nodes = {

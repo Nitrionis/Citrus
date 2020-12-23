@@ -11,15 +11,18 @@ namespace Tangerine.UI.Charts
 	{
 		private readonly Item[] items;
 
+		public readonly Widget ValuesContainer;
+		
 		public ChartsLegend(IChartsGroup[] groups, IEnumerable<ItemDescription> items)
 		{
 			var itemsDescriptions = items.ToArray();
 			this.items = new Item[itemsDescriptions.Length];
-			void DecorateContainer(Widget container) {
-				container.Layout = new VBoxLayout { Spacing = 2 };
+			void DecorateContainer(Widget container, Thickness padding, float spacing) {
+				container.Layout = new VBoxLayout { Spacing = spacing };
 				foreach (var node in container.Nodes) {
 					var w = node.AsWidget;
-					w.Height = w.MinMaxHeight = Theme.Metrics.TextHeight;
+					w.Height = w.MinMaxHeight = 12;
+					w.Padding = padding;
 				}
 			}
 			var checkboxesContainer = new ChartsVisibilityController(groups);
@@ -42,12 +45,12 @@ namespace Tangerine.UI.Charts
 				valuesContainer.AddNode(valueWidget);
 			}
 			Layout = new HBoxLayout { Spacing = 4 };
-			DecorateContainer(checkboxesContainer);
-			DecorateContainer(labelsContainer);
-			DecorateContainer(valuesContainer);
+			DecorateContainer(checkboxesContainer, new Thickness(0), 2);
+			DecorateContainer(labelsContainer, new Thickness(0, -2), 2);
+			DecorateContainer(valuesContainer, new Thickness(0, -2), 2);
 			AddNode(checkboxesContainer);
 			AddNode(labelsContainer);
-			AddNode(valuesContainer);
+			ValuesContainer = valuesContainer;
 		}
 
 		public void SetValue(float value, int chartIndex) => 

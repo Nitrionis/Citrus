@@ -66,6 +66,14 @@ namespace Tangerine.UI
 			profilingMode.Items.Add(new CommonDropDownList.Item("Remote Game"));
 			profilingMode.Index = 0;
 			var optionsButton = new ThemedButton("Options");
+			Image CreateSearchIcon() => new Image(IconPool.GetTexture("Profiler.Search")) {
+				Material = new IconMaterial {
+					Color = defaultButtonColor
+				},
+				Padding = new Thickness(2),
+				MinMaxSize = new Vector2(22, 22),
+				Size = new Vector2(22, 22),
+			};
 			Nodes.Add(new Widget {
 				Presenter = new WidgetFlatFillPresenter(Theme.Colors.ControlBorder),
 				Layout = new HBoxLayout(),
@@ -92,17 +100,26 @@ namespace Tangerine.UI
 					},
 					profilingMode,
 					optionsButton,
+					new ThemedSimpleText("Select") {
+						VAlignment = VAlignment.Center,
+						Padding = new Thickness(8, 4, 2, 0)
+					},
+					CreateSearchIcon(),
+					new ThemedEditBox() { MinMaxWidth = 256 },
+					new ThemedSimpleText("in Charts") {
+						VAlignment = VAlignment.Center,
+						Padding = new Thickness(8, 4, 2, 0)
+					},
+					new ThemedCheckBox { Checked = true, Padding = new Thickness(3) },
+					new ThemedSimpleText("in Timelines") {
+						VAlignment = VAlignment.Center,
+						Padding = new Thickness(8, 4, 2, 0)
+					},
+					new ThemedCheckBox { Checked = true, Padding = new Thickness(3) },
 					Spacer.HFill()
 				}
 			});
-			Image CreateSearchIcon() => new Image(IconPool.GetTexture("Profiler.Search")) {
-				Material = new IconMaterial {
-					Color = defaultButtonColor
-				},
-				Padding = new Thickness(2),
-				MinMaxSize = new Vector2(22, 22),
-				Size = new Vector2(22, 22),
-			};
+			
 			var chartsPanel = new ChartsPanel(out var chartVisibilityControllers);
 			var optionsPanel = new OptionsPanel(chartVisibilityControllers, new TimelineVisibilityControllers {
 				MainThreadTimelineSetVisible = (b => { }),
