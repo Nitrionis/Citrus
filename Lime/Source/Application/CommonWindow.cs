@@ -111,7 +111,7 @@ namespace Lime
 		protected void RaiseSync()
 		{
 #if PROFILER
-			ProfilerDatabase.SyncStarted(this == Application.MainWindow);
+			ProfilerDatabase.SyncStarted();
 #endif // PROFILER
 			using (Context.Activate().Scoped()) {
 				Sync?.Invoke();

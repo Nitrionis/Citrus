@@ -137,8 +137,8 @@ namespace Tangerine.UI
 			renderCharts = CreateAreaCharts("Render Thread",new[] {
 				CreateFloatLegendItem("Render"),
 				CreateFloatLegendItem("Body"),
-				CreateFloatLegendItem("Wait GPU"),
-				CreateFloatLegendItem("Selected")
+				CreateFloatLegendItem("Selected"),
+				CreateFloatLegendItem("Wait GPU")
 			});
 			gpuCharts = CreateAreaCharts("GPU",new[] {
 				CreateFloatLegendItem("Drawing"),
@@ -245,6 +245,7 @@ namespace Tangerine.UI
 				RenderGcChartsSetVisible = value => SetVisible(value, renderGcCharts)
 			};
 			Updating += delta => {
+				Application.MainWindow.Invalidate();
 				if (updateCharts.ChartsContainer.Visible) {
 					updateCharts.ChartsGroup.Rebuild();
 				}
@@ -292,12 +293,15 @@ namespace Tangerine.UI
 
 			logarithmizedAll = Logarithm(frame.RenderThreadElapsedTicks.TicksToMilliseconds());
 			bodyPercent = frame.RenderBodyElapsedTicks / Math.Max(float.Epsilon, frame.RenderThreadElapsedTicks);
-			float waitPercent = bodyPercent * frame.WaitForAcquiringSwapchainBuffer / Math.Max(float.Epsilon, frame.RenderBodyElapsedTicks);
+			float waitPercent = frame.WaitForAcquiringSwapchainBuffer / Math.Max(float.Epsilon, frame.RenderBodyElapsedTicks);
 			charts = renderCharts.ChartsGroup.Charts;
 			charts[0].Enqueue(logarithmizedAll * (1 - bodyPercent));
 			charts[1].Enqueue(logarithmizedAll * bodyPercent * (1 - waitPercent));
-			charts[2].Enqueue(logarithmizedAll * bodyPercent * waitPercent);
-			charts[3].Enqueue(0);
+			charts[2].Enqueue(0);
+			charts[3].Enqueue(logarithmizedAll * bodyPercent * waitPercent);
+			/*charts[0].Enqueue((frame.RenderThreadElapsedTicks - frame.RenderBodyElapsedTicks).TicksToMilliseconds());
+			charts[1].Enqueue((frame.RenderBodyElapsedTicks - frame.WaitForAcquiringSwapchainBuffer).TicksToMilliseconds());
+			charts[3].Enqueue(frame.WaitForAcquiringSwapchainBuffer.TicksToMilliseconds());*/
 			MoveSlice(renderCharts.LinesContainer.Lines);
 
 			charts = gpuCharts.ChartsGroup.Charts;
@@ -326,7 +330,7 @@ namespace Tangerine.UI
 				if (i < garbageCollections.Length) {
 					int value = garbageCollections[i];
 					garbageCollections[i] -= previousUpdateGC[i];
-					charts[i + 1].Enqueue(value);
+					charts[i + 1].Enqueue(garbageCollections[i]);
 					previousUpdateGC[i] = value;
 				} else {
 					charts[i + 1].Enqueue(0);
@@ -341,7 +345,7 @@ namespace Tangerine.UI
 				if (garbageCollections != null && i < garbageCollections.Length) {
 					int value = garbageCollections[i];
 					garbageCollections[i] -= previousRenderGC[i];
-					charts[i + 1].Enqueue(value);
+					charts[i + 1].Enqueue(garbageCollections[i]);
 					previousRenderGC[i] = value;
 				} else {
 					charts[i + 1].Enqueue(0);
@@ -351,6 +355,8 @@ namespace Tangerine.UI
 			
 			if (sliceIndex < 0) {
 				SetFrameValuesToLegend(frame);
+			} else {
+				Application.MainWindow.Invalidate();
 			}
 		}
 
@@ -370,6 +376,7 @@ namespace Tangerine.UI
 					frame.Identifier <= response.LastFrameIdentifer
 					) 
 				{
+					// TODO 
 					float allTime = frame.UpdateThreadElapsedTicks.TicksToMilliseconds();
 					float selectedTime = response.UpdateTimeForEachFrame[j];
 					SetValues(updateCharts.ChartsGroup, i, allTime, selectedTime);
@@ -397,8 +404,8 @@ namespace Tangerine.UI
 			legend = renderCharts.ChartsLegend;
 			legend.SetValue(frame.RenderThreadElapsedTicks.TicksToMilliseconds(), 0);
 			legend.SetValue(frame.RenderBodyElapsedTicks.TicksToMilliseconds(), 1);
-			legend.SetValue(frame.WaitForAcquiringSwapchainBuffer.TicksToMilliseconds(), 2);
-			legend.SetValue(0, 3);
+			legend.SetValue(0, 2);
+			legend.SetValue(frame.WaitForAcquiringSwapchainBuffer.TicksToMilliseconds(), 3);
 
 			legend = gpuCharts.ChartsLegend;
 			legend.SetValue(frame.GpuElapsedTime.TicksToMilliseconds(), 0);

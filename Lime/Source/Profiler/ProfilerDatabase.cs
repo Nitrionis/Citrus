@@ -73,38 +73,36 @@ namespace Lime.Profiler
 		/// </summary>
 		public static bool MustSkipSceneUpdate => instance.IsSceneUpdateFrozen;
 
+		/// <remarks>Access only from render thread.</remarks>
+		public static bool IsBatchBreakReasonsRequired => RenderThreadScope.IsBatchBreakReasonsRequired;
+
 		/// <remarks>
 		/// We use this to ensure the correct order of resource release
 		/// in cases where no rendering occurs after the update.
 		/// </remarks>
 		private static Queue<(RingPool.ListDescriptor, RingPool.ListDescriptor)> renderResourcesQueue;
 
-		private static bool isUpdateProfilerEnabled;
-		private static bool isRenderProfilerEnabled;
-		private static bool isProfilingRequired = true;
-
 		/// <inheritdoc/>
 		public bool ProfilerEnabled
 		{
-			get => isUpdateProfilerEnabled;
-			set => isProfilingRequired = value;
+			get => UpdateThreadScope.ProfilingEnabled;
+			set => UpdateThreadScope.ProfilingEnabled = value;
 		}
 
 		/// <inheritdoc/>
 		public bool BatchBreakReasonsRequired
 		{
-			get => IsBatchBreakReasonsRequired;
-			set => isBatchBreakReasonsRequired = value;
+			get => RenderThreadScope.IsBatchBreakReasonsRequired;
+			set => RenderThreadScope.IsBatchBreakReasonsRequired = value;
 		}
 
-		private UpdateSkipOptions currentSceneUpdateSkipOptions;
-		private UpdateSkipOptions nextSceneUpdateSkipOptions;
+		/// <inheritdoc/>
+		public bool IsSceneUpdateFrozen =>
+			UpdateThreadScope.SceneUpdateSkipOptions != UpdateSkipOptions.NoSkip;
 
 		/// <inheritdoc/>
-		public bool IsSceneUpdateFrozen => currentSceneUpdateSkipOptions != UpdateSkipOptions.NoSkip;
-
-		/// <inheritdoc/>
-		public void SetSceneUpdateFrozen(UpdateSkipOptions options) => nextSceneUpdateSkipOptions = options;
+		public void SetSceneUpdateFrozen(UpdateSkipOptions options) =>
+			UpdateThreadScope.SceneUpdateSkipOptions = options;
 
 		/// <inheritdoc/>
 		public int FrameLifespan { get; }
@@ -154,7 +152,7 @@ namespace Lime.Profiler
 			if (task.Status != TaskStatus.Created) {
 				throw new InvalidOperationException("Profiler: The task should not be started!");
 			}
-			nextSceneUpdateSkipOptions = UpdateSkipOptions.SkipAll;
+			UpdateThreadScope.SceneUpdateSkipOptions = UpdateSkipOptions.SkipAll;
 			dataReadTasks.Enqueue(task);
 		}
 
@@ -163,11 +161,6 @@ namespace Lime.Profiler
 		/// </summary>
 		private static Frame CalculatedFramePlace(long identifier) =>
 			profiledFrames[identifier % profiledFrames.Length];
-
-		private static bool isBatchBreakReasonsRequired;
-
-		/// <remarks>Access only from render thread.</remarks>
-		public static bool IsBatchBreakReasonsRequired { get; private set; }
 
 		/// <summary>
 		/// Ensures that a description has been created for this object.
@@ -259,268 +252,369 @@ namespace Lime.Profiler
 		}
 
 		/// <summary>
+		/// Create and saves the CpuUsage structure in the database.
+		/// </summary>
+		public static void CpuUsageFinished(CpuUsageStartInfo usageInfo, CpuUsage.Reasons reason)
+		{
+			if (usageInfo.ThreadInfo != ThreadInfo.Unknown) {
+				var threadInfo = threadDependentData[(int)usageInfo.ThreadInfo];
+				threadInfo.CpuUsagesPool.AddToNewestList(new CpuUsage {
+					Reason = reason,
+					Owners = Owners.Empty,
+					TypeIdentifier = TypeIdentifier.Empty,
+					StartTime = usageInfo.StartTime,
+					FinishTime = Stopwatch.GetTimestamp()
+				});
+			}
+		}
+
+		/// <summary>
 		/// Ensures that the specified type will be assigned some number.
 		/// </summary>
 		public static TypeIdentifier EnsureNumberFor(Type type) =>
 			new TypeIdentifier(nativeTypesTable.GetOrCreateValue(type).Value);
-
-		private static CpuUsageStartInfo fullUpdateCpuUsage;
-		private static bool isUpdateMainWindowTarget;
 
 		/// <summary>
 		/// Called before updating the main application window.
 		/// </summary>
 		internal static event Action MainWindowUpdating;
 
-		private static void SetNextProfilerEnabledState()
-		{
-			var dataReadTasks = instance.dataReadTasks;
-			bool isReadFromDatabase = false;
-			while (dataReadTasks.Count > 0) {
-				var task = dataReadTasks.Peek();
-				long framesCount = instance.ProfiledFramesCount;
-				long lastFrame = instance.LastAvailableFrame;
-				if (task.Status == TaskStatus.Created && framesCount == lastFrame + 1) {
-					task.Start();
-					isReadFromDatabase = true;
-					break;
-				}
-				if (!task.IsCompleted) {
-					isReadFromDatabase = true;
-					break;
-				}
-				dataReadTasks.Dequeue();
-			}
-			isUpdateProfilerEnabled = isProfilingRequired && !isReadFromDatabase;
-		}
-
-		private void SetNextSceneUpdateSkipOptions()
-		{
-			if (nextSceneUpdateSkipOptions == UpdateSkipOptions.SkipAllAfterNext) {
-				nextSceneUpdateSkipOptions = UpdateSkipOptions.SkipAll;
-				currentSceneUpdateSkipOptions = UpdateSkipOptions.NoSkip;
-			} else {
-				currentSceneUpdateSkipOptions = nextSceneUpdateSkipOptions;
-			}
-		}
-
 		private const long InvalidElapsedTime = long.MaxValue;
 
 		internal static void Updating(bool isMainWindowTarget)
 		{
-			isUpdateMainWindowTarget = isMainWindowTarget;
-			if (!isMainWindowTarget) return;
-			SetNextProfilerEnabledState();
-			instance.SetNextSceneUpdateSkipOptions();
-			// From Static to ThreadStatic.
-			threadInfo = isUpdateProfilerEnabled ? ThreadInfo.Update : ThreadInfo.Unknown;
-			ownersPool = instance.UpdateOwnersPool;
-			if (isUpdateProfilerEnabled) {
-				while (poolExpandingCpuUsages != null && poolExpandingCpuUsages.Count > 0) {
-					instance.UpdateCpuUsagesPool.AddToNewestList(poolExpandingCpuUsages.Dequeue());
-				}
-
-				var frame = CalculatedFramePlace(instance.ProfiledFramesCount);
-				FreeResourcesForNextUpdate(frame);
-
-				frame.CommonData = new ProfiledFrame {
-					Identifier = instance.ProfiledFramesCount,
-					StopwatchFrequency = Stopwatch.Frequency,
-					UpdateThreadElapsedTicks = InvalidElapsedTime,
-					UpdateThreadStartTime = Stopwatch.GetTimestamp(),
-					UpdateThreadGarbageCollections = frame.CommonData.UpdateThreadGarbageCollections,
-					RenderThreadGarbageCollections = frame.CommonData.RenderThreadGarbageCollections
-				};
-
-				frame.DrawCommandsState = Frame.DrawCommandsExecution.NotSubmittedToGpu;
-				frame.UpdateCpuUsagesList = instance.UpdateCpuUsagesPool.AcquireList();
-				frame.RenderCpuUsagesList = RingPool.ListDescriptor.Null;
-				frame.DrawingGpuUsagesList = RingPool.ListDescriptor.Null;
-
-				++instance.ProfiledFramesCount;
-				fullUpdateCpuUsage = CpuUsageStarted();
-				unfinishedFrames.Enqueue(frame.CommonData.Identifier);
+			UpdateThreadScope.Updating(isMainWindowTarget);
+			if (isMainWindowTarget) {
+				MainWindowUpdating?.Invoke();
 			}
-			if (instance.ProfiledFramesCount > 1) {
-				var previousFrame = CalculatedFramePlace(instance.ProfiledFramesCount - 2);
-				if (previousFrame.CommonData.UpdateThreadElapsedTicks == InvalidElapsedTime) {
-					previousFrame.CommonData.UpdateThreadElapsedTicks =
-						Stopwatch.GetTimestamp() - previousFrame.CommonData.UpdateThreadStartTime;
-				}
-			}
-			if (activeContext != requestedContext) {
-				activeContext?.Detached();
-				activeContext = requestedContext;
-				activeContext.Attached(instance);
-			}
-			activeContext?.MainWindowUpdating();
-			MainWindowUpdating?.Invoke();
 		}
 
-		internal static void Updated()
-		{
-			if (!isUpdateMainWindowTarget) return;
-			var nativeReferenceTable = instance.NativeReferenceTable;
-			// 10000 is just some value that adjusts the frequency of garbage collection.
-			if (nativeReferenceTable.NewDescriptionsCount > 10000) {
-				Console.WriteLine("Profiler ReferenceTable garbage collection starting!");
-				long minFrameIndexToStayAlive =
-					instance.ProfiledFramesCount - instance.FrameLifespan - 2;
-				nativeReferenceTable.CollectGarbage(minFrameIndexToStayAlive);
-			}
-			if (isUpdateProfilerEnabled) {
-				var frame = CalculatedFramePlace(instance.ProfiledFramesCount - 1);
-				var garbageCollections =
-					frame.CommonData.UpdateThreadGarbageCollections ?? new int[GC.MaxGeneration + 1];
-				for (int i = 0; i < garbageCollections.Length; i++) {
-					garbageCollections[i] = GC.CollectionCount(i);
-				}
-				frame.CommonData.UpdateThreadGarbageCollections = garbageCollections;
-				frame.CommonData.EndOfUpdateMemory = GC.GetTotalMemory(forceFullCollection: false);
-				// It takes a long time to get this parameter.
-				//frame.CommonData.EndOfUpdatePhysicalMemory = Process.GetCurrentProcess().WorkingSet64;
-				frame.CommonData.UpdateBodyElapsedTicks =
-					Stopwatch.GetTimestamp() - frame.CommonData.UpdateThreadStartTime;
-				CpuUsageFinished(fullUpdateCpuUsage, Owners.Empty, CpuUsage.Reasons.FullUpdate, TypeIdentifier.Empty);
-			}
-			DenyInputFromThread();
-		}
-
-		private static CpuUsageStartInfo syncBlockCpuUsage;
-		private static bool isSyncMainWindowTarget;
-		private static long renderThreadTargetFrameIndex;
+		internal static void Updated() => UpdateThreadScope.Updated();
 
 		/// <summary>
 		/// Occurs at the end of update and before render. The previous render is guaranteed to be completed.
 		/// </summary>
-		internal static void SyncStarted(bool isMainWindowTarget)
+		internal static void SyncStarted() => UpdateThreadScope.SyncStarted();
+
+		/// <summary>
+		/// Occurs at the end of update and before render. The previous render is guaranteed to be completed.
+		/// </summary>
+		internal static void SyncFinishing() => UpdateThreadScope.SyncFinishing();
+
+		internal static void Rendering(bool isMainWindowTarget) => RenderThreadScope.Rendering(isMainWindowTarget);
+
+		internal static void Rendered() => RenderThreadScope.Rendered();
+
+		internal static void SwappingSwapchainBuffer() => RenderThreadScope.SwappingSwapchainBuffer();
+
+		internal static void SwappedSwapchainBuffer() => RenderThreadScope.SwappedSwapchainBuffer();
+
+		private static class UpdateThreadScope
 		{
-			isSyncMainWindowTarget = isMainWindowTarget;
-			if (!isMainWindowTarget) return;
-			if (resetCommand.IsInitiated) {
-				Initialize(resetCommand.FrameLifespan);
+			private static bool isMainWindowTarget;
+			private static long targetFrameIndex;
+
+			private static CpuUsageStartInfo fullUpdateCpuUsage;
+			private static CpuUsageStartInfo syncBlockCpuUsage;
+
+			private static bool profilingEnabled;
+			private static bool profilingRequired;
+
+			public static bool ProfilingEnabled
+			{
+				get => profilingEnabled;
+				set => profilingRequired = value;
 			}
-			isRenderProfilerEnabled = isUpdateProfilerEnabled;
-			// Passing the index of the current frame to the rendering thread.
-			renderThreadTargetFrameIndex = instance.ProfiledFramesCount - 1;
-			if (renderThreadTargetFrameIndex > 1) {
-				var previousFrame = CalculatedFramePlace(renderThreadTargetFrameIndex - 2);
-				if (previousFrame.CommonData.RenderThreadElapsedTicks == InvalidElapsedTime) {
-					previousFrame.CommonData.RenderThreadElapsedTicks = previousFrame.CommonData.RenderBodyElapsedTicks;
+
+			private static UpdateSkipOptions currentSceneUpdateSkipOptions;
+			private static UpdateSkipOptions nextSceneUpdateSkipOptions;
+
+			public static UpdateSkipOptions SceneUpdateSkipOptions
+			{
+				get => currentSceneUpdateSkipOptions;
+				set => nextSceneUpdateSkipOptions = value;
+			}
+
+			public static void Updating(bool isMainWindowTarget)
+			{
+				UpdateThreadScope.isMainWindowTarget = isMainWindowTarget;
+				if (!isMainWindowTarget) {
+					return;
+				}
+				SetNextProfilerEnabledState();
+				SetNextSceneUpdateSkipOptions();
+				// From Static to ThreadStatic.
+				threadInfo = profilingEnabled ? ThreadInfo.Update : ThreadInfo.Unknown;
+				ownersPool = instance.UpdateOwnersPool;
+				if (instance.ProfiledFramesCount > 0) {
+					var previousFrame = CalculatedFramePlace(instance.ProfiledFramesCount - 1);
+					if (previousFrame.CommonData.UpdateThreadElapsedTicks == InvalidElapsedTime) {
+						previousFrame.CommonData.UpdateThreadElapsedTicks =
+							Stopwatch.GetTimestamp() - previousFrame.CommonData.UpdateThreadStartTime;
+					}
+				}
+				if (profilingEnabled) {
+					targetFrameIndex = instance.ProfiledFramesCount++;
+					while (poolExpandingCpuUsages != null && poolExpandingCpuUsages.Count > 0) {
+						instance.UpdateCpuUsagesPool.AddToNewestList(poolExpandingCpuUsages.Dequeue());
+					}
+
+					var frame = CalculatedFramePlace(targetFrameIndex);
+					FreeResourcesForNextUpdate(frame);
+
+					frame.CommonData = new ProfiledFrame {
+						Identifier = targetFrameIndex,
+						StopwatchFrequency = Stopwatch.Frequency,
+						UpdateThreadElapsedTicks = InvalidElapsedTime,
+						UpdateThreadStartTime = Stopwatch.GetTimestamp(),
+						UpdateThreadGarbageCollections = frame.CommonData.UpdateThreadGarbageCollections,
+						RenderThreadGarbageCollections = frame.CommonData.RenderThreadGarbageCollections
+					};
+
+					frame.DrawCommandsState = Frame.DrawCommandsExecution.NotSubmittedToGpu;
+					frame.UpdateCpuUsagesList = instance.UpdateCpuUsagesPool.AcquireList();
+					frame.RenderCpuUsagesList = RingPool.ListDescriptor.Null;
+					frame.DrawingGpuUsagesList = RingPool.ListDescriptor.Null;
+
+					fullUpdateCpuUsage = CpuUsageStarted();
+					unfinishedFrames.Enqueue(frame.CommonData.Identifier);
+				}
+				if (activeContext != requestedContext) {
+					activeContext?.Detached();
+					activeContext = requestedContext;
+					activeContext.Attached(instance);
+				}
+				activeContext?.MainWindowUpdating();
+			}
+
+			public static void Updated()
+			{
+				if (!isMainWindowTarget) return;
+				var nativeReferenceTable = instance.NativeReferenceTable;
+				// 10000 is just some value that adjusts the frequency of garbage collection.
+				if (nativeReferenceTable.NewDescriptionsCount > 10000) {
+					Console.WriteLine("Profiler ReferenceTable garbage collection starting!");
+					long minFrameIndexToStayAlive = targetFrameIndex - instance.FrameLifespan - 1;
+					nativeReferenceTable.CollectGarbage(minFrameIndexToStayAlive);
+				}
+				if (profilingEnabled) {
+					var frame = CalculatedFramePlace(targetFrameIndex);
+					var garbageCollections =
+						frame.CommonData.UpdateThreadGarbageCollections ?? new int[GC.MaxGeneration + 1];
+					for (int i = 0; i < garbageCollections.Length; i++) {
+						garbageCollections[i] = GC.CollectionCount(i);
+					}
+					frame.CommonData.UpdateThreadGarbageCollections = garbageCollections;
+					frame.CommonData.EndOfUpdateMemory = GC.GetTotalMemory(forceFullCollection: false);
+					// It takes a long time to get this parameter.
+					//frame.CommonData.EndOfUpdatePhysicalMemory = Process.GetCurrentProcess().WorkingSet64;
+					frame.CommonData.UpdateBodyElapsedTicks =
+						Stopwatch.GetTimestamp() - frame.CommonData.UpdateThreadStartTime;
+					CpuUsageFinished(fullUpdateCpuUsage, CpuUsage.Reasons.FullUpdate);
+				}
+				DenyInputFromThread();
+			}
+
+			private static void SetNextProfilerEnabledState()
+			{
+				var dataReadTasks = instance.dataReadTasks;
+				bool isReadFromDatabase = false;
+				while (dataReadTasks.Count > 0) {
+					var task = dataReadTasks.Peek();
+					long framesCount = instance.ProfiledFramesCount;
+					long lastFrame = instance.LastAvailableFrame;
+					if (task.Status == TaskStatus.Created && framesCount == lastFrame + 1) {
+						task.Start();
+						isReadFromDatabase = true;
+						break;
+					}
+					if (!task.IsCompleted) {
+						isReadFromDatabase = true;
+						break;
+					}
+					dataReadTasks.Dequeue();
+				}
+				profilingEnabled = profilingRequired && !isReadFromDatabase;
+			}
+
+			public static void SyncStarted()
+			{
+				if (!isMainWindowTarget) {
+					return;
+				}
+				// Passing the index of the current frame to the rendering thread.
+				RenderThreadScope.SetNextTargetFrameIndex(targetFrameIndex);
+				RenderThreadScope.ProfilingEnabled = profilingEnabled;
+				if (targetFrameIndex > 1) {
+					// Handle the case when the frame was not rendered.
+					var frame = CalculatedFramePlace(targetFrameIndex - 2);
+					if (frame.CommonData.RenderThreadElapsedTicks == InvalidElapsedTime) {
+						frame.CommonData.RenderThreadElapsedTicks = frame.CommonData.RenderBodyElapsedTicks;
+					}
+				}
+				while (unfinishedFrames.Count > 0) {
+					if (unfinishedFrames.Count > MaxSwapchainBuffersCount) {
+						throw new System.Exception("Profiler: Incorrect behavior detected!");
+					}
+					var frame = CalculatedFramePlace(unfinishedFrames.Peek());
+					if (
+						frame.CommonData.UpdateThreadElapsedTicks != InvalidElapsedTime &&
+						frame.CommonData.RenderThreadElapsedTicks != InvalidElapsedTime && (
+						frame.DrawCommandsState == Frame.DrawCommandsExecution.Completed ||
+						frame.DrawCommandsState == Frame.DrawCommandsExecution.NotSubmittedToGpu)
+						)
+					{
+						instance.LastAvailableFrame = unfinishedFrames.Dequeue();
+					} else {
+						break;
+					}
+				}
+				if (profilingEnabled) {
+					syncBlockCpuUsage = CpuUsageStarted();
 				}
 			}
-			while (unfinishedFrames.Count > 0) {
-				if (unfinishedFrames.Count > MaxSwapchainBuffersCount) {
-					throw new System.Exception("Profiler: Incorrect behavior detected!");
+
+			public static void SyncFinishing()
+			{
+				if (!isMainWindowTarget) {
+					return;
 				}
-				var frame = CalculatedFramePlace(unfinishedFrames.Peek());
-				if (
-					frame.CommonData.UpdateThreadElapsedTicks != InvalidElapsedTime &&
-					frame.CommonData.RenderThreadElapsedTicks != InvalidElapsedTime && (
-					frame.DrawCommandsState == Frame.DrawCommandsExecution.Completed ||
-					frame.DrawCommandsState == Frame.DrawCommandsExecution.NotSubmittedToGpu)
-					)
-				{
-					instance.LastAvailableFrame = unfinishedFrames.Dequeue();
+				if (profilingEnabled) {
+					CpuUsageFinished(syncBlockCpuUsage, CpuUsage.Reasons.SyncBodyExecution);
+				}
+			}
+
+			private static void SetNextSceneUpdateSkipOptions()
+			{
+				if (nextSceneUpdateSkipOptions == UpdateSkipOptions.SkipAllAfterNext) {
+					nextSceneUpdateSkipOptions = UpdateSkipOptions.SkipAll;
+					currentSceneUpdateSkipOptions = UpdateSkipOptions.NoSkip;
 				} else {
-					break;
-				}
-			}
-			if (isRenderProfilerEnabled) {
-				syncBlockCpuUsage = CpuUsageStarted();
-			}
-		}
-
-		/// <summary>
-		/// Occurs at the end of update and before render. The previous render is guaranteed to be completed.
-		/// </summary>
-		internal static void SyncFinishing()
-		{
-			if (!isSyncMainWindowTarget) return;
-			if (isRenderProfilerEnabled) {
-				CpuUsageFinished(syncBlockCpuUsage, Owners.Empty, CpuUsage.Reasons.SyncBodyExecution, TypeIdentifier.Empty);
-			}
-		}
-
-		private static CpuUsageStartInfo fullRenderCpuUsage;
-		private static bool isRenderMainWindowTarget;
-
-		internal static void Rendering(bool isMainWindowTarget)
-		{
-			isRenderMainWindowTarget = isMainWindowTarget;
-			if (!isMainWindowTarget) return;
-			RenderBatchStatistics.Reset();
-			threadInfo = isRenderProfilerEnabled ? ThreadInfo.Render : ThreadInfo.Unknown;
-			ownersPool = isRenderProfilerEnabled ? instance.RenderOwnersPool : null;
-			IsBatchBreakReasonsRequired = isBatchBreakReasonsRequired;
-			if (isRenderProfilerEnabled) {
-				while (poolExpandingCpuUsages != null && poolExpandingCpuUsages.Count > 0) {
-					instance.UpdateCpuUsagesPool.AddToNewestList(poolExpandingCpuUsages.Dequeue());
-				}
-
-				var frame = CalculatedFramePlace(renderThreadTargetFrameIndex);
-				FreeResourcesForNextRender();
-
-				frame.CommonData.RenderThreadStartTime = Stopwatch.GetTimestamp();
-				frame.CommonData.RenderThreadElapsedTicks = InvalidElapsedTime;
-
-				frame.RenderCpuUsagesList = instance.RenderCpuUsagesPool.AcquireList();
-				frame.DrawingGpuUsagesList = instance.GpuUsagesPool.AcquireList();
-				renderResourcesQueue.Enqueue((frame.RenderCpuUsagesList, frame.DrawingGpuUsagesList));
-
-				fullRenderCpuUsage = CpuUsageStarted();
-			}
-			if (renderThreadTargetFrameIndex > 0) {
-				var previousFrame = CalculatedFramePlace(renderThreadTargetFrameIndex - 1);
-				if (previousFrame.CommonData.RenderThreadElapsedTicks == InvalidElapsedTime) {
-					previousFrame.CommonData.RenderThreadElapsedTicks =
-						Stopwatch.GetTimestamp() - previousFrame.CommonData.RenderThreadStartTime;
+					currentSceneUpdateSkipOptions = nextSceneUpdateSkipOptions;
 				}
 			}
 		}
 
-		internal static void Rendered()
+		private static class RenderThreadScope
 		{
-			if (!isRenderMainWindowTarget) return;
-			if (isRenderProfilerEnabled) {
-				var frame = CalculatedFramePlace(renderThreadTargetFrameIndex);
-				var garbageCollections =
-					frame.CommonData.RenderThreadGarbageCollections ?? new int[GC.MaxGeneration + 1];
-				for (int i = 0; i < garbageCollections.Length; i++) {
-					garbageCollections[i] = GC.CollectionCount(i);
-				}
-				frame.CommonData.RenderThreadGarbageCollections = garbageCollections;
-				frame.CommonData.EndOfRenderMemory = GC.GetTotalMemory(forceFullCollection: false);
-				// It takes a long time to get this parameter.
-				//frame.CommonData.EndOfRenderPhysicalMemory = Process.GetCurrentProcess().WorkingSet64;
-				frame.CommonData.RenderBodyElapsedTicks =
-					Stopwatch.GetTimestamp() - frame.CommonData.RenderThreadStartTime;
-				frame.CommonData.FullSavedByBatching = RenderBatchStatistics.FullSavedByBatching;
-				frame.CommonData.SceneSavedByBatching = RenderBatchStatistics.SceneSavedByBatching;
-				var rendererStatistics = PlatformRendererStatistics.Instance;
-				frame.CommonData.FullDrawCallCount = rendererStatistics.FullDrawCallsCount;
-				frame.CommonData.SceneDrawCallCount = rendererStatistics.SceneDrawCallsCount;
-				frame.CommonData.FullVerticesCount = rendererStatistics.FullVertexCount;
-				frame.CommonData.SceneVerticesCount = rendererStatistics.SceneVertexCount;
-				frame.CommonData.FullTrianglesCount = rendererStatistics.FullTrianglesCount;
-				frame.CommonData.SceneTrianglesCount = rendererStatistics.SceneTrianglesCount;
+			private static bool isMainWindowTarget;
+			private static long targetFrameIndex;
+			private static long previousTargetFrameIndex;
 
-				CpuUsageFinished(fullRenderCpuUsage, Owners.Empty, CpuUsage.Reasons.FullRender, TypeIdentifier.Empty);
+			private static CpuUsageStartInfo fullRenderCpuUsage;
+			private static CpuUsageStartInfo swapBufferCpuUsage;
+
+			private static bool profilingEnabled;
+			private static bool profilingRequired;
+
+			public static bool ProfilingEnabled
+			{
+				get => profilingEnabled;
+				set => profilingRequired = value;
 			}
-			DenyInputFromThread();
+
+			public static bool ProfilingRequired { get; set; }
+
+			private static bool batchBreakReasonsRequired;
+			private static bool batchBreakReasonsEnabled;
+
+			public static bool IsBatchBreakReasonsRequired
+			{
+				get => batchBreakReasonsEnabled;
+				set => batchBreakReasonsRequired = value;
+			}
+
+			public static void SetNextTargetFrameIndex(long index) => targetFrameIndex = index;
+
+			public static void Rendering(bool isMainWindowTarget)
+			{
+				RenderThreadScope.isMainWindowTarget = isMainWindowTarget;
+				if (!isMainWindowTarget) {
+					return;
+				}
+				RenderBatchStatistics.Reset();
+				profilingEnabled = profilingRequired;
+				batchBreakReasonsEnabled = batchBreakReasonsRequired;
+				if (targetFrameIndex > 0) {
+					int offset = previousTargetFrameIndex == targetFrameIndex ? 0 : 1;
+					var previousFrame = CalculatedFramePlace(targetFrameIndex - offset);
+					if (previousFrame.CommonData.RenderThreadElapsedTicks == InvalidElapsedTime) {
+						previousFrame.CommonData.RenderThreadElapsedTicks =
+							Stopwatch.GetTimestamp() - previousFrame.CommonData.RenderThreadStartTime;
+					}
+				}
+				threadInfo = profilingEnabled ? ThreadInfo.Render : ThreadInfo.Unknown;
+				ownersPool = profilingEnabled ? instance.RenderOwnersPool : null;
+				batchBreakReasonsEnabled = batchBreakReasonsRequired;
+				if (profilingEnabled) {
+					while (poolExpandingCpuUsages != null && poolExpandingCpuUsages.Count > 0) {
+						instance.UpdateCpuUsagesPool.AddToNewestList(poolExpandingCpuUsages.Dequeue());
+					}
+
+					var frame = CalculatedFramePlace(targetFrameIndex);
+					FreeResourcesForNextRender();
+
+					frame.CommonData.RenderThreadStartTime = Stopwatch.GetTimestamp();
+					frame.CommonData.RenderThreadElapsedTicks = InvalidElapsedTime;
+
+					frame.RenderCpuUsagesList = instance.RenderCpuUsagesPool.AcquireList();
+					frame.DrawingGpuUsagesList = instance.GpuUsagesPool.AcquireList();
+					renderResourcesQueue.Enqueue((frame.RenderCpuUsagesList, frame.DrawingGpuUsagesList));
+
+					fullRenderCpuUsage = CpuUsageStarted();
+				}
+				previousTargetFrameIndex = targetFrameIndex;
+			}
+
+			public static void Rendered()
+			{
+				if (!isMainWindowTarget) {
+					return;
+				}
+				if (profilingEnabled) {
+					var frame = CalculatedFramePlace(targetFrameIndex);
+					var garbageCollections =
+						frame.CommonData.RenderThreadGarbageCollections ?? new int[GC.MaxGeneration + 1];
+					for (int i = 0; i < garbageCollections.Length; i++) {
+						garbageCollections[i] = GC.CollectionCount(i);
+					}
+					frame.CommonData.RenderThreadGarbageCollections = garbageCollections;
+					frame.CommonData.EndOfRenderMemory = GC.GetTotalMemory(forceFullCollection: false);
+					// It takes a long time to get this parameter.
+					//frame.CommonData.EndOfRenderPhysicalMemory = Process.GetCurrentProcess().WorkingSet64;
+					frame.CommonData.RenderBodyElapsedTicks =
+						Stopwatch.GetTimestamp() - frame.CommonData.RenderThreadStartTime;
+					frame.CommonData.FullSavedByBatching = RenderBatchStatistics.FullSavedByBatching;
+					frame.CommonData.SceneSavedByBatching = RenderBatchStatistics.SceneSavedByBatching;
+					var rendererStatistics = PlatformRendererStatistics.Instance;
+					frame.CommonData.FullDrawCallCount = rendererStatistics.FullDrawCallsCount;
+					frame.CommonData.SceneDrawCallCount = rendererStatistics.SceneDrawCallsCount;
+					frame.CommonData.FullVerticesCount = rendererStatistics.FullVertexCount;
+					frame.CommonData.SceneVerticesCount = rendererStatistics.SceneVertexCount;
+					frame.CommonData.FullTrianglesCount = rendererStatistics.FullTrianglesCount;
+					frame.CommonData.SceneTrianglesCount = rendererStatistics.SceneTrianglesCount;
+
+					CpuUsageFinished(fullRenderCpuUsage, CpuUsage.Reasons.FullRender);
+				}
+				DenyInputFromThread();
+			}
+
+			public static void SwappingSwapchainBuffer() =>
+				swapBufferCpuUsage = new CpuUsageStartInfo(threadInfo, Stopwatch.GetTimestamp());
+
+			public static void SwappedSwapchainBuffer()
+			{
+				if (profilingEnabled && isMainWindowTarget) {
+					var frame = CalculatedFramePlace(targetFrameIndex);
+					if (swapBufferCpuUsage.ThreadInfo == ThreadInfo.Render) {
+						CpuUsageFinished(swapBufferCpuUsage, CpuUsage.Reasons.WaitForPreviousRendering);
+					}
+					frame.CommonData.WaitForAcquiringSwapchainBuffer =
+						Stopwatch.GetTimestamp() - swapBufferCpuUsage.StartTime;
+				}
+			}
 		}
 
-		private static CpuUsageStartInfo swapBufferCpuUsage;
-
-		internal static void SwappingSwapchainBuffer() => swapBufferCpuUsage = CpuUsageStarted();
-
-		internal static void SwappedSwapchainBuffer()
-		{
-			var frame = CalculatedFramePlace(renderThreadTargetFrameIndex);
-			CpuUsageFinished(swapBufferCpuUsage, Owners.Empty, CpuUsage.Reasons.WaitForPreviousRendering, TypeIdentifier.Empty);
-			frame.CommonData.WaitForAcquiringSwapchainBuffer = Stopwatch.GetTimestamp() - swapBufferCpuUsage.StartTime;
-		}
-		
 		private static void DenyInputFromThread()
 		{
 			threadInfo = ThreadInfo.Unknown;
@@ -568,8 +662,6 @@ namespace Lime.Profiler
 		private static void Initialize(uint frameLifespan)
 		{
 			threadInfo = ThreadInfo.Unknown;
-			isUpdateProfilerEnabled = false;
-			isRenderProfilerEnabled = false;
 			frameLifespan = Math.Max(frameLifespan, MaxSwapchainBuffersCount + 1);
 			instance = new ProfilerDatabase(frameLifespan);
 			cpuUsagesPools[(int)ThreadInfo.Update] = instance.UpdateCpuUsagesPool;
@@ -705,7 +797,6 @@ namespace Lime.Profiler
 		}
 
 		private static bool firstInitialization = true;
-		private static ResetCommand resetCommand = new ResetCommand { IsInitiated = false };
 
 		/// <summary>
 		/// Allows you to reinitialize the profiler's database,
@@ -718,18 +809,6 @@ namespace Lime.Profiler
 				Initialize(frameLifespan);
 			} else {
 				throw new NotImplementedException("Profiler: Reinitialize not implemented!");
-				resetCommand = new ResetCommand { FrameLifespan = frameLifespan };
-			}
-		}
-
-		private struct ResetCommand
-		{
-			public uint FrameLifespan;
-
-			public bool IsInitiated
-			{
-				get => FrameLifespan != uint.MaxValue;
-				set => FrameLifespan = value ? throw new InvalidOperationException() : uint.MaxValue;
 			}
 		}
 	}
