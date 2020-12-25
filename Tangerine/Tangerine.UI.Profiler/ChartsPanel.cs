@@ -30,7 +30,7 @@ namespace Tangerine.UI
 		private readonly ChartsInfo<LineCharts> updateGcCharts;
 		private readonly ChartsInfo<LineCharts> renderGcCharts;
 
-		private int sliceIndex = -1;
+		private int currentSliceIndex = -1;
 
 		public event Action<long> SliceSelected; 
 		
@@ -56,7 +56,7 @@ namespace Tangerine.UI
 			LegendItemDescription CreateFloatLegendItem(string name) =>
 				new LegendItemDescription {
 					Label = name,
-					ValueFormat = "{0:0.##}"
+					ValueFormat = "{0:0.00}"
 				};
 			LegendItemDescription CreateIntLegendItem(string name) =>
 				new LegendItemDescription {
@@ -274,7 +274,7 @@ namespace Tangerine.UI
 		private void EnqueueFrameValuesToCharts(ProfiledFrame frame)
 		{
 			history.Enqueue(frame);
-			sliceIndex = sliceIndex >= 0 ? sliceIndex - 1 : -1;
+			currentSliceIndex = currentSliceIndex >= 0 ? currentSliceIndex - 1 : -1;
 				
 			RemoteStopwatchExtension.Frequency = frame.StopwatchFrequency;
 
@@ -353,7 +353,7 @@ namespace Tangerine.UI
 			}
 			MoveSlice(renderGcCharts.LinesContainer.Lines);
 			
-			if (sliceIndex < 0) {
+			if (currentSliceIndex < 0) {
 				SetFrameValuesToLegend(frame);
 			} else {
 				Application.MainWindow.Invalidate();
@@ -442,10 +442,10 @@ namespace Tangerine.UI
 
 		private void OnSliceSelected(VerticalSlice slice)
 		{
-			sliceIndex = slice.Index;
+			currentSliceIndex = slice.Index;
 			var frame = history.GetItem(slice.Index);
 			SetFrameValuesToLegend(frame);
-			float position = sliceIndex * ControlPointsSpacing;
+			float position = currentSliceIndex * ControlPointsSpacing;
 			void SetSlicePosition(Line[] lines) {
 				lines[0].Start.X = position;
 				lines[0].End.X = position;
