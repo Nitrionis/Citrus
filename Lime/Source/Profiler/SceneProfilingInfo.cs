@@ -14,7 +14,7 @@ namespace Lime.Profiler
 		private static int scopeCount = 0;
 
 		/// <summary>
-		/// Indicates whether we are inside the OverdrawMaterialScope or not.
+		/// Indicates whether we are inside the scene render or not.
 		/// </summary>
 #if TANGERINE 
 		public static bool IsInside => scopeCount > 0;

@@ -22,7 +22,7 @@ namespace Lime.Profiler
 		/// <summary>
 		/// This is a value greater than the number of buffers in swapchain.
 		/// </summary>
-		private const uint MaxSwapchainBuffersCount = 10;
+		private const uint MaxUnfinishedFramesQueueLength = 10;
 
 		private static ProfilerDatabase instance;
 
@@ -418,23 +418,20 @@ namespace Lime.Profiler
 			private static void SetNextProfilerEnabledState()
 			{
 				var dataReadTasks = instance.dataReadTasks;
-				bool isReadFromDatabase = false;
 				while (dataReadTasks.Count > 0) {
 					var task = dataReadTasks.Peek();
 					long framesCount = instance.ProfiledFramesCount;
 					long lastFrame = instance.LastAvailableFrame;
 					if (task.Status == TaskStatus.Created && framesCount == lastFrame + 1) {
 						task.Start();
-						isReadFromDatabase = true;
 						break;
 					}
 					if (!task.IsCompleted) {
-						isReadFromDatabase = true;
 						break;
 					}
 					dataReadTasks.Dequeue();
 				}
-				profilingEnabled = profilingRequired && !isReadFromDatabase;
+				profilingEnabled = profilingRequired && dataReadTasks.Count == 0;
 			}
 
 			public static void SyncStarted()
@@ -453,7 +450,7 @@ namespace Lime.Profiler
 					}
 				}
 				while (unfinishedFrames.Count > 0) {
-					if (unfinishedFrames.Count > MaxSwapchainBuffersCount) {
+					if (unfinishedFrames.Count > MaxUnfinishedFramesQueueLength) {
 						throw new System.Exception("Profiler: Incorrect behavior detected!");
 					}
 					var frame = CalculatedFramePlace(unfinishedFrames.Peek());
@@ -662,7 +659,7 @@ namespace Lime.Profiler
 		private static void Initialize(uint frameLifespan)
 		{
 			threadInfo = ThreadInfo.Unknown;
-			frameLifespan = Math.Max(frameLifespan, MaxSwapchainBuffersCount + 1);
+			frameLifespan = Math.Max(frameLifespan, MaxUnfinishedFramesQueueLength + 1);
 			instance = new ProfilerDatabase(frameLifespan);
 			cpuUsagesPools[(int)ThreadInfo.Update] = instance.UpdateCpuUsagesPool;
 			cpuUsagesPools[(int)ThreadInfo.Render] = instance.RenderCpuUsagesPool;
