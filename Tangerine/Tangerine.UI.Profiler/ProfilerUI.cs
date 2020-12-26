@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Lime;
 using Lime.Profiler;
 using Lime.Profiler.Contexts;
@@ -109,7 +110,7 @@ namespace Tangerine.UI
 						Padding = new Thickness(8, 4, 2, 0)
 					},
 					CreateSearchIcon(),
-					(regexFilter = new ThemedEditBox() { MinMaxWidth = 256 }),
+					(regexFilter = new ThemedEditBox { MinMaxWidth = 256 }),
 					new ThemedSimpleText("in Charts") {
 						VAlignment = VAlignment.Center,
 						Padding = new Thickness(8, 4, 2, 0)
@@ -151,10 +152,26 @@ namespace Tangerine.UI
 				}
 			};
 			chartsPanel.FrameSelected += frameIdentifier => {
-				if (frameIdentifier > 0) {
+				throw new NotImplementedException();
+			};
+			regexFilter.Submitted += pattern => {
+				bool IsValidRegex() {
+					if (!string.IsNullOrEmpty(pattern)) {
+						try {
+							new Regex(pattern);
+						} catch (ArgumentException) {
+							return false;
+						}
+						return true;
+					}
+					return false;
+				}
+				if (IsValidRegex()) {
 					var processor = new ChartsDataResponseProcessor();
-					ProfilerTerminal.SelectTime(, processor);
+					ProfilerTerminal.SelectTime(pattern, processor);
 					chartsResponses.Enqueue(processor);
+				} else {
+					chartsResponses.Enqueue(ChartsDataResponseProcessor.Empty);
 				}
 			};
 		}
@@ -166,6 +183,9 @@ namespace Tangerine.UI
 			public bool IsFinished => isFinished;
 			
 			public ObjectsSummaryResponse Response { get; private set; }
+
+			public static ChartsDataResponseProcessor Empty =>
+				new ChartsDataResponseProcessor { isFinished = true };
 			
 			public void ProcessResponse(object response)
 			{
