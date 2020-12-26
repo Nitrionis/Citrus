@@ -151,17 +151,17 @@ namespace Lime.Profiler.Contexts
 					foreach (var usage in database.UpdateCpuUsagesPool.Reversed(frame.UpdateCpuUsagesList)) {
 						ProcessCpuUsage(usage.StartTime, usage.FinishTime, IsCpuUsageFiltersPassed(usage, updateOwnersPool));
 					}
-					response.UpdateTimeForEachFrame[identifer] = elapsed / (Stopwatch.Frequency / 1000f);
+					response.UpdateTimeForEachFrame[identifer - start] = elapsed / (Stopwatch.Frequency / 1000f);
 					ResetCounter();
 					foreach (var usage in database.RenderCpuUsagesPool.Reversed(frame.RenderCpuUsagesList)) {
 						ProcessCpuUsage(usage.StartTime, usage.FinishTime, IsCpuUsageFiltersPassed(usage, renderOwnersPool));
 					}
-					response.RenderTimeForEachFrame[identifer] = elapsed / (Stopwatch.Frequency / 1000f);
+					response.RenderTimeForEachFrame[identifer - start] = elapsed / (Stopwatch.Frequency / 1000f);
 					ResetCounter();
 					foreach (var usage in database.GpuUsagesPool.Reversed(frame.DrawingGpuUsagesList)) {
 						ProcessGpuUsage(usage.StartTime, usage.FinishTime, IsGpuUsageFiltersPassed(usage, renderOwnersPool));
 					}
-					response.DrawTimeForEachFrame[identifer] = elapsed / 1000f;
+					response.DrawTimeForEachFrame[identifer - start] = elapsed / 1000f;
 				}
 			}
 			serializer.ToWriter(response, writer);

@@ -1,4 +1,4 @@
-﻿#if PROFILER
+#if PROFILER
 
 using System;
 using Lime;
@@ -20,7 +20,9 @@ namespace Tangerine.UI
 		
 		private readonly int[] previousUpdateGC = new int[3];
 		private readonly int[] previousRenderGC = new int[3];
-		
+
+		private ObjectsSummaryResponse lastResponse;
+
 		private readonly ChartsInfo<StackedAreaCharts> updateCharts;
 		private readonly ChartsInfo<StackedAreaCharts> renderCharts;
 		private readonly ChartsInfo<StackedAreaCharts> gpuCharts;
@@ -153,7 +155,7 @@ namespace Tangerine.UI
 			sceneGeometryCharts = CreateLineCharts("Scene Geometry", geometryChartsDescriptions);
 			fullGeometryCharts = CreateLineCharts("Full Geometry", geometryChartsDescriptions);
 			var gcChartsDescriptions = new [] {
-				CreateFloatLegendItem("Memory"),
+				CreateIntLegendItem("Memory"),
 				CreateIntLegendItem("GC 0"),
 				CreateIntLegendItem("GC 1"),
 				CreateIntLegendItem("GC 2"),
@@ -282,77 +284,85 @@ namespace Tangerine.UI
 				lines[0].Start.X -= ControlPointsSpacing;
 				lines[0].End.X -= ControlPointsSpacing;
 			}
-			
-			float logarithmizedAll = Logarithm(frame.UpdateThreadElapsedTicks.TicksToMilliseconds());
-			float bodyPercent = frame.UpdateBodyElapsedTicks / Math.Max(float.Epsilon, frame.UpdateThreadElapsedTicks);
-			var charts = updateCharts.ChartsGroup.Charts;
-			charts[0].Enqueue(logarithmizedAll * (1 - bodyPercent));
-			charts[1].Enqueue(logarithmizedAll * bodyPercent);
-			charts[2].Enqueue(0);
-			MoveSlice(updateCharts.LinesContainer.Lines);
-
-			logarithmizedAll = Logarithm(frame.RenderThreadElapsedTicks.TicksToMilliseconds());
-			bodyPercent = frame.RenderBodyElapsedTicks / Math.Max(float.Epsilon, frame.RenderThreadElapsedTicks);
-			float waitPercent = frame.WaitForAcquiringSwapchainBuffer / Math.Max(float.Epsilon, frame.RenderBodyElapsedTicks);
-			charts = renderCharts.ChartsGroup.Charts;
-			charts[0].Enqueue(logarithmizedAll * (1 - bodyPercent));
-			charts[1].Enqueue(logarithmizedAll * bodyPercent * (1 - waitPercent));
-			charts[2].Enqueue(0);
-			charts[3].Enqueue(logarithmizedAll * bodyPercent * waitPercent);
-			/*charts[0].Enqueue((frame.RenderThreadElapsedTicks - frame.RenderBodyElapsedTicks).TicksToMilliseconds());
-			charts[1].Enqueue((frame.RenderBodyElapsedTicks - frame.WaitForAcquiringSwapchainBuffer).TicksToMilliseconds());
-			charts[3].Enqueue(frame.WaitForAcquiringSwapchainBuffer.TicksToMilliseconds());*/
-			MoveSlice(renderCharts.LinesContainer.Lines);
-
-			charts = gpuCharts.ChartsGroup.Charts;
-			charts[0].Enqueue(Logarithm(frame.GpuElapsedTime.TicksToMilliseconds()));
-			charts[1].Enqueue(0);
-			MoveSlice(gpuCharts.LinesContainer.Lines);
-			
-			charts = sceneGeometryCharts.ChartsGroup.Charts;
-			charts[0].Enqueue(frame.SceneSavedByBatching);
-			charts[1].Enqueue(frame.SceneDrawCallCount);
-			charts[2].Enqueue(frame.SceneVerticesCount);
-			charts[3].Enqueue(frame.SceneTrianglesCount);
-			MoveSlice(sceneGeometryCharts.LinesContainer.Lines);
-
-			charts = fullGeometryCharts.ChartsGroup.Charts;
-			charts[0].Enqueue(frame.FullSavedByBatching);
-			charts[1].Enqueue(frame.FullDrawCallCount);
-			charts[2].Enqueue(frame.FullVerticesCount);
-			charts[3].Enqueue(frame.FullTrianglesCount);
-			MoveSlice(fullGeometryCharts.LinesContainer.Lines);
-
-			charts = updateGcCharts.ChartsGroup.Charts;
-			charts[0].Enqueue(frame.EndOfUpdateMemory);
-			for (int i = 0; i < charts.Count - 1; i++) {
-				var garbageCollections = frame.UpdateThreadGarbageCollections;
-				if (i < garbageCollections.Length) {
-					int value = garbageCollections[i];
-					garbageCollections[i] -= previousUpdateGC[i];
-					charts[i + 1].Enqueue(garbageCollections[i]);
-					previousUpdateGC[i] = value;
-				} else {
-					charts[i + 1].Enqueue(0);
-				}
+			{ // CPU Update thread charts
+				long fullTicks = frame.UpdateThreadElapsedTicks;
+				long bodyTicks = frame.UpdateBodyElapsedTicks;
+				float logarithmizedFull = Logarithm(fullTicks.TicksToMilliseconds());
+				float bodyPercent = bodyTicks / Math.Max(float.Epsilon, fullTicks);
+				var charts = updateCharts.ChartsGroup.Charts;
+				charts[0].Enqueue(logarithmizedFull * (1 - bodyPercent));
+				charts[1].Enqueue(logarithmizedFull * bodyPercent);
+				charts[2].Enqueue(0);
+				MoveSlice(updateCharts.LinesContainer.Lines);
 			}
-			MoveSlice(updateGcCharts.LinesContainer.Lines);
-			
-			charts = renderGcCharts.ChartsGroup.Charts;
-			charts[0].Enqueue(frame.EndOfRenderMemory);
-			for (int i = 0; i < charts.Count - 1; i++) {
-				var garbageCollections = frame.RenderThreadGarbageCollections;
-				if (garbageCollections != null && i < garbageCollections.Length) {
-					int value = garbageCollections[i];
-					garbageCollections[i] -= previousRenderGC[i];
-					charts[i + 1].Enqueue(garbageCollections[i]);
-					previousRenderGC[i] = value;
-				} else {
-					charts[i + 1].Enqueue(0);
-				}
+			{ // CPU Render thread charts
+				long fullTicks = frame.RenderThreadElapsedTicks;
+				long bodyTicks = frame.RenderBodyElapsedTicks;
+				long waitTicks = frame.WaitForAcquiringSwapchainBuffer;
+				float logarithmizedFull = Logarithm(fullTicks.TicksToMilliseconds());
+				float bodyPercent = bodyTicks / Math.Max(float.Epsilon, fullTicks);
+				float waitPercent = waitTicks / Math.Max(float.Epsilon, bodyTicks);
+				var charts = renderCharts.ChartsGroup.Charts;
+				charts[0].Enqueue(logarithmizedFull * (1 - bodyPercent));
+				charts[1].Enqueue(logarithmizedFull * bodyPercent * (1 - waitPercent));
+				charts[2].Enqueue(0);
+				charts[3].Enqueue(logarithmizedFull * bodyPercent * waitPercent);
+				MoveSlice(renderCharts.LinesContainer.Lines);
 			}
-			MoveSlice(renderGcCharts.LinesContainer.Lines);
-			
+			{ // GPU Drawing charts
+				var charts = gpuCharts.ChartsGroup.Charts;
+				charts[0].Enqueue(Logarithm(frame.GpuElapsedTime.TicksToMilliseconds()));
+				charts[1].Enqueue(0);
+				MoveSlice(gpuCharts.LinesContainer.Lines);
+			}
+			{ // Scene geometry data charts
+				var charts = sceneGeometryCharts.ChartsGroup.Charts;
+				charts[0].Enqueue(frame.SceneSavedByBatching);
+				charts[1].Enqueue(frame.SceneDrawCallCount);
+				charts[2].Enqueue(frame.SceneVerticesCount);
+				charts[3].Enqueue(frame.SceneTrianglesCount);
+				MoveSlice(sceneGeometryCharts.LinesContainer.Lines);
+			}
+			{ // Full geometry data charts
+				var charts = fullGeometryCharts.ChartsGroup.Charts;
+				charts[0].Enqueue(frame.FullSavedByBatching);
+				charts[1].Enqueue(frame.FullDrawCallCount);
+				charts[2].Enqueue(frame.FullVerticesCount);
+				charts[3].Enqueue(frame.FullTrianglesCount);
+				MoveSlice(fullGeometryCharts.LinesContainer.Lines);
+			}
+			{ // Update thread garbage collection charts
+				var charts = updateGcCharts.ChartsGroup.Charts;
+				charts[0].Enqueue(frame.EndOfUpdateMemory);
+				for (int i = 0; i < charts.Count - 1; i++) {
+					var garbageCollections = frame.UpdateThreadGarbageCollections;
+					if (i < garbageCollections.Length) {
+						int value = garbageCollections[i];
+						garbageCollections[i] -= Math.Min(garbageCollections[i], previousUpdateGC[i]);
+						charts[i + 1].Enqueue(garbageCollections[i]);
+						previousUpdateGC[i] = value;
+					} else {
+						charts[i + 1].Enqueue(0);
+					}
+				}
+				MoveSlice(updateGcCharts.LinesContainer.Lines);
+			}
+			{ // Render thread garbage collection charts
+				var charts = renderGcCharts.ChartsGroup.Charts;
+				charts[0].Enqueue(frame.EndOfRenderMemory);
+				for (int i = 0; i < charts.Count - 1; i++) {
+					var garbageCollections = frame.RenderThreadGarbageCollections;
+					if (garbageCollections != null && i < garbageCollections.Length) {
+						int value = garbageCollections[i];
+						garbageCollections[i] -= Math.Min(garbageCollections[i], previousRenderGC[i]);
+						charts[i + 1].Enqueue(garbageCollections[i]);
+						previousRenderGC[i] = value;
+					} else {
+						charts[i + 1].Enqueue(0);
+					}
+				}
+				MoveSlice(renderGcCharts.LinesContainer.Lines);
+			}
 			if (currentSliceIndex < 0) {
 				SetFrameValuesToLegend(frame);
 			} else {
@@ -362,35 +372,42 @@ namespace Tangerine.UI
 
 		public void SetSelectedAreaInTimeCharts(ObjectsSummaryResponse response)
 		{
-			void SetValues(StackedAreaCharts chartsGroup, int sliceIndex, float all, float selected) {
-				// TODO 
-				float logarithmizedAll = Logarithm(all);
-				float percent = Math.Min(selected, all) / all;
-				chartsGroup.Charts[0].Heights[sliceIndex] = logarithmizedAll * (1f - percent);
-				chartsGroup.Charts[1].Heights[sliceIndex] = logarithmizedAll * percent;
-			}
 			for (int i = 0, j = 0; i < HistorySize; i++) {
 				var frame = history.GetItem(i);
-				if (
+				bool canAccessFrame =
 					frame.Identifier >= response.FirstFrameIdentifer &&
-					frame.Identifier <= response.LastFrameIdentifer
-					) 
-				{
-					// TODO 
-					float allTime = frame.UpdateThreadElapsedTicks.TicksToMilliseconds();
-					float selectedTime = response.UpdateTimeForEachFrame[j];
-					SetValues(updateCharts.ChartsGroup, i, allTime, selectedTime);
-					
-					allTime = frame.RenderThreadElapsedTicks.TicksToMilliseconds();
-					selectedTime = response.RenderTimeForEachFrame[j];
-					SetValues(updateCharts.ChartsGroup, i, allTime, selectedTime);
-					
-					allTime = frame.GpuElapsedTime / 1000f;
-					selectedTime = response.DrawTimeForEachFrame[j];
-					SetValues(updateCharts.ChartsGroup, i, allTime, selectedTime);
-					
-					++j;
+					frame.Identifier <= response.LastFrameIdentifer;
+				{ // CPU Update thread charts
+					long fullTicks = frame.UpdateThreadElapsedTicks;
+					long bodyTicks = frame.UpdateBodyElapsedTicks;
+					float logarithmizedFull = Logarithm(fullTicks.TicksToMilliseconds());
+					float bodyPercent = bodyTicks / Math.Max(float.Epsilon, fullTicks);
+					float selectedTime = response.UpdateTimeForEachFrame[frame.Identifier];
+					float selectedPercent = selectedTime / Math.Max(float.Epsilon, bodyTicks.TicksToMilliseconds());
+					var charts = updateCharts.ChartsGroup.Charts;
+					charts[1].Heights[i] = ;
+					charts[2].Heights[i] = ;
 				}
+				{ // CPU Render thread charts
+					long fullTicks = frame.RenderThreadElapsedTicks;
+					long bodyTicks = frame.RenderBodyElapsedTicks;
+					float logarithmizedFull = Logarithm(fullTicks.TicksToMilliseconds());
+					float bodyPercent = bodyTicks / Math.Max(float.Epsilon, fullTicks);
+					float selectedTime = response.RenderTimeForEachFrame[frame.Identifier];
+					float selectedPercent = selectedTime / Math.Max(float.Epsilon, bodyTicks.TicksToMilliseconds());
+					var charts = renderCharts.ChartsGroup.Charts;
+					charts[1].Heights[i] = ;
+					charts[2].Heights[i] = ;
+				}
+				{ // GPU Drawing charts
+					float fullTime = frame.GpuElapsedTime / 1000f;
+					float selectedTime = response.DrawTimeForEachFrame[frame.Identifier];
+					float selectedPercent = selectedTime / Math.Max(float.Epsilon, fullTime);
+					var charts = gpuCharts.ChartsGroup.Charts;
+					charts[0].Heights[i] = ;
+					charts[1].Heights[i] = ;
+				}
+				j += canAccessFrame ? 1 : 0;
 			}
 		}
 		
