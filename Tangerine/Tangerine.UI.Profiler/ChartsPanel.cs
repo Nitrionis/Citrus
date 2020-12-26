@@ -311,7 +311,7 @@ namespace Tangerine.UI
 			}
 			{ // GPU Drawing charts
 				var charts = gpuCharts.ChartsGroup.Charts;
-				charts[0].Enqueue(Logarithm(frame.GpuElapsedTime.TicksToMilliseconds()));
+				charts[0].Enqueue(Logarithm(frame.GpuElapsedTime / 1000f));
 				charts[1].Enqueue(0);
 				MoveSlice(gpuCharts.LinesContainer.Lines);
 			}
@@ -380,32 +380,35 @@ namespace Tangerine.UI
 				{ // CPU Update thread charts
 					long fullTicks = frame.UpdateThreadElapsedTicks;
 					long bodyTicks = frame.UpdateBodyElapsedTicks;
+					float selectedTime = response.UpdateTimeForEachFrame[frame.Identifier];
 					float logarithmizedFull = Logarithm(fullTicks.TicksToMilliseconds());
 					float bodyPercent = bodyTicks / Math.Max(float.Epsilon, fullTicks);
-					float selectedTime = response.UpdateTimeForEachFrame[frame.Identifier];
 					float selectedPercent = selectedTime / Math.Max(float.Epsilon, bodyTicks.TicksToMilliseconds());
 					var charts = updateCharts.ChartsGroup.Charts;
-					charts[1].Heights[i] = ;
-					charts[2].Heights[i] = ;
+					charts[1].Heights[i] = logarithmizedFull * bodyPercent * (1 - selectedPercent);
+					charts[2].Heights[i] = logarithmizedFull * bodyPercent * selectedPercent;
 				}
 				{ // CPU Render thread charts
 					long fullTicks = frame.RenderThreadElapsedTicks;
 					long bodyTicks = frame.RenderBodyElapsedTicks;
+					long waitTicks = frame.WaitForAcquiringSwapchainBuffer;
+					float selectedTime = response.RenderTimeForEachFrame[frame.Identifier];
 					float logarithmizedFull = Logarithm(fullTicks.TicksToMilliseconds());
 					float bodyPercent = bodyTicks / Math.Max(float.Epsilon, fullTicks);
-					float selectedTime = response.RenderTimeForEachFrame[frame.Identifier];
+					float waitPercent = waitTicks / Math.Max(float.Epsilon, bodyTicks);
 					float selectedPercent = selectedTime / Math.Max(float.Epsilon, bodyTicks.TicksToMilliseconds());
 					var charts = renderCharts.ChartsGroup.Charts;
-					charts[1].Heights[i] = ;
-					charts[2].Heights[i] = ;
+					charts[1].Heights[i] = logarithmizedFull * bodyPercent * (1 - waitPercent - selectedPercent);
+					charts[2].Heights[i] = logarithmizedFull * bodyPercent * selectedPercent;
 				}
 				{ // GPU Drawing charts
 					float fullTime = frame.GpuElapsedTime / 1000f;
+					float logarithmizedFull = Logarithm(fullTime);
 					float selectedTime = response.DrawTimeForEachFrame[frame.Identifier];
 					float selectedPercent = selectedTime / Math.Max(float.Epsilon, fullTime);
 					var charts = gpuCharts.ChartsGroup.Charts;
-					charts[0].Heights[i] = ;
-					charts[1].Heights[i] = ;
+					charts[0].Heights[i] = logarithmizedFull * (1 - selectedPercent);
+					charts[1].Heights[i] = logarithmizedFull * selectedPercent;
 				}
 				j += canAccessFrame ? 1 : 0;
 			}
