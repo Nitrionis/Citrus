@@ -16,12 +16,10 @@ namespace Tangerine.UI
 		private const int HistorySize = 160;
 		private const int ControlPointsSpacing = 5;
 
-		private readonly FixedCapacityQueue<ProfiledFrame> history;
-		
+		private readonly FixedCapacityQueue<ExtendedFrame> history;
+
 		private readonly int[] previousUpdateGC = new int[3];
 		private readonly int[] previousRenderGC = new int[3];
-
-		private ObjectsSummaryResponse lastResponse;
 
 		private readonly ChartsInfo<StackedAreaCharts> updateCharts;
 		private readonly ChartsInfo<StackedAreaCharts> renderCharts;
@@ -34,11 +32,11 @@ namespace Tangerine.UI
 
 		private int currentSliceIndex = -1;
 
-		public event Action<long> SliceSelected; 
+		public event Action<long> FrameSelected; 
 		
 		public ChartsPanel(out ChartVisibilityControllers visibilityControllers)
 		{
-			history = new FixedCapacityQueue<ProfiledFrame>(HistorySize);
+			history = new FixedCapacityQueue<ExtendedFrame>(HistorySize);
 			Layout = new VBoxLayout();
 			Anchors = Anchors.LeftRight;
 			FixedHorizontalSpacingCharts.Parameters GetParameters(int chartsCount) => 
@@ -275,7 +273,10 @@ namespace Tangerine.UI
 
 		private void EnqueueFrameValuesToCharts(ProfiledFrame frame)
 		{
-			history.Enqueue(frame);
+			history.Enqueue(new ExtendedFrame {
+				Frame = frame,
+				SelectedData = new SelectedData()
+			});
 			currentSliceIndex = currentSliceIndex >= 0 ? currentSliceIndex - 1 : -1;
 				
 			RemoteStopwatchExtension.Frequency = frame.StopwatchFrequency;
@@ -364,26 +365,40 @@ namespace Tangerine.UI
 				MoveSlice(renderGcCharts.LinesContainer.Lines);
 			}
 			if (currentSliceIndex < 0) {
-				SetFrameValuesToLegend(frame);
-			} else {
-				Application.MainWindow.Invalidate();
+				SetFrameValuesToLegend(frame, new SelectedData());
 			}
 		}
 
 		public void SetSelectedAreaInTimeCharts(ObjectsSummaryResponse response)
 		{
 			for (int i = 0, j = 0; i < HistorySize; i++) {
-				var frame = history.GetItem(i);
-				bool canAccessFrame =
-					frame.Identifier >= response.FirstFrameIdentifer &&
-					frame.Identifier <= response.LastFrameIdentifer;
+				var frame = history.GetItem(i).Frame;
+				bool isNoDataSelected = 
+					response == null || 
+					!response.IsSuccessed ||
+					frame.Identifier < response.FirstFrameIdentifer ||
+					frame.Identifier > response.LastFrameIdentifer;
+				history[history.GetInternalIndex(i)] = new ExtendedFrame {
+					Frame = frame,
+					SelectedData = new SelectedData {
+						UpdateTime = isNoDataSelected ? 0 : response.UpdateTimeForEachFrame[j],
+						RenderTime = isNoDataSelected ? 0 : response.RenderTimeForEachFrame[j],
+						GpuTime = isNoDataSelected ? 0 : response.DrawTimeForEachFrame[j]
+					}
+				};
+				j += isNoDataSelected ? 0 : 1;
+			}
+			for (int i = 0; i < HistorySize; i++) {
+				var data = history.GetItem(i);
+				var frame = data.Frame;
+				var selected = data.SelectedData;
 				{ // CPU Update thread charts
 					long fullTicks = frame.UpdateThreadElapsedTicks;
 					long bodyTicks = frame.UpdateBodyElapsedTicks;
-					float selectedTime = response.UpdateTimeForEachFrame[frame.Identifier];
 					float logarithmizedFull = Logarithm(fullTicks.TicksToMilliseconds());
 					float bodyPercent = bodyTicks / Math.Max(float.Epsilon, fullTicks);
-					float selectedPercent = selectedTime / Math.Max(float.Epsilon, bodyTicks.TicksToMilliseconds());
+					float selectedPercent = 
+						selected.UpdateTime / Math.Max(float.Epsilon, bodyTicks.TicksToMilliseconds());
 					var charts = updateCharts.ChartsGroup.Charts;
 					charts[1].Heights[i] = logarithmizedFull * bodyPercent * (1 - selectedPercent);
 					charts[2].Heights[i] = logarithmizedFull * bodyPercent * selectedPercent;
@@ -392,11 +407,11 @@ namespace Tangerine.UI
 					long fullTicks = frame.RenderThreadElapsedTicks;
 					long bodyTicks = frame.RenderBodyElapsedTicks;
 					long waitTicks = frame.WaitForAcquiringSwapchainBuffer;
-					float selectedTime = response.RenderTimeForEachFrame[frame.Identifier];
 					float logarithmizedFull = Logarithm(fullTicks.TicksToMilliseconds());
 					float bodyPercent = bodyTicks / Math.Max(float.Epsilon, fullTicks);
 					float waitPercent = waitTicks / Math.Max(float.Epsilon, bodyTicks);
-					float selectedPercent = selectedTime / Math.Max(float.Epsilon, bodyTicks.TicksToMilliseconds());
+					float selectedPercent = 
+						selected.RenderTime / Math.Max(float.Epsilon, bodyTicks.TicksToMilliseconds());
 					var charts = renderCharts.ChartsGroup.Charts;
 					charts[1].Heights[i] = logarithmizedFull * bodyPercent * (1 - waitPercent - selectedPercent);
 					charts[2].Heights[i] = logarithmizedFull * bodyPercent * selectedPercent;
@@ -404,32 +419,30 @@ namespace Tangerine.UI
 				{ // GPU Drawing charts
 					float fullTime = frame.GpuElapsedTime / 1000f;
 					float logarithmizedFull = Logarithm(fullTime);
-					float selectedTime = response.DrawTimeForEachFrame[frame.Identifier];
-					float selectedPercent = selectedTime / Math.Max(float.Epsilon, fullTime);
+					float selectedPercent = selected.GpuTime / Math.Max(float.Epsilon, fullTime);
 					var charts = gpuCharts.ChartsGroup.Charts;
 					charts[0].Heights[i] = logarithmizedFull * (1 - selectedPercent);
 					charts[1].Heights[i] = logarithmizedFull * selectedPercent;
 				}
-				j += canAccessFrame ? 1 : 0;
 			}
 		}
 		
-		private void SetFrameValuesToLegend(ProfiledFrame frame)
+		private void SetFrameValuesToLegend(ProfiledFrame frame, SelectedData selectedData)
 		{
 			var legend = updateCharts.ChartsLegend;
 			legend.SetValue(frame.UpdateThreadElapsedTicks.TicksToMilliseconds(), 0);
 			legend.SetValue(frame.UpdateBodyElapsedTicks.TicksToMilliseconds(), 1);
-			legend.SetValue(0, 2);
+			legend.SetValue(selectedData.UpdateTime, 2);
 			
 			legend = renderCharts.ChartsLegend;
 			legend.SetValue(frame.RenderThreadElapsedTicks.TicksToMilliseconds(), 0);
 			legend.SetValue(frame.RenderBodyElapsedTicks.TicksToMilliseconds(), 1);
-			legend.SetValue(0, 2);
+			legend.SetValue(selectedData.RenderTime, 2);
 			legend.SetValue(frame.WaitForAcquiringSwapchainBuffer.TicksToMilliseconds(), 3);
 
 			legend = gpuCharts.ChartsLegend;
 			legend.SetValue(frame.GpuElapsedTime.TicksToMilliseconds(), 0);
-			legend.SetValue(0, 1);
+			legend.SetValue(selectedData.GpuTime, 1);
 
 			legend = sceneGeometryCharts.ChartsLegend;
 			legend.SetValue(frame.SceneSavedByBatching, 0);
@@ -463,8 +476,8 @@ namespace Tangerine.UI
 		private void OnSliceSelected(VerticalSlice slice)
 		{
 			currentSliceIndex = slice.Index;
-			var frame = history.GetItem(slice.Index);
-			SetFrameValuesToLegend(frame);
+			var data = history.GetItem(slice.Index);
+			SetFrameValuesToLegend(data.Frame, data.SelectedData);
 			float position = currentSliceIndex * ControlPointsSpacing;
 			void SetSlicePosition(Line[] lines) {
 				lines[0].Start.X = position;
@@ -477,7 +490,7 @@ namespace Tangerine.UI
 			SetSlicePosition(fullGeometryCharts.LinesContainer.Lines);
 			SetSlicePosition(updateGcCharts.LinesContainer.Lines);
 			SetSlicePosition(renderGcCharts.LinesContainer.Lines);
-			SliceSelected?.Invoke(frame.Identifier);
+			FrameSelected?.Invoke(data.Frame.Identifier);
 		}
 		
 		private static float Logarithm(float value) => value <= 33.3f ? value :
@@ -504,6 +517,19 @@ namespace Tangerine.UI
 			public ChartsType ChartsGroup;
 			public LinesContainer LinesContainer;
 			public ChartsContainer ChartsContainer;
+		}
+		
+		private struct ExtendedFrame
+		{
+			public ProfiledFrame Frame;
+			public SelectedData SelectedData;
+		}
+		
+		private struct SelectedData
+		{
+			public float UpdateTime;
+			public float RenderTime;
+			public float GpuTime;
 		}
 	}
 }

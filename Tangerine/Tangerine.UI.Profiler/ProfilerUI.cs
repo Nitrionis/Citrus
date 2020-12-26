@@ -1,6 +1,7 @@
 #if PROFILER
 
 using System;
+using System.Collections.Generic;
 using Lime;
 using Lime.Profiler;
 using Lime.Profiler.Contexts;
@@ -13,7 +14,10 @@ namespace Tangerine.UI
 	internal class ProfilerUI : Widget
 	{
 		private readonly ThemedDropDownList profilingMode;
-
+		private readonly ThemedEditBox regexFilter;
+		
+		private readonly Queue<ChartsDataResponseProcessor> chartsResponses;
+		
 		private readonly Vector4 defaultButtonColor = Color4.Black.Lighten(0.2f).ToVector4();
 		private readonly Vector4 recordButtonColor = new Color4(255, 87, 34).ToVector4();
 		private readonly Vector4 playButtonColor = new Color4(33, 150, 243).ToVector4();
@@ -105,7 +109,7 @@ namespace Tangerine.UI
 						Padding = new Thickness(8, 4, 2, 0)
 					},
 					CreateSearchIcon(),
-					new ThemedEditBox() { MinMaxWidth = 256 },
+					(regexFilter = new ThemedEditBox() { MinMaxWidth = 256 }),
 					new ThemedSimpleText("in Charts") {
 						VAlignment = VAlignment.Center,
 						Padding = new Thickness(8, 4, 2, 0)
@@ -138,7 +142,36 @@ namespace Tangerine.UI
 						playButtonColor : defaultButtonColor;
 				pauseMaterial.Color =
 					ProfilerTerminal.IsSceneUpdateFrozen ? pauseButtonColor : defaultButtonColor;
+				ChartsDataResponseProcessor lastResponse = null;
+				while (chartsResponses.Count > 0 && chartsResponses.Peek().IsFinished) {
+					lastResponse = chartsResponses.Dequeue();
+				}
+				if (lastResponse != null) {
+					chartsPanel.SetSelectedAreaInTimeCharts(lastResponse.Response);
+				}
 			};
+			chartsPanel.FrameSelected += frameIdentifier => {
+				if (frameIdentifier > 0) {
+					var processor = new ChartsDataResponseProcessor();
+					ProfilerTerminal.SelectTime(, processor);
+					chartsResponses.Enqueue(processor);
+				}
+			};
+		}
+
+		private class ChartsDataResponseProcessor : IResponseProcessor
+		{
+			private volatile bool isFinished;
+			
+			public bool IsFinished => isFinished;
+			
+			public ObjectsSummaryResponse Response { get; private set; }
+			
+			public void ProcessResponse(object response)
+			{
+				Response = (ObjectsSummaryResponse)response;
+				isFinished = true;
+			}
 		}
 	}
 }
