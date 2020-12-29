@@ -14,17 +14,17 @@ namespace Tangerine.UI.Timelines
 		/// <summary>
 		/// Pixel spacing for small marks for <see cref="RulerScale"/> = 1.0
 		/// </summary>
-		public float SmallStep;
+		public float SmallStepSize;
 
 		/// <summary>
-		/// Changes the number of small steps in a big.
+		/// Count of small steps in a big step.
 		/// </summary>
 		public int SmallStepsPerBig;
 
 		/// <summary>
 		/// Defines the initial values of the timeline.
 		/// </summary>
-		public float Offset;
+		public float RulerOffset;
 
 		/// <summary>
 		/// Timestamps labels color.
@@ -36,9 +36,9 @@ namespace Tangerine.UI.Timelines
 		/// </summary>
 		public Color4 TimestampsColor = Color4.White;
 
-		public TimelineRuler(float smallStep, int smallStepsPerBig)
+		public TimelineRuler(float smallStepSize, int smallStepsPerBig)
 		{
-			SmallStep = smallStep;
+			SmallStepSize = smallStepSize;
 			SmallStepsPerBig = smallStepsPerBig;
 			Presenter = new RulerPresenter(this);
 		}
@@ -52,8 +52,14 @@ namespace Tangerine.UI.Timelines
 			public Lime.RenderObject GetRenderObject(Node node)
 			{
 				var ro = RenderObjectPool<RenderObject>.Acquire();
-				ro.Ruler = ruler;
 				ro.CaptureRenderState(ruler);
+				ro.ContainerWidth = node.AsWidget.Width;
+				ro.RulerScale = ruler.RulerScale;
+				ro.SmallStepSize = ruler.SmallStepSize;
+				ro.SmallStepsPerBig = ruler.SmallStepsPerBig;
+				ro.RulerOffset = ruler.RulerOffset;
+				ro.TextColor = ruler.TextColor;
+				ro.TimestampsColor = ruler.TimestampsColor;
 				return ro;
 			}
 
@@ -61,28 +67,33 @@ namespace Tangerine.UI.Timelines
 
 			private class RenderObject : WidgetRenderObject
 			{
-				public TimelineRuler Ruler;
-
+				public float ContainerWidth;
+				public float RulerScale;
+				public float SmallStepSize;
+				public float SmallStepsPerBig;
+				public float RulerOffset;
+				public Color4 TextColor;
+				public Color4 TimestampsColor;
+				
 				public override void Render()
 				{
 					PrepareRenderState();
-					float smallStep = Ruler.SmallStep * Ruler.RulerScale;
-					float offset = Ruler.Offset * Ruler.RulerScale;
-					int stepIndex = (offset / smallStep).Floor();
-					var startPosition = new Vector2(Ruler.SmallStep - Ruler.Offset % Ruler.SmallStep, 26);
 					var offsetSmall = new Vector2(1, -6);
 					var offsetBig = new Vector2(1, -16);
 					var offsetText = new Vector2(4, -24);
-					for (; startPosition.X < Ruler.Width; startPosition.X += Ruler.SmallStep, stepIndex++) {
+					float scaledSmallStep = SmallStepSize * RulerScale;
+					int stepIndex = (RulerOffset / SmallStepSize).Floor();
+					var startPosition = new Vector2(SmallStepSize - RulerOffset % SmallStepSize, 26);
+					for (; startPosition.X < ContainerWidth; startPosition.X += SmallStepSize, stepIndex++) {
 						Vector2 endPosition;
-						if (stepIndex % Ruler.SmallStepsPerBig == 0) {
+						if (stepIndex % SmallStepsPerBig == 0) {
 							endPosition = startPosition + offsetBig;
-							var time = $"{stepIndex * smallStep / 1000:0.0#}";
-							Renderer.DrawTextLine(startPosition + offsetText, time, 16, Ruler.TextColor, 0);
+							var time = $"{stepIndex * scaledSmallStep / 1000:0.0#}";
+							Renderer.DrawTextLine(startPosition + offsetText, time, 16, TextColor, 0);
 						} else {
 							endPosition = startPosition + offsetSmall;
 						}
-						Renderer.DrawRect(startPosition, endPosition, Ruler.TimestampsColor);
+						Renderer.DrawRect(startPosition, endPosition, TimestampsColor);
 					}
 				}
 			}

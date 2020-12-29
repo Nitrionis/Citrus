@@ -77,8 +77,12 @@
     <Compile Include="ProfilerUI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StopwatchExtension.cs" />
+    <Compile Include="Timelines\Rectangle.cs" />
+    <Compile Include="Timelines\RectanglesMesh.cs" />
     <Compile Include="Timelines\Timeline.cs" />
+    <Compile Include="Timelines\TimePeriodsPositions.cs" />
     <Compile Include="Timelines\TimelineRuler.cs" />
+    <Compile Include="Timelines\TimePeriod.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Lime\Lime.Mac.csproj">
