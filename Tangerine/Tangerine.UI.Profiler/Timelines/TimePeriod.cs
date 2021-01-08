@@ -1,3 +1,5 @@
+using System;
+
 #if PROFILER
 
 namespace Tangerine.UI.Timelines
@@ -18,6 +20,15 @@ namespace Tangerine.UI.Timelines
 		/// Time period duration in microseconds.
 		/// </summary>
 		public float Duration => FinishTime - StartTime;
+
+		public TimePeriod(float startTime, float finishTime)
+		{
+			if (startTime > finishTime) {
+				throw new ArgumentException();
+			}
+			StartTime = startTime;
+			FinishTime = finishTime;
+		}
 	}
 }
 

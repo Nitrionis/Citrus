@@ -79,7 +79,7 @@
     <Compile Include="StopwatchExtension.cs" />
     <Compile Include="Timelines\Rectangle.cs" />
     <Compile Include="Timelines\RectanglesMesh.cs" />
-    <Compile Include="Timelines\Timeline.cs" />
+    <Compile Include="Timelines\TimelineWidget.cs" />
     <Compile Include="Timelines\TimePeriodsPositions.cs" />
     <Compile Include="Timelines\TimelineRuler.cs" />
     <Compile Include="Timelines\TimePeriod.cs" />

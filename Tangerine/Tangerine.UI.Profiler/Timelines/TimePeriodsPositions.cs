@@ -1,86 +1,91 @@
 #if PROFILER
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using Lime;
 
 namespace Tangerine.UI.Timelines
 {
-	internal class TimePeriodsPositions : IEnumerable<Vector2>
+	internal partial class Timeline
 	{
-		private readonly Parameters parameters;
-		
-		public TimePeriodsPositions(Parameters parameters) => this.parameters = parameters;
-
-		public IEnumerator<Vector2> GetEnumerator() => new Enumerator(parameters);
-		
-		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-		private class Enumerator : IEnumerator<Vector2>
+		private class TimePeriodsPositions : IEnumerable<Vector2>
 		{
-			private readonly Parameters parameters;
-			private readonly List<float> freeSpaceOfLines;
-			private readonly IEnumerator<TimePeriod> timePerios;
-			
-			public Vector2 Current { get; private set; }
+			private readonly SpacingParameters parameters;
+			private readonly IEnumerable<TimePeriod> periods;
 
-			object IEnumerator.Current => Current;
-			
-			public Enumerator(Parameters parameters)
+			public TimePeriodsPositions(IEnumerable<TimePeriod> periods, SpacingParameters parameters)
 			{
+				this.periods = periods;
 				this.parameters = parameters;
-				freeSpaceOfLines = new List<float>();
-				timePerios = parameters.Periods.GetEnumerator();
 			}
 
-			public void Dispose() => timePerios.Dispose();
+			public IEnumerator<Vector2> GetEnumerator() => new Enumerator(periods.GetEnumerator(), parameters);
 
-			public bool MoveNext()
+			IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+			private class Enumerator : IEnumerator<Vector2>
 			{
-				bool value = timePerios.MoveNext();
-				if (value) {
-					Current = AcquirePosition(timePerios.Current);
+				private readonly IEnumerator<TimePeriod> periods;
+				private readonly SpacingParameters parameters;
+				private readonly List<float> freeSpaceOfLines;
+
+				public Vector2 Current { get; private set; }
+
+				object IEnumerator.Current => Current;
+
+				public Enumerator(IEnumerator<TimePeriod> periods, SpacingParameters parameters)
+				{
+					this.periods = periods;
+					this.parameters = parameters;
+					freeSpaceOfLines = new List<float>();
 				}
-				return value;
-			}
-			
-			public void Reset()
-			{
-				freeSpaceOfLines.Clear();
-				timePerios.Reset();
-			}
-			
-			private Vector2 AcquirePosition(TimePeriod period)
-			{
-				int lineIndex = -1;
-				for (int i = 0; i < freeSpaceOfLines.Count; i++) {
-					if (freeSpaceOfLines[i] < period.StartTime) {
-						lineIndex = i;
-						break;
+
+				public void Dispose() => periods.Dispose();
+
+				public bool MoveNext()
+				{
+					bool value = periods.MoveNext();
+					if (value) {
+						Current = AcquirePosition(periods.Current);
 					}
+					return value;
 				}
-				// Add extra time to make small intervals on the timeline more visible.
-				float finishTime = (float)(period.FinishTime + Math.Ceiling(parameters.MicrosecondsPerPixel));
-				if (lineIndex == -1) {
-					lineIndex = freeSpaceOfLines.Count;
-					freeSpaceOfLines.Add(finishTime);
-				} else {
-					freeSpaceOfLines[lineIndex] = finishTime;
+
+				public void Reset()
+				{
+					freeSpaceOfLines.Clear();
+					periods.Reset();
 				}
-				return new Vector2(
-					parameters.HorizontalOffset + period.StartTime / parameters.MicrosecondsPerPixel,
-					parameters.ItemHeight * lineIndex + parameters.ItemMargin * (lineIndex + 1));
+
+				private Vector2 AcquirePosition(TimePeriod period)
+				{
+					int lineIndex = -1;
+					for (int i = 0; i < freeSpaceOfLines.Count; i++) {
+						if (freeSpaceOfLines[i] < period.StartTime) {
+							lineIndex = i;
+							break;
+						}
+					}
+					// Add extra time to make small intervals on the timeline more visible.
+					float finishTime = period.FinishTime + parameters.MicrosecondsPerPixel;
+					if (lineIndex == -1) {
+						lineIndex = freeSpaceOfLines.Count;
+						freeSpaceOfLines.Add(finishTime);
+					} else {
+						freeSpaceOfLines[lineIndex] = finishTime;
+					}
+					return new Vector2(
+						period.StartTime / parameters.MicrosecondsPerPixel,
+						parameters.ItemHeight * lineIndex + parameters.ItemVerticalMargin * (lineIndex + 1));
+				}
 			}
-		}
-		
-		public struct Parameters
-		{
-			public IEnumerable<TimePeriod> Periods;
-			public float MicrosecondsPerPixel;
-			public float HorizontalOffset;
-			public float ItemMargin;
-			public float ItemHeight;
+
+			public struct SpacingParameters
+			{
+				public float MicrosecondsPerPixel;
+				public float ItemVerticalMargin;
+				public float ItemHeight;
+			}
 		}
 	}
 }
