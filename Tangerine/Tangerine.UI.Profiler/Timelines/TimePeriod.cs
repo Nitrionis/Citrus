@@ -1,6 +1,6 @@
-using System;
-
 #if PROFILER
+
+using System;
 
 namespace Tangerine.UI.Timelines
 {

@@ -8,7 +8,7 @@ namespace Tangerine.UI.Timelines
 {
 	internal partial class Timeline
 	{
-		private class TimePeriodsPositions : IEnumerable<Vector2>
+		protected class TimePeriodsPositions : IEnumerable<Vector2>
 		{
 			private readonly SpacingParameters parameters;
 			private readonly IEnumerable<TimePeriod> periods;

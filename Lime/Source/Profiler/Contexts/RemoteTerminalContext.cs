@@ -129,16 +129,16 @@ namespace Lime.Profiler.Contexts
 							bool shouldUseCachedResponse =
 								dataSelectionRequest is FrameDataRequest frameDataRequest &&
 								lastFrameDataResponse != null &&
-								lastFrameDataResponse.IsSuccessed &&
+								lastFrameDataResponse.IsSucceed &&
 								lastFrameDataResponse.FrameIdentifier == frameDataRequest.FrameIdentifier;
 							dataSelectionRequest.IsRunning = true;
 							isDataSelectionRequestCompleted = false;
 							if (!shouldUseCachedResponse) {
 								server.LazySend(dataSelectionRequest);
 							} else {
-								var processor = dataSelectionRequest.ResponseProcessor;
+								var processor = dataSelectionRequest.AsyncResponseProcessor;
 								Task.Run(() => {
-									processor.ProcessResponse(lastFrameDataResponse);
+									processor.ProcessResponseAsync(lastFrameDataResponse);
 									isDataSelectionRequestCompleted = true;
 								});
 							}
@@ -146,14 +146,14 @@ namespace Lime.Profiler.Contexts
 						if (!responses.IsEmpty) {
 							var responseBuilder = PeekResponse();
 							if (responseBuilder is IDataSelectionResponseBuilder builder) {
-								var processor = dataSelectionRequest.ResponseProcessor;
+								var processor = dataSelectionRequest.AsyncResponseProcessor;
 								Task.Run(() => {
 									try {
 										var response = builder.Build(frameClipboard, lastBinaryReader);
 										if (response is FrameDataResponse frameDataResponse) {
 											lastFrameDataResponse = frameDataResponse;
 										}
-										processor.ProcessResponse(response);
+										processor.ProcessResponseAsync(response);
 										isDataSelectionRequestCompleted = true;
 									} catch (IOException e) {
 										Console.WriteLine(e.ToString());

@@ -375,9 +375,9 @@ namespace Tangerine.UI
 				var frame = history.GetItem(i).Frame;
 				bool isNoDataSelected = 
 					response == null || 
-					!response.IsSuccessed ||
-					frame.Identifier < response.FirstFrameIdentifer ||
-					frame.Identifier > response.LastFrameIdentifer;
+					!response.IsSucceed ||
+					frame.Identifier < response.FirstFrameIdentifier ||
+					frame.Identifier > response.LastFrameIdentifier;
 				history[history.GetInternalIndex(i)] = new ExtendedFrame {
 					Frame = frame,
 					SelectedData = new SelectedData {

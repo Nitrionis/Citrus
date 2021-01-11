@@ -745,9 +745,7 @@ namespace Lime.Profiler
 			private readonly Dictionary<Type, int> typesDictionary;
 
 			public readonly RingPool<CpuUsage> CpuUsagesPool;
-
-			public bool IsThreadSupported => CpuUsagesPool != null;
-
+			
 			public ThreadDependentData(RingPool<CpuUsage> cpuUsagesPool, Dictionary<Type, int> typesDictionary)
 			{
 				CpuUsagesPool = cpuUsagesPool;

@@ -6,9 +6,7 @@ using System.Text.RegularExpressions;
 using Lime;
 using Lime.Profiler;
 using Lime.Profiler.Contexts;
-using Lime.Profiler.Graphics;
 using Tangerine.Core;
-using Tangerine.UI.Charts;
 
 namespace Tangerine.UI
 {
@@ -26,6 +24,7 @@ namespace Tangerine.UI
 		
 		public ProfilerUI()
 		{
+			chartsResponses = new Queue<ChartsDataResponseProcessor>();
 			Layout = new VBoxLayout();
 			Anchors = Anchors.LeftRight;
 			var size = new Vector2(28, 22);
@@ -176,7 +175,7 @@ namespace Tangerine.UI
 			};
 		}
 
-		private class ChartsDataResponseProcessor : IResponseProcessor
+		private class ChartsDataResponseProcessor : AsyncResponseProcessor<ObjectsSummaryResponse>
 		{
 			private volatile bool isFinished;
 			
@@ -187,9 +186,9 @@ namespace Tangerine.UI
 			public static ChartsDataResponseProcessor Empty =>
 				new ChartsDataResponseProcessor { isFinished = true };
 			
-			public void ProcessResponse(object response)
+			protected override void ProcessResponseAsync(ObjectsSummaryResponse response)
 			{
-				Response = (ObjectsSummaryResponse)response;
+				Response = response;
 				isFinished = true;
 			}
 		}

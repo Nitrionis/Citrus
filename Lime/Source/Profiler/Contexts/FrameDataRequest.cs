@@ -28,9 +28,13 @@ namespace Lime.Profiler.Contexts
 		public long FrameIdentifier { get; }
 
 		/// <inheritdoc/>
-		public IResponseProcessor ResponseProcessor { get; set; }
+		public IAsyncResponseProcessor AsyncResponseProcessor { get; }
 
-		public FrameDataRequest(long frameIdentifer) => FrameIdentifier = frameIdentifer;
+		public FrameDataRequest(long frameIdentifier, IAsyncResponseProcessor asyncResponseProcessor)
+		{
+			FrameIdentifier = frameIdentifier;
+			AsyncResponseProcessor = asyncResponseProcessor;
+		}
 
 		/// <inheritdoc/>
 		public void FetchData(IProfilerDatabase database, BinaryWriter writer)
@@ -43,7 +47,7 @@ namespace Lime.Profiler.Contexts
 			bool canAccessFrame = database.CanAccessFrame(FrameIdentifier);
 			serializer.ToWriter(new FrameDataResponseBuilder(canAccessFrame, FrameIdentifier), writer);
 			if (canAccessFrame) {
-				NumberedTypesDictionary.SafeAccess(dictionary => {
+				TypeIdentifiersCache.SafeAccess(dictionary => {
 					void SerializeCpuUsage(CpuUsage usage, RingPool<ReferenceTable.RowIndex> pool) {
 						dictionary.EnsureKeyValuePairFor(usage.TypeIdentifier);
 						writer.Write((uint)usage.Reason);
@@ -129,7 +133,7 @@ namespace Lime.Profiler.Contexts
 
 	public class FrameDataResponse : IDataSelectionResponse
 	{
-		public bool IsSuccessed { get; set; }
+		public bool IsSucceed { get; set; }
 		public long FrameIdentifier { get; set; }
 		public FrameClipboard Clipboard { get; set; }
 	}
@@ -140,14 +144,14 @@ namespace Lime.Profiler.Contexts
 		private static uint[] ownersRedirection;
 		
 		[YuzuMember]
-		public bool IsSuccessed { get; }
+		public bool IsSucceed { get; }
 
 		[YuzuMember]
 		public long FrameIdentifier { get; }
 
-		public FrameDataResponseBuilder(bool isSuccessed, long frameIdentifier)
+		public FrameDataResponseBuilder(bool isSucceed, long frameIdentifier)
 		{
-			IsSuccessed = isSuccessed;
+			IsSucceed = isSucceed;
 			FrameIdentifier = frameIdentifier;
 		}
 
@@ -207,9 +211,9 @@ namespace Lime.Profiler.Contexts
 				}
 				return owners;
 			}
-			if (!IsSuccessed) {
+			if (!IsSucceed) {
 				return new FrameDataResponse {
-					IsSuccessed = IsSuccessed,
+					IsSucceed = IsSucceed,
 					FrameIdentifier = FrameIdentifier,
 					Clipboard = null
 				};
@@ -244,7 +248,7 @@ namespace Lime.Profiler.Contexts
 			}
 			((DeserializableReferenceTable)clipboard.ReferenceTable).ReloadFromReader(reader);
 			return new FrameDataResponse {
-				IsSuccessed = IsSuccessed,
+				IsSucceed = IsSucceed,
 				FrameIdentifier = FrameIdentifier,
 				Clipboard = clipboard
 			};

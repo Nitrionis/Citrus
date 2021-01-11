@@ -65,12 +65,12 @@ namespace Lime.Profiler.Contexts
 							bool shouldUseCachedResponse =
 								dataSelectionRequest is FrameDataRequest frameDataRequest &&
 								lastFrameDataResponse != null &&
-								lastFrameDataResponse.IsSuccessed &&
+								lastFrameDataResponse.IsSucceed &&
 								lastFrameDataResponse.FrameIdentifier == frameDataRequest.FrameIdentifier;
 							dataSelectionRequest.IsRunning = true;
 							isDataSelectionRequestCompleted = false;
 							database.PreventProfilingWhileRunning(new Task(() => {
-								var responseProcessor = dataSelectionRequest.ResponseProcessor;
+								var responseProcessor = dataSelectionRequest.AsyncResponseProcessor;
 								if (shouldUseCachedResponse) {
 									ProcessResponse(lastFrameDataResponse, responseProcessor);
 								} else {
@@ -107,11 +107,11 @@ namespace Lime.Profiler.Contexts
 			});
 		}
 
-		private void ProcessResponse(object response, IResponseProcessor responseProcessor)
+		private void ProcessResponse(object response, IAsyncResponseProcessor asyncResponseProcessor)
 		{
 			if (response is IDataSelectionResponseBuilder dataResponse) {
 				var data = dataResponse.Build(frameClipboard, binaryReader);
-				responseProcessor.ProcessResponse(data);
+				asyncResponseProcessor.ProcessResponseAsync(data);
 			} else {
 				throw new System.Exception("Profiler: Wrong response!");
 			}

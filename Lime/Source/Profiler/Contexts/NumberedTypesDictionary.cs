@@ -9,16 +9,16 @@ namespace Lime.Profiler.Contexts
 {
 	using TypesDictionary = Dictionary<int, string>;
 
-	internal interface INumberedTypesDictionary
+	internal interface ITypeIdentifiersCache
 	{
 		void EnsureKeyValuePairFor(TypeIdentifier identifier);
 		TypesDictionary FindAndGetTypeNames(IProfilerDatabase database);
 		string GetTypeName(TypeIdentifier identifier, IProfilerDatabase database);
 	}
 
-	internal class NumberedTypesDictionary : INumberedTypesDictionary
+	internal class TypeIdentifiersCache : ITypeIdentifiersCache
 	{
-		private static readonly NumberedTypesDictionary instance = new NumberedTypesDictionary();
+		private static readonly TypeIdentifiersCache instance = new TypeIdentifiersCache();
 
 		private readonly object accessLockObject;
 		private readonly Regex ignoredAssemblies;
@@ -26,7 +26,7 @@ namespace Lime.Profiler.Contexts
 
 		private bool typesReloadRequired;
 
-		private NumberedTypesDictionary()
+		private TypeIdentifiersCache()
 		{
 			accessLockObject = new object();
 			ignoredAssemblies = new Regex(
@@ -36,7 +36,7 @@ namespace Lime.Profiler.Contexts
 			typesDictionary = new TypesDictionary();
 		}
 
-		public static void SafeAccess(Action<INumberedTypesDictionary> action)
+		public static void SafeAccess(Action<ITypeIdentifiersCache> action)
 		{
 			lock (instance.accessLockObject) {
 				action.Invoke(instance);

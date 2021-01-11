@@ -11,6 +11,9 @@ namespace Lime.Profiler.Contexts
 {
 	using OwnersPool = RingPool<ReferenceTable.RowIndex>;
 
+	/// <summary>
+	/// Gets the total CPU and GPU time spent by filtered objects for each frame in history.
+	/// </summary>
 	internal class ObjectsSummaryRequest : IDataSelectionRequest
 	{
 		private const string EmptyOwnersText = "Empty_Owners";
@@ -21,23 +24,24 @@ namespace Lime.Profiler.Contexts
 		public bool IsRunning { get; set; }
 
 		/// <inheritdoc/>
-		public IResponseProcessor ResponseProcessor { get; set; }
+		public IAsyncResponseProcessor AsyncResponseProcessor { get; }
 
 		[YuzuMember]
 		private string regexp;
 		[YuzuMember]
 		private SearchMode mode;
 
-		public ObjectsSummaryRequest(string regexp)
+		public ObjectsSummaryRequest(string regexp, IAsyncResponseProcessor asyncResponseProcessor)
 		{
 			this.regexp = regexp;
 			mode = GetMode(regexp);
+			AsyncResponseProcessor = asyncResponseProcessor;
 		}
 
 		public void FetchData(IProfilerDatabase database, BinaryWriter writer) =>
-			NumberedTypesDictionary.SafeAccess(types => Execute(database, writer, types));
+			TypeIdentifiersCache.SafeAccess(types => Execute(database, writer, types));
 
-		private void Execute(IProfilerDatabase database, BinaryWriter writer, INumberedTypesDictionary types)
+		private void Execute(IProfilerDatabase database, BinaryWriter writer, ITypeIdentifiersCache types)
 		{
 			if (IsRunning) {
 				throw new InvalidOperationException("Profiler: The request execution has already started!");
@@ -48,20 +52,20 @@ namespace Lime.Profiler.Contexts
 			try {
 				regexp = new Regex(this.regexp);
 			} catch (ArgumentException) {
-				serializer.ToWriter(new ObjectsSummaryResponse { IsSuccessed = false }, writer);
+				serializer.ToWriter(new ObjectsSummaryResponse { IsSucceed = false }, writer);
 				return;
 			}
-			var response = new ObjectsSummaryResponse { IsSuccessed = true };
+			var response = new ObjectsSummaryResponse { IsSucceed = true };
 			response.UpdateTimeForEachFrame = new float[database.FrameLifespan];
 			response.RenderTimeForEachFrame = new float[database.FrameLifespan];
 			response.DrawTimeForEachFrame = new float[database.FrameLifespan];
 			long start = database.LastAvailableFrame - database.FrameLifespan + 1;
 			long end = database.LastAvailableFrame;
-			response.FirstFrameIdentifer = start;
-			response.LastFrameIdentifer = end;
-			for (long identifer = start; identifer <= end; identifer++) {
-				if (database.CanAccessFrame(identifer)) {
-					var frame = database.GetFrame(identifer);
+			response.FirstFrameIdentifier = start;
+			response.LastFrameIdentifier = end;
+			for (long identifier = start; identifier <= end; identifier++) {
+				if (database.CanAccessFrame(identifier)) {
+					var frame = database.GetFrame(identifier);
 					long elapsed;
 					long lastStartTimestamp;
 					void ResetCounter() {
@@ -121,8 +125,7 @@ namespace Lime.Profiler.Contexts
 							}
 						}
 					}
-					bool CheckType(TypeIdentifier identifier) =>
-						regexp.IsMatch(types.GetTypeName(identifier, database));
+					bool CheckType(TypeIdentifier id) => regexp.IsMatch(types.GetTypeName(id, database));
 					/// Usages example:           ▀▀▀▀▀▀ ▀▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀
 					///                ▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀  ▀▀▀▀▀▀▀▀▀
 					///                ▀▀▀  ▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀▀▀▀▀   ▀▀▀▀  ▀▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀▀▀
@@ -151,17 +154,17 @@ namespace Lime.Profiler.Contexts
 					foreach (var usage in database.UpdateCpuUsagesPool.Reversed(frame.UpdateCpuUsagesList)) {
 						ProcessCpuUsage(usage.StartTime, usage.FinishTime, IsCpuUsageFiltersPassed(usage, updateOwnersPool));
 					}
-					response.UpdateTimeForEachFrame[identifer - start] = elapsed / (Stopwatch.Frequency / 1000f);
+					response.UpdateTimeForEachFrame[identifier - start] = elapsed / (Stopwatch.Frequency / 1000f);
 					ResetCounter();
 					foreach (var usage in database.RenderCpuUsagesPool.Reversed(frame.RenderCpuUsagesList)) {
 						ProcessCpuUsage(usage.StartTime, usage.FinishTime, IsCpuUsageFiltersPassed(usage, renderOwnersPool));
 					}
-					response.RenderTimeForEachFrame[identifer - start] = elapsed / (Stopwatch.Frequency / 1000f);
+					response.RenderTimeForEachFrame[identifier - start] = elapsed / (Stopwatch.Frequency / 1000f);
 					ResetCounter();
 					foreach (var usage in database.GpuUsagesPool.Reversed(frame.DrawingGpuUsagesList)) {
 						ProcessGpuUsage(usage.StartTime, usage.FinishTime, IsGpuUsageFiltersPassed(usage, renderOwnersPool));
 					}
-					response.DrawTimeForEachFrame[identifer - start] = elapsed / 1000f;
+					response.DrawTimeForEachFrame[identifier - start] = elapsed / 1000f;
 				}
 			}
 			serializer.ToWriter(response, writer);
@@ -209,14 +212,17 @@ namespace Lime.Profiler.Contexts
 		}
 	}
 
+	/// <summary>
+	/// Represents the total time spent by filtered objects for each frame in history.
+	/// </summary>
 	public class ObjectsSummaryResponse : IDataSelectionResponseBuilder, IDataSelectionResponse
 	{
 		[YuzuMember]
-		public bool IsSuccessed { get; set; }
+		public bool IsSucceed { get; set; }
 		[YuzuMember]
-		public long FirstFrameIdentifer { get; set; }
+		public long FirstFrameIdentifier { get; set; }
 		[YuzuMember]
-		public long LastFrameIdentifer { get; set; }
+		public long LastFrameIdentifier { get; set; }
 		[YuzuMember]
 		public float[] RenderTimeForEachFrame { get; set; }
 		[YuzuMember]

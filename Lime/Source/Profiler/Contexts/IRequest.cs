@@ -37,7 +37,7 @@ namespace Lime.Profiler.Contexts
 		/// <summary>
 		/// Handles response of the data selection request on the terminal side.
 		/// </summary>
-		IResponseProcessor ResponseProcessor { get; set; }
+		IAsyncResponseProcessor AsyncResponseProcessor { get; }
 
 		/// <summary>
 		/// Fetch data on a database side.
@@ -51,20 +51,34 @@ namespace Lime.Profiler.Contexts
 	/// <summary>
 	/// Processes a response to a data selection request.
 	/// </summary>
-	public interface IResponseProcessor
+	public interface IAsyncResponseProcessor
 	{
 		/// <summary>
 		/// Handles the response on the terminal side.
 		/// </summary>
-		void ProcessResponse(object response);
+		/// <param name="response">
+		/// <para>The response object that is considered valid only within the method call.</para>
+		/// <para>Attempts to access data from outside the method will cause undefined behavior.</para>
+		/// </param>
+		void ProcessResponseAsync(object response);
 	}
 
+	/// <inheritdoc cref="IAsyncResponseProcessor"/>
+	public abstract class AsyncResponseProcessor<ResponseType> : IAsyncResponseProcessor
+	{
+		/// <inheritdoc/>
+		public void ProcessResponseAsync(object response) => ProcessResponseAsync((ResponseType)response);
+		
+		/// <inheritdoc cref="IAsyncResponseProcessor.ProcessResponseAsync"/>
+		protected abstract void ProcessResponseAsync(ResponseType response);
+	}
+	
 	/// <summary>
 	/// Common interface for all responses.
 	/// </summary>
 	public interface IDataSelectionResponse
 	{
-		bool IsSuccessed { get; set; }
+		bool IsSucceed { get; set; }
 	}
 	
 	/// <summary>
