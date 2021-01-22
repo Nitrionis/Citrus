@@ -27,6 +27,66 @@
 	"Nodes":[
 		{
 			"class":"Lime.Frame, Lime",
+			"Color":[4294967295],
+			"Id":"Frame",
+			"Nodes":[
+				{
+					"class":"Lime.ParticleEmitter, Lime",
+					"Color":[4294967295],
+					"Id":"ParticleEmitter",
+					"Nodes":[
+						{
+							"class":"Lime.EmitterShapePoint, Lime",
+							"Id":"EmitterShapePoint3",
+							"Position":[-0.41999984,3.65]
+						},
+						{
+							"class":"Lime.EmitterShapePoint, Lime",
+							"Id":"EmitterShapePoint2",
+							"Position":[1.405,4.65]
+						},
+						{
+							"class":"Lime.EmitterShapePoint, Lime",
+							"Id":"EmitterShapePoint1",
+							"Position":[1.355,-3.05]
+						},
+						{
+							"class":"Lime.EmitterShapePoint, Lime",
+							"Id":"EmitterShapePoint",
+							"Position":[-0.48499984,-3.3]
+						},
+						{
+							"class":"Lime.ParticleModifier, Lime",
+							"Animators":[
+								{
+									"class":"Lime.Color4Animator, Lime",
+									"ReadonlyKeys":[
+										[0,0,[16777215]],
+										[30,0,[4294967295]],
+										[60,0,[16777215]]
+									],
+									"TargetProperty":"Color"
+								}
+							],
+							"Color":[16777215],
+							"Id":"ParticleModifier",
+							"Texture":{
+								"class":"Lime.SerializableTexture, Lime"
+							}
+						}
+					],
+					"Pivot":[0.5,0.5],
+					"Position":[18,7],
+					"Shape":4,
+					"Size":[100,10]
+				}
+			],
+			"Pivot":[0.5,0.5],
+			"Position":[324,-74],
+			"Size":[100,10]
+		},
+		{
+			"class":"Lime.Frame, Lime",
 			"Anchors":48,
 			"Animators":[
 				{

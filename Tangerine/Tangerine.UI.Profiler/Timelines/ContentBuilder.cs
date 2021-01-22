@@ -2,7 +2,10 @@
 
 namespace Tangerine.UI.Timelines
 {
-	internal partial class Timeline
+	/// <summary>
+	/// 
+	/// </summary>
+	internal class ContentBuilder
 	{
 		
 	}

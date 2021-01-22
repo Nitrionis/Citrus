@@ -6,13 +6,13 @@ using Lime;
 
 namespace Tangerine.UI.Timelines
 {
-	internal partial class Timeline : Widget
+	internal class Timeline : Widget
 	{
 		private const float ScaleScrollingSpeed = 1f / 1200f;
 		private const float MinMicrosecondsPerPixel = 0.2f;
 		private const float MaxMicrosecondsPerPixel = 32f;
 		
-		private readonly Ruler ruler;
+		private readonly TimelineRuler ruler;
 		private readonly Widget contentContainer;
 		private readonly ThemedScrollView horizontalScrollView;
 		private readonly ThemedScrollView verticalScrollView;
@@ -53,7 +53,7 @@ namespace Tangerine.UI.Timelines
 		{
 			Layout = new VBoxLayout();
 			Presenter = new WidgetFlatFillPresenter(ColorTheme.Current.Profiler.TimelineTasksBackground);
-			ruler = new Ruler(smallStepSize: 10, smallStepsPerBig: 10) {
+			ruler = new TimelineRuler(smallStepSize: 10, smallStepsPerBig: 10) {
 				Anchors = Anchors.LeftRight,
 				MinMaxHeight = 32,
 				RulerOffset = 0,
@@ -63,7 +63,7 @@ namespace Tangerine.UI.Timelines
 			AddNode(ruler);
 			contentContainer = new Widget {
 				Id = "Profiler timeline content",
-				Presenter = contentPresenter
+				//Presenter = contentPresenter
 			};
 			horizontalScrollView = new ThemedScrollView(ScrollDirection.Horizontal) {
 				Anchors = Anchors.LeftRightTopBottom,
@@ -147,7 +147,7 @@ namespace Tangerine.UI.Timelines
 		
 		protected struct TimelineState
 		{
-			/// <summary>
+			/*/// <summary>
 			/// todo it is not TimelineState
 			/// 
 			/// </summary>
@@ -158,7 +158,7 @@ namespace Tangerine.UI.Timelines
 			/// todo rectangles already scaled
 			/// List of all rectangles that the user will see if the timeline is large enough to show them all.
 			/// </summary>
-			public List<Rectangle> Rectangles;
+			public List<Rectangle> Rectangles;*/
 			
 			/// <summary>
 			/// Defines the time interval visible by users.
@@ -188,11 +188,11 @@ namespace Tangerine.UI.Timelines
 			/// </summary>
 			public Vector2 LocalMousePosition;
 
-			public TimePeriodsPositions.SpacingParameters SpaceManagerParameters => 
-				new TimePeriodsPositions.SpacingParameters {
+			public PeriodPositions.SpacingParameters SpacingParameters => 
+				new PeriodPositions.SpacingParameters {
 					MicrosecondsPerPixel = MicrosecondsPerPixel,
-					ItemVerticalMargin = TimeIntervalVerticalMargin,
-					ItemHeight = TimeIntervalHeight
+					TimePeriodVerticalMargin = TimeIntervalVerticalMargin,
+					TimePeriodHeight = TimeIntervalHeight
 				};
 		}
 	}
