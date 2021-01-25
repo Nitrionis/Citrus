@@ -13,6 +13,7 @@ namespace Tangerine.UI.Timelines
 		private const float MaxMicrosecondsPerPixel = 32f;
 
 		private readonly TimelineMesh timelineMesh;
+		private readonly TimelineHitTest timelineHitTest;
 		
 		private readonly TimelineRuler ruler;
 		private readonly Widget contentContainer;
@@ -54,6 +55,7 @@ namespace Tangerine.UI.Timelines
 		public Timeline()
 		{
 			timelineMesh = new TimelineMesh();
+			timelineHitTest = new TimelineHitTest();
 			
 			Layout = new VBoxLayout();
 			Presenter = new WidgetFlatFillPresenter(ColorTheme.Current.Profiler.TimelineTasksBackground);

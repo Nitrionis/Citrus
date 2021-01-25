@@ -16,41 +16,44 @@ namespace Tangerine.UI.Timelines
 		private Task<int> newestTask;
 		private long newestTaskId;
 		
-		public TimelineHitTest()
-		{
-			newestTask = Task.CompletedTask;
-		}
-		
+		public TimelineHitTest() => newestTask = Task.FromResult(InvalidItemIndex);
+
 		/// <summary>
-		/// 
+		/// Asynchronously checks if the cursor position intersects elements until the first match.
 		/// </summary>
-		/// <param name="mousePosition">
-		/// 
-		/// </param>
 		/// <param name="items">
-		/// 
+		/// Items should not change until the request completes.
 		/// </param>
 		/// <returns>
-		///
+		/// A task with a result containing the number of the element with which the cursor intersects.
+		/// Use this task to find out when the request is completed.
 		/// </returns>
-		public Task<int> RunAsyncHitTest(Vector2 mousePosition, IEnumerable<ItemInfo> items)
+		public Task<int> RunAsyncHitTest(ClickPoint mousePosition, IEnumerable<ItemInfo> items)
 		{
 			var mousePositionCopy = mousePosition;
 			var itemsIteratorCopy = items;
 			var currentTaskId = Interlocked.Increment(ref newestTaskId);
-			newestTask = newestTask.ContinueWith((previousTask) => {
-				if (currentTaskId != Interlocked.Read(ref newestTaskId)) {
-					// It makes no sense to execute old queries.
-					return InvalidItemIndex;
-				}
-				return RunHitTest(mousePositionCopy, itemsIteratorCopy);
-			});
+			newestTask = newestTask.ContinueWith((previousTask) => 
+				currentTaskId != Interlocked.Read(ref newestTaskId) ? 
+					InvalidItemIndex : RunHitTest(mousePositionCopy, itemsIteratorCopy));
 			return newestTask;
 		}
 
-		private static int RunHitTest(Vector2 mousePosition, IEnumerable<ItemInfo> items)
+		private static int RunHitTest(ClickPoint mousePosition, IEnumerable<ItemInfo> items)
 		{
-			
+			int itemIndex = -1;
+			foreach (var item in items) {
+				++itemIndex;
+				if (
+					item.TimePeriod.StartTime <= mousePosition.Timestamp &&
+					item.TimePeriod.FinishTime >= mousePosition.Timestamp ||
+					item.VerticalPosition.A <= mousePosition.VerticalPosition &&
+					item.VerticalPosition.B >= mousePosition.VerticalPosition
+					) 
+				{
+					return itemIndex;
+				}
+			}
 			return InvalidItemIndex;
 		}
 		
@@ -60,10 +63,23 @@ namespace Tangerine.UI.Timelines
 			public float VerticalPosition;
 		}
 		
+		public struct Range
+		{
+			public float A;
+			public float B;
+		}
+		
 		public struct ItemInfo
 		{
+			/// <summary>
+			/// Defines the horizontal location of the element.
+			/// </summary>
 			public TimePeriod TimePeriod;
-			public float VerticalPosition;
+			
+			/// <summary>
+			/// Defines the vertical location of the element, where a <= b.
+			/// </summary>
+			public Range VerticalPosition;
 		}
 	}
 }
