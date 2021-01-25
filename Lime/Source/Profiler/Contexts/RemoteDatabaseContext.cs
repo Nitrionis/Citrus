@@ -98,7 +98,8 @@ namespace Lime.Profiler.Contexts
 						shouldSendProfilerOptions = false;
 						if (!dataSelectionRequest.IsRunning) {
 							dataSelectionRequest.IsRunning = true;
-							taskCompletionSource = new TaskCompletionSource<bool>();
+							taskCompletionSource = new TaskCompletionSource<bool>(
+								TaskCreationOptions.RunContinuationsAsynchronously);
 							database.PreventProfilingWhileRunning(new Task(async () => {
 								client.LazySend(dataSelectionRequest);
 								await taskCompletionSource.Task;

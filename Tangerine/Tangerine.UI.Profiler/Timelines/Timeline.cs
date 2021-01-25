@@ -11,6 +11,8 @@ namespace Tangerine.UI.Timelines
 		private const float ScaleScrollingSpeed = 1f / 1200f;
 		private const float MinMicrosecondsPerPixel = 0.2f;
 		private const float MaxMicrosecondsPerPixel = 32f;
+
+		private readonly TimelineMesh timelineMesh;
 		
 		private readonly TimelineRuler ruler;
 		private readonly Widget contentContainer;
@@ -51,6 +53,8 @@ namespace Tangerine.UI.Timelines
 		
 		public Timeline()
 		{
+			timelineMesh = new TimelineMesh();
+			
 			Layout = new VBoxLayout();
 			Presenter = new WidgetFlatFillPresenter(ColorTheme.Current.Profiler.TimelineTasksBackground);
 			ruler = new TimelineRuler(smallStepSize: 10, smallStepsPerBig: 10) {
