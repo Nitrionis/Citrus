@@ -395,7 +395,9 @@ namespace Lime.Profiler
 				if (nativeReferenceTable.NewDescriptionsCount > 10000) {
 					Console.WriteLine("Profiler ReferenceTable garbage collection starting!");
 					long minFrameIndexToStayAlive = targetFrameIndex - instance.FrameLifespan - 1;
+					var usage = CpuUsageStarted();
 					nativeReferenceTable.CollectGarbage(minFrameIndexToStayAlive);
+					CpuUsageFinished(usage, CpuUsage.Reasons.ReferenceTableGarbageCollection);
 				}
 				if (profilingEnabled) {
 					var frame = CalculatedFramePlace(targetFrameIndex);
@@ -604,7 +606,7 @@ namespace Lime.Profiler
 				if (profilingEnabled && isMainWindowTarget) {
 					var frame = CalculatedFramePlace(targetFrameIndex);
 					if (swapBufferCpuUsage.ThreadInfo == ThreadInfo.Render) {
-						CpuUsageFinished(swapBufferCpuUsage, CpuUsage.Reasons.WaitForPreviousRendering);
+						CpuUsageFinished(swapBufferCpuUsage, CpuUsage.Reasons.WaitForAcquiringSwapchainBuffer);
 					}
 					frame.CommonData.WaitForAcquiringSwapchainBuffer =
 						Stopwatch.GetTimestamp() - swapBufferCpuUsage.StartTime;

@@ -15,7 +15,8 @@ namespace Tangerine.UI.Timelines
 	internal class CpuTimelineContent : TimelineContent<CpuUsage>
 	{
 		private readonly AsyncContentBuilder contentBuilder;
-
+		private readonly int[] colorIndices;
+		
 		/// <summary>
 		/// Changes the timeline rebuild mode for the next mesh rebuild requests.
 		/// </summary>
@@ -30,6 +31,17 @@ namespace Tangerine.UI.Timelines
 			contentBuilder = new AsyncContentBuilder(this);
 		}
 
+		public static Color4[] GetColors() => new [] {
+			ColorTheme.Current.Profiler.TimelineUnselectedTasks,
+			ColorTheme.Current.Profiler.TimelineAnimationTasks,
+			ColorTheme.Current.Profiler.TimelineUpdateTasks,
+			ColorTheme.Current.Profiler.TimelineGestureTasks,
+			ColorTheme.Current.Profiler.TimelineRenderPreparationTasks,
+			ColorTheme.Current.Profiler.TimelineNodeRenderTasks,
+			ColorTheme.Current.Profiler.TimelineBatchRenderTasks,
+			Color4.Red
+		};
+		
 		public override IEnumerable<Rectangle> GetRectangles(TimePeriod timePeriod) => 
 			contentBuilder.GetRectangles(timePeriod);
 
@@ -41,13 +53,13 @@ namespace Tangerine.UI.Timelines
 		private class AsyncContentBuilder : IAsyncContentBuilder<CpuUsage>
 		{
 			private const int PreservedColorsCount = 2;
-			private const int GrayColorIndex = 1;
-			private const int RedColorIndex = 2;
+			private const int GrayColorBit = 1;
+			private const int RedColorBit = 2;
 			
 			private readonly TimelineContent<CpuUsage> timelineContent;
 			private readonly List<Rectangle> cachedRectangles;
 			private readonly int[] colorsPackRasterizationTarget;
-			private readonly int[] usageReasonToColors;
+			private readonly uint[] usageReasonToColors;
 			private Item[] items;
 			private int itemsCount;
 			
@@ -59,29 +71,33 @@ namespace Tangerine.UI.Timelines
 				items = new Item[1];
 				cachedRectangles = new List<Rectangle>();
 				colorsPackRasterizationTarget = new int[ColorsPack.MaxColorsCount];
-				usageReasonToColors = new int[(int)CpuUsage.Reasons.MaxReasonIndex + 1];
+				usageReasonToColors = new uint[(int)CpuUsage.Reasons.MaxReasonIndex + 1];
 				for (int i = 0; i < usageReasonToColors.Length; i++) {
-					usageReasonToColors[i] = RedColorIndex;
+					usageReasonToColors[i] = RedColorBit;
 				}
+				// todo get colors and converters from outside
 				var colors = usageReasonToColors;
-				usageReasonToColors[(int)CpuUsage.Reasons.FullUpdate] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.FullRender] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.NodeAnimation] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.NodeProcessor] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.NodeUpdate] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.NodeRender] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.ProcessCommands] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.IssueCommands] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.ProcessCommands] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.BatchRender] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.AudioSystemUpdate] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
-				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
+				colors[(int)CpuUsage.Reasons.FullUpdate] = PreservedColorsCount + 1;
+				colors[(int)CpuUsage.Reasons.FullRender] = PreservedColorsCount + 2;
+				colors[(int)CpuUsage.Reasons.NodeAnimation] = PreservedColorsCount + 1;
+				colors[(int)CpuUsage.Reasons.NodeUpdate] = PreservedColorsCount + 1;
+				colors[(int)CpuUsage.Reasons.NodeProcessor] = PreservedColorsCount + 1;
+				colors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = PreservedColorsCount + 1;
+				colors[(int)CpuUsage.Reasons.NodeDeserialization] = PreservedColorsCount + 3;
+				colors[(int)CpuUsage.Reasons.LoadExternalScenes] = PreservedColorsCount + 3;
+				colors[(int)CpuUsage.Reasons.NodeRenderPreparation] = PreservedColorsCount + ;
+				colors[(int)CpuUsage.Reasons.NodeRender] = PreservedColorsCount + 0;
+				colors[(int)CpuUsage.Reasons.BatchRender] = PreservedColorsCount + 0;
+				colors[(int)CpuUsage.Reasons.WaitForPreviousRendering] = PreservedColorsCount + 0;
+				colors[(int)CpuUsage.Reasons.WaitForAcquiringSwapchainBuffer] = PreservedColorsCount + 0;
+				colors[(int)CpuUsage.Reasons.ReferenceTableGarbageCollection] = PreservedColorsCount + 0;
+				colors[(int)CpuUsage.Reasons.ProfilerDatabaseResizing] = PreservedColorsCount + 0;
+				colors[(int)CpuUsage.Reasons.SyncBodyExecution] = PreservedColorsCount + 0;
+				colors[(int)CpuUsage.Reasons.RunScheduledActions] = PreservedColorsCount + 0;
+				colors[(int)CpuUsage.Reasons.RunPendingActionsOnRendering] = PreservedColorsCount + 0;
+				colors[(int)CpuUsage.Reasons.AudioSystemUpdate] = PreservedColorsCount + 0;
+				colors[(int)CpuUsage.Reasons.IssueCommands] = PreservedColorsCount + 0;
+				colors[(int)CpuUsage.Reasons.ProcessCommands] = PreservedColorsCount + 0;
 			}
 
 			public IEnumerable<Rectangle> GetRectangles(TimePeriod timePeriod)
@@ -112,13 +128,10 @@ namespace Tangerine.UI.Timelines
 				if (frameData.IsSucceed) {
 					itemsCount = 0;
 					cachedRectangles.Clear();
-					
 					var usages = frameData.Clipboard.UpdateCpuUsages;
 					var spacingParameters = timelineContent.SpacingParameters;
-					
 					long stopwatchFrequency = frameData.ProfiledFrame.StopwatchFrequency;
 					long updateThreadStartTime = frameData.ProfiledFrame.UpdateThreadStartTime;
-					
 					var periods = GetPeriods(usages, updateThreadStartTime, stopwatchFrequency);
 					var positions = new PeriodPositions(periods, spacingParameters);
 					float ticksPerMicrosecond = stopwatchFrequency / 1000f;
@@ -134,17 +147,17 @@ namespace Tangerine.UI.Timelines
 									data = (uint)(usage.Reason & CpuUsage.Reasons.BatchBreakReasonsBitMask);
 									data <<= (int)CpuUsage.Reasons.BatchBreakReasonsStartBit - PreservedColorsCount;
 								} else {
-									data = GrayColorIndex;
+									data = GrayColorBit;
 								}
 							} else {
 								if (filter(usage, frameData.Clipboard)) {
-									
+									data = usageReasonToColors[(uint)(usage.Reason & CpuUsage.Reasons.ReasonsBitMask)];
 								} else {
-									data = GrayColorIndex;
+									data = GrayColorBit;
 								}
 							}
 						} else {
-							data = GrayColorIndex;
+							data = GrayColorBit;
 						}
 						return new ColorsPack { Data = (byte)data };
 					}
@@ -158,8 +171,7 @@ namespace Tangerine.UI.Timelines
 							},
 							ColorsPack = CreateColorsPack(usage)
 						};
-						// todo create rectangles
-						throw new NotImplementedException();
+						CreateRectanglesFor(item, position);
 					}
 				}
 			}
