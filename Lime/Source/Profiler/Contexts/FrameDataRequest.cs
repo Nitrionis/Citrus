@@ -44,8 +44,10 @@ namespace Lime.Profiler.Contexts
 			}
 			IsRunning = true;
 			var serializer = new BinarySerializer();
-			bool canAccessFrame = database.CanAccessFrame(FrameIdentifier);
-			serializer.ToWriter(new FrameDataResponseBuilder(canAccessFrame, FrameIdentifier), writer);
+			var frame = database.GetFrame(FrameIdentifier);
+			bool canAccessFrame = frame != null;
+			var profiledFrame = canAccessFrame ? frame.CommonData : new ProfiledFrame { Identifier = FrameIdentifier };
+			serializer.ToWriter(new FrameDataResponseBuilder(canAccessFrame, profiledFrame), writer);
 			if (canAccessFrame) {
 				TypeIdentifiersCache.SafeAccess(dictionary => {
 					void SerializeCpuUsage(CpuUsage usage, RingPool<ReferenceTable.RowIndex> pool) {
@@ -69,7 +71,6 @@ namespace Lime.Profiler.Contexts
 						writer.Write(usage.VerticesCount);
 						SerializeOwners(usage.Owners, pool, database.NativeReferenceTable, writer);
 					}
-					var frame = database.GetFrame(FrameIdentifier);
 					for (int i = 0; i < requiredDescriptions.Length; i++) {
 						requiredDescriptions[i] = false;
 					}
@@ -134,7 +135,7 @@ namespace Lime.Profiler.Contexts
 	public class FrameDataResponse : IDataSelectionResponse
 	{
 		public bool IsSucceed { get; set; }
-		public long FrameIdentifier { get; set; }
+		public ProfiledFrame ProfiledFrame { get; set; }
 		public FrameClipboard Clipboard { get; set; }
 	}
 	
@@ -147,12 +148,12 @@ namespace Lime.Profiler.Contexts
 		public bool IsSucceed { get; }
 
 		[YuzuMember]
-		public long FrameIdentifier { get; }
+		public ProfiledFrame ProfiledFrame { get; }
 
-		public FrameDataResponseBuilder(bool isSucceed, long frameIdentifier)
+		public FrameDataResponseBuilder(bool isSucceed, ProfiledFrame profiledFrame)
 		{
 			IsSucceed = isSucceed;
-			FrameIdentifier = frameIdentifier;
+			ProfiledFrame = profiledFrame;
 		}
 
 		/// <inheritdoc/>
@@ -214,7 +215,7 @@ namespace Lime.Profiler.Contexts
 			if (!IsSucceed) {
 				return new FrameDataResponse {
 					IsSucceed = IsSucceed,
-					FrameIdentifier = FrameIdentifier,
+					ProfiledFrame = ProfiledFrame,
 					Clipboard = null
 				};
 			}
@@ -249,7 +250,7 @@ namespace Lime.Profiler.Contexts
 			((DeserializableReferenceTable)clipboard.ReferenceTable).ReloadFromReader(reader);
 			return new FrameDataResponse {
 				IsSucceed = IsSucceed,
-				FrameIdentifier = FrameIdentifier,
+				ProfiledFrame = ProfiledFrame,
 				Clipboard = clipboard
 			};
 		}

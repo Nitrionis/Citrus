@@ -42,16 +42,9 @@ namespace Tangerine.UI.Timelines
 		private long newestRescaleTaskId;
 		private readonly Func<long> actualRebuildIdGetter;
 		private readonly Func<long> actualHitTestIdGetter;
-		private long lastProcessedFrame = -1;
 		
-		protected SpacingParameters SpacingParameters { get; private set; }
+		public SpacingParameters SpacingParameters { get; private set; }
 		
-		public long NewestRebuildTaskId => Interlocked.Read(ref newestRebuildTaskId);
-		
-		public abstract IEnumerable<Rectangle> Rectangles { get; }
-
-		public abstract IEnumerable<TimelineHitTest.ItemInfo> HitTestTargets { get; }
-
 		protected TimelineContent(SpacingParameters spacingParameters)
 		{
 			SpacingParameters = spacingParameters;
@@ -59,6 +52,10 @@ namespace Tangerine.UI.Timelines
 			actualHitTestIdGetter = () => Interlocked.Read(ref newestRescaleTaskId);
 		}
 		
+		public abstract IEnumerable<Rectangle> GetRectangles(TimePeriod timePeriod);
+		
+		public abstract IEnumerable<TimelineHitTest.ItemInfo> GetHitTestTargets();
+
 		public Task RebuildAsync(long frameIndex, Task waitingTask)
 		{
 			long currentTaskId = Interlocked.Increment(ref newestRebuildTaskId);
@@ -81,7 +78,7 @@ namespace Tangerine.UI.Timelines
 			newestContentModificationTask = Task.Run(async () => {
 				await waitingTask;
 				await previousContentModificationTask;
-				if (lastProcessedFrame != -1 && currentTaskId == actualHitTestIdGetter()) {
+				if (currentTaskId == actualHitTestIdGetter()) {
 					SpacingParameters = spacingParameters;
 					contentBuilder.RescaleItemsAsync();
 				}
@@ -125,18 +122,6 @@ namespace Tangerine.UI.Timelines
 				}
 				taskCompletionSource.SetResult(true);
 			}
-		}
-		
-		protected struct Item
-		{
-			public TimePeriod TimePeriod;
-			public BuilderLocation BuilderLocation;
-		}
-		
-		protected struct BuilderLocation
-		{
-			public int BuilderType;
-			public int BuilderIndex;
 		}
 	}
 }

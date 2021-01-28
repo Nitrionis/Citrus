@@ -226,6 +226,20 @@ namespace Lime.Profiler
 			/// Can only exist together with <see cref="BatchRender"/>.
 			/// </remarks>
 			BatchBreakDifferentAtlasTwo = 1u << 24,
+			
+			/// <summary>
+			/// Index of the first bit of the batch break reasons.
+			/// </summary>
+			BatchBreakReasonsStartBit = 24,
+			
+			BatchBreakReasonsBitMask =
+				BatchBreakNullLastBatch |
+				BatchBreakDifferentMaterials |
+				BatchBreakMaterialPassCount |
+				BatchBreakVertexBufferOverflow |
+				BatchBreakIndexBufferOverflow |
+				BatchBreakDifferentAtlasOne |
+				BatchBreakDifferentAtlasTwo
 		}
 	}
 }

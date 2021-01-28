@@ -9,6 +9,12 @@ namespace Tangerine.UI.Timelines
 {
 	using Task = System.Threading.Tasks.Task;
 	
+	internal struct Range
+	{
+		public float A;
+		public float B;
+	}
+	
 	internal class TimelineHitTest
 	{
 		public const int InvalidItemIndex = -1;
@@ -47,8 +53,8 @@ namespace Tangerine.UI.Timelines
 				if (
 					item.TimePeriod.StartTime <= mousePosition.Timestamp &&
 					item.TimePeriod.FinishTime >= mousePosition.Timestamp ||
-					item.VerticalPosition.A <= mousePosition.VerticalPosition &&
-					item.VerticalPosition.B >= mousePosition.VerticalPosition
+					item.VerticalLocation.A <= mousePosition.VerticalPosition &&
+					item.VerticalLocation.B >= mousePosition.VerticalPosition
 					) 
 				{
 					return itemIndex;
@@ -62,13 +68,7 @@ namespace Tangerine.UI.Timelines
 			public float Timestamp;
 			public float VerticalPosition;
 		}
-		
-		public struct Range
-		{
-			public float A;
-			public float B;
-		}
-		
+
 		public struct ItemInfo
 		{
 			/// <summary>
@@ -79,7 +79,7 @@ namespace Tangerine.UI.Timelines
 			/// <summary>
 			/// Defines the vertical location of the element, where a <= b.
 			/// </summary>
-			public Range VerticalPosition;
+			public Range VerticalLocation;
 		}
 	}
 }

@@ -130,7 +130,7 @@ namespace Lime.Profiler.Contexts
 								dataSelectionRequest is FrameDataRequest frameDataRequest &&
 								lastFrameDataResponse != null &&
 								lastFrameDataResponse.IsSucceed &&
-								lastFrameDataResponse.FrameIdentifier == frameDataRequest.FrameIdentifier;
+								lastFrameDataResponse.ProfiledFrame.Identifier == frameDataRequest.FrameIdentifier;
 							dataSelectionRequest.IsRunning = true;
 							isDataSelectionRequestCompleted = false;
 							if (!shouldUseCachedResponse) {
