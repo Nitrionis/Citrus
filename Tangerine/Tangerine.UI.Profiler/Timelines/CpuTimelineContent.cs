@@ -81,21 +81,21 @@ namespace Tangerine.UI.Timelines
 			public void RebuildAsync(FrameDataResponse frameData)
 			{
 				if (frameData.IsSucceed) {
-					// todo items.Clear();
 					itemsCount = 0;
 					cachedRectangles.Clear();
+					
 					var usages = frameData.Clipboard.UpdateCpuUsages;
 					var spacingParameters = timelineContent.SpacingParameters;
-					var profiledFrame = frameData.ProfiledFrame;
-					var periods = GetPeriods(
-						usages,
-						profiledFrame.UpdateThreadStartTime, 
-						profiledFrame.StopwatchFrequency);
+					
+					long stopwatchFrequency = frameData.ProfiledFrame.StopwatchFrequency;
+					long updateThreadStartTime = frameData.ProfiledFrame.UpdateThreadStartTime;
+					
+					var periods = GetPeriods(usages, updateThreadStartTime, stopwatchFrequency);
 					var positions = new PeriodPositions(periods, spacingParameters);
-					float ticksPerMicrosecond = profiledFrame.StopwatchFrequency / 1000f;
+					float ticksPerMicrosecond = stopwatchFrequency / 1000f;
 					TimePeriod UsageToTimePeriod(CpuUsage usage) => new TimePeriod(
-						startTime: (usage.StartTime - profiledFrame.UpdateThreadStartTime) / ticksPerMicrosecond,
-						finishTime: (usage.FinishTime - profiledFrame.UpdateThreadStartTime) / ticksPerMicrosecond);
+						startTime: (usage.StartTime - updateThreadStartTime) / ticksPerMicrosecond,
+						finishTime: (usage.FinishTime - updateThreadStartTime) / ticksPerMicrosecond);
 					ColorsPack CreateColorsPack(CpuUsage usage) {
 						if (Mode == TimelineMode.BatchBreakReasons) {
 							var reasons = usage.Reason;
@@ -132,8 +132,7 @@ namespace Tangerine.UI.Timelines
 			{
 				cachedRectangles.Clear();
 				var spacingParameters = timelineContent.SpacingParameters;
-				var positionsBuilder = new PeriodPositions(GetCachedPeriods(), spacingParameters);
-				var positions = positionsBuilder.GetEnumerator();
+				var positions = new PeriodPositions(GetCachedPeriods(), spacingParameters).GetEnumerator();
 				positions.MoveNext();
 				for (int i = 0; i < itemsCount; i++, positions.MoveNext()) {
 					var position = positions.Current;

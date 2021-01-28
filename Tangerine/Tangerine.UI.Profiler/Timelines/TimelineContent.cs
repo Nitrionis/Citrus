@@ -12,7 +12,7 @@ namespace Tangerine.UI.Timelines
 	using Task = System.Threading.Tasks.Task;
 	using SpacingParameters = PeriodPositions.SpacingParameters;
 	
-	internal interface IAsyncContentBuilder
+	internal interface IAsyncContentBuilder<UsageType> where UsageType : struct
 	{
 		/// <summary>
 		/// Rebuilds content as part of some asynchronous task.
@@ -56,7 +56,7 @@ namespace Tangerine.UI.Timelines
 		
 		public abstract IEnumerable<TimelineHitTest.ItemInfo> GetHitTestTargets();
 
-		public Task RebuildAsync(long frameIndex, Task waitingTask)
+		public Task RebuildAsync<TItem>(long frameIndex, Task waitingTask, Func<TItem, bool> filter) where TItem : struct
 		{
 			long currentTaskId = Interlocked.Increment(ref newestRebuildTaskId);
 			var contentBuilder = GetContentBuilder();
