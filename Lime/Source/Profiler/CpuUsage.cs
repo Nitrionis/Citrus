@@ -172,6 +172,16 @@ namespace Lime.Profiler
 			LoadExternalScenes = 21,
 
 			/// <summary>
+			/// Max reason index.
+			/// </summary>
+			MaxReasonIndex = 21,
+			
+			/// <summary>
+			/// Mask all reasons without secondary data.
+			/// </summary>
+			ReasonsBitMask = 0xff,
+			
+			/// <summary>
 			/// Batch breaking due to the fact that there is no link to the previous batch.
 			/// </summary>
 			/// <remarks>
@@ -232,6 +242,9 @@ namespace Lime.Profiler
 			/// </summary>
 			BatchBreakReasonsStartBit = 24,
 			
+			/// <summary>
+			/// 
+			/// </summary>
 			BatchBreakReasonsBitMask =
 				BatchBreakNullLastBatch |
 				BatchBreakDifferentMaterials |

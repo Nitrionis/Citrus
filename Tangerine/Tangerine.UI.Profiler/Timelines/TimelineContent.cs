@@ -12,7 +12,12 @@ namespace Tangerine.UI.Timelines
 	using Task = System.Threading.Tasks.Task;
 	using SpacingParameters = PeriodPositions.SpacingParameters;
 	
-	internal interface IAsyncContentBuilder<UsageType> where UsageType : struct
+	internal class TimelineContent
+	{
+		public delegate bool Filter<TUsage>(TUsage usage, FrameClipboard frameClipboard);
+	}
+	
+	internal interface IAsyncContentBuilder<TItem> where TItem : struct
 	{
 		/// <summary>
 		/// Rebuilds content as part of some asynchronous task.
@@ -24,7 +29,7 @@ namespace Tangerine.UI.Timelines
 		/// <remarks>
 		/// This method will not be called in parallel.
 		/// </remarks>
-		void RebuildAsync(FrameDataResponse frameData);
+		void RebuildAsync(FrameDataResponse frameData, TimelineContent.Filter<TItem> filter);
 
 		/// <summary>
 		/// Updates elements locations.
@@ -35,7 +40,7 @@ namespace Tangerine.UI.Timelines
 		void RescaleItemsAsync();
 	}
 
-	internal abstract class TimelineContent
+	internal abstract class TimelineContent<TUsage> : TimelineContent where TUsage : struct
 	{
 		private Task newestContentModificationTask = Task.CompletedTask;
 		private long newestRebuildTaskId;
@@ -56,7 +61,7 @@ namespace Tangerine.UI.Timelines
 		
 		public abstract IEnumerable<TimelineHitTest.ItemInfo> GetHitTestTargets();
 
-		public Task RebuildAsync<TItem>(long frameIndex, Task waitingTask, Func<TItem, bool> filter) where TItem : struct
+		public Task RebuildAsync(long frameIndex, Task waitingTask, Filter<TUsage> filter)
 		{
 			long currentTaskId = Interlocked.Increment(ref newestRebuildTaskId);
 			var contentBuilder = GetContentBuilder();
@@ -64,7 +69,8 @@ namespace Tangerine.UI.Timelines
 				Task.WhenAll(waitingTask, newestContentModificationTask),
 				currentTaskId,
 				actualRebuildIdGetter,
-				contentBuilder);
+				contentBuilder,
+				filter);
 			ProfilerTerminal.GetFrame(frameIndex, frameProcessor);
 			newestContentModificationTask = frameProcessor.Completed;
 			return newestContentModificationTask;
@@ -86,28 +92,31 @@ namespace Tangerine.UI.Timelines
 			return newestContentModificationTask;
 		}
 		
-		protected abstract IAsyncContentBuilder GetContentBuilder();
+		protected abstract IAsyncContentBuilder<TUsage> GetContentBuilder();
 		
 		private class AsyncFrameProcessor : AsyncResponseProcessor<FrameDataResponse>
 		{
 			private readonly Task waitingTask;
 			private readonly long selfRebuildId;
 			private readonly Func<long> actualRebuildIdGetter;
-			private readonly IAsyncContentBuilder contentBuilder;
+			private readonly IAsyncContentBuilder<TUsage> contentBuilder;
 			private readonly TaskCompletionSource<bool> taskCompletionSource;
-
+			private readonly TimelineContent.Filter<TUsage> filter;
+			
 			public Task Completed => taskCompletionSource.Task;
 
 			public AsyncFrameProcessor(
 				Task waitingTask,
 				long selfRebuildId,
 				Func<long> actualRebuildIdGetter,
-				IAsyncContentBuilder contentBuilder)
+				IAsyncContentBuilder<TUsage> contentBuilder,
+				TimelineContent.Filter<TUsage> filter)
 			{
 				this.waitingTask = waitingTask;
 				this.contentBuilder = contentBuilder;
 				this.selfRebuildId = selfRebuildId;
 				this.actualRebuildIdGetter = actualRebuildIdGetter;
+				this.filter = filter;
 				taskCompletionSource = new TaskCompletionSource<bool>(
 					TaskCreationOptions.RunContinuationsAsynchronously);
 			}
@@ -118,7 +127,7 @@ namespace Tangerine.UI.Timelines
 					await waitingTask;
 				}
 				if (selfRebuildId == actualRebuildIdGetter()) {
-					contentBuilder.RebuildAsync(response);
+					contentBuilder.RebuildAsync(response, filter);
 				}
 				taskCompletionSource.SetResult(true);
 			}

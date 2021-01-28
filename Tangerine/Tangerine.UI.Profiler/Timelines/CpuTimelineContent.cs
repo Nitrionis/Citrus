@@ -1,6 +1,7 @@
 #if PROFILER
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Lime;
@@ -11,7 +12,7 @@ namespace Tangerine.UI.Timelines
 {
 	using SpacingParameters = PeriodPositions.SpacingParameters;
 	
-	internal class CpuTimelineContent : TimelineContent
+	internal class CpuTimelineContent : TimelineContent<CpuUsage>
 	{
 		private readonly AsyncContentBuilder contentBuilder;
 
@@ -35,24 +36,52 @@ namespace Tangerine.UI.Timelines
 		public override IEnumerable<TimelineHitTest.ItemInfo> GetHitTestTargets() => 
 			contentBuilder.GetHitTestTargets();
 		
-		protected override IAsyncContentBuilder GetContentBuilder() => contentBuilder;
+		protected override IAsyncContentBuilder<CpuUsage> GetContentBuilder() => contentBuilder;
 		
-		private class AsyncContentBuilder : IAsyncContentBuilder
+		private class AsyncContentBuilder : IAsyncContentBuilder<CpuUsage>
 		{
-			private readonly TimelineContent timelineContent;
+			private const int PreservedColorsCount = 2;
+			private const int GrayColorIndex = 1;
+			private const int RedColorIndex = 2;
+			
+			private readonly TimelineContent<CpuUsage> timelineContent;
 			private readonly List<Rectangle> cachedRectangles;
 			private readonly int[] colorsPackRasterizationTarget;
+			private readonly int[] usageReasonToColors;
 			private Item[] items;
 			private int itemsCount;
 			
 			public TimelineMode Mode { get; set; } = TimelineMode.Default;
 			
-			public AsyncContentBuilder(TimelineContent timelineContent)
+			public AsyncContentBuilder(TimelineContent<CpuUsage> timelineContent)
 			{
 				this.timelineContent = timelineContent;
 				items = new Item[1];
 				cachedRectangles = new List<Rectangle>();
 				colorsPackRasterizationTarget = new int[ColorsPack.MaxColorsCount];
+				usageReasonToColors = new int[(int)CpuUsage.Reasons.MaxReasonIndex + 1];
+				for (int i = 0; i < usageReasonToColors.Length; i++) {
+					usageReasonToColors[i] = RedColorIndex;
+				}
+				var colors = usageReasonToColors;
+				usageReasonToColors[(int)CpuUsage.Reasons.FullUpdate] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.FullRender] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.NodeAnimation] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.NodeProcessor] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.NodeUpdate] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.NodeRender] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.ProcessCommands] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.IssueCommands] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.ProcessCommands] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.BatchRender] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.AudioSystemUpdate] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
+				usageReasonToColors[(int)CpuUsage.Reasons.BehaviorComponentUpdate] = ;
 			}
 
 			public IEnumerable<Rectangle> GetRectangles(TimePeriod timePeriod)
@@ -78,7 +107,7 @@ namespace Tangerine.UI.Timelines
 				}
 			}
 
-			public void RebuildAsync(FrameDataResponse frameData)
+			public void RebuildAsync(FrameDataResponse frameData, Filter<CpuUsage> filter)
 			{
 				if (frameData.IsSucceed) {
 					itemsCount = 0;
@@ -97,20 +126,27 @@ namespace Tangerine.UI.Timelines
 						startTime: (usage.StartTime - updateThreadStartTime) / ticksPerMicrosecond,
 						finishTime: (usage.FinishTime - updateThreadStartTime) / ticksPerMicrosecond);
 					ColorsPack CreateColorsPack(CpuUsage usage) {
-						if (Mode == TimelineMode.BatchBreakReasons) {
-							var reasons = usage.Reason;
-							uint data = 0;
-							if ((reasons & CpuUsage.Reasons.BatchRender) != 0) {
-								data = (uint)(usage.Reason & CpuUsage.Reasons.BatchBreakReasonsBitMask);
-								data <<= -1 + (int)CpuUsage.Reasons.BatchBreakReasonsStartBit;
+						uint data = 0;
+						if (filter(usage, frameData.Clipboard)) {
+							if (Mode == TimelineMode.BatchBreakReasons) {
+								var reasons = usage.Reason;
+								if ((reasons & CpuUsage.Reasons.BatchRender) != 0) {
+									data = (uint)(usage.Reason & CpuUsage.Reasons.BatchBreakReasonsBitMask);
+									data <<= (int)CpuUsage.Reasons.BatchBreakReasonsStartBit - PreservedColorsCount;
+								} else {
+									data = GrayColorIndex;
+								}
 							} else {
-								data = 1; // gray color
+								if (filter(usage, frameData.Clipboard)) {
+									
+								} else {
+									data = GrayColorIndex;
+								}
 							}
-							return new ColorsPack { Data = (byte)data };
 						} else {
-							// colorize by predicate
-							throw new NotImplementedException();
+							data = GrayColorIndex;
 						}
+						return new ColorsPack { Data = (byte)data };
 					}
 					foreach (var (usage, position) in usages.Zip(positions, Tuple.Create)) {
 						var period = UsageToTimePeriod(usage);
