@@ -317,6 +317,28 @@ namespace Tangerine.UI
 			public Color4 TimelineBatchRenderTasks { get; set; }
 			[YuzuOptional]
 			public Color4 TimelineUnknownOwnerTasks { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineAudioSystemTasks { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineDeserializationTasks { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineRunPendingActionsTasks { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineWaitTasks { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineBatchBreakNullLastBatch { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineBatchBreakDifferentMaterials { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineBatchBreakMaterialPassCount { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineBatchBreakVertexBufferOverflow { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineBatchBreakIndexBufferOverflow { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineBatchBreakDifferentAtlasOne { get; set; }
+			[YuzuOptional]
+			public Color4 TimelineBatchBreakDifferentAtlasTwo { get; set; }
 		}
 
 		[YuzuOptional]

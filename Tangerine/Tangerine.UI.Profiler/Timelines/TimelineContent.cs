@@ -48,6 +48,10 @@ namespace Tangerine.UI.Timelines
 		private readonly Func<long> actualRebuildIdGetter;
 		private readonly Func<long> actualHitTestIdGetter;
 		
+		protected long LastRequestedFrame { get; private set; }
+		
+		protected Filter<TUsage> LastRequestedFilter { get; private set; }
+		
 		public SpacingParameters SpacingParameters { get; private set; }
 		
 		protected TimelineContent(SpacingParameters spacingParameters)
@@ -63,6 +67,8 @@ namespace Tangerine.UI.Timelines
 
 		public Task RebuildAsync(long frameIndex, Task waitingTask, Filter<TUsage> filter)
 		{
+			LastRequestedFrame = frameIndex;
+			LastRequestedFilter = filter;
 			long currentTaskId = Interlocked.Increment(ref newestRebuildTaskId);
 			var contentBuilder = GetContentBuilder();
 			var frameProcessor = new AsyncFrameProcessor(
