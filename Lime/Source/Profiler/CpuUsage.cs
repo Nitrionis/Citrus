@@ -235,24 +235,35 @@ namespace Lime.Profiler
 			/// <remarks>
 			/// Can only exist together with <see cref="BatchRender"/>.
 			/// </remarks>
-			BatchBreakDifferentAtlasTwo = 1u << 24,
-			
+			BatchBreakDifferentAtlasTwo = 1u << 24
+		}
+		
+		public static class BatchBreakReasons
+		{
 			/// <summary>
 			/// Index of the first bit of the batch break reasons.
 			/// </summary>
-			BatchBreakReasonsStartBit = 24,
-			
-			/// <summary>
-			/// 
-			/// </summary>
-			BatchBreakReasonsBitMask =
-				BatchBreakNullLastBatch |
-				BatchBreakDifferentMaterials |
-				BatchBreakMaterialPassCount |
-				BatchBreakVertexBufferOverflow |
-				BatchBreakIndexBufferOverflow |
-				BatchBreakDifferentAtlasOne |
-				BatchBreakDifferentAtlasTwo
+			public const int StartBitIndex = 24;
+
+			public const uint BitMask =
+				(uint)Reasons.BatchBreakNullLastBatch |
+				(uint)Reasons.BatchBreakDifferentMaterials |
+				(uint)Reasons.BatchBreakMaterialPassCount |
+				(uint)Reasons.BatchBreakVertexBufferOverflow |
+				(uint)Reasons.BatchBreakIndexBufferOverflow |
+				(uint)Reasons.BatchBreakDifferentAtlasOne |
+				(uint)Reasons.BatchBreakDifferentAtlasTwo;
+
+			static BatchBreakReasons()
+			{
+				uint data = BitMask >> StartBitIndex;
+				while (data > 0) {
+					if ((data & 1u) == 0) {
+						throw new System.Exception("Profiler: BatchBreakReasons wrong bits combination!");
+					}
+					data <<= 1;
+				}
+			}
 		}
 	}
 }

@@ -6,12 +6,13 @@ using Lime;
 
 namespace Tangerine.UI.Timelines
 {
-	internal class Timeline : Widget
+	internal abstract class Timeline : Widget
 	{
 		private const float ScaleScrollingSpeed = 1f / 1200f;
 		private const float MinMicrosecondsPerPixel = 0.2f;
 		private const float MaxMicrosecondsPerPixel = 32f;
 
+		private readonly TimelineContent timelineContent;
 		private readonly TimelineMesh timelineMesh;
 		private readonly TimelineHitTest timelineHitTest;
 		
@@ -20,6 +21,7 @@ namespace Tangerine.UI.Timelines
 		private readonly ThemedScrollView horizontalScrollView;
 		private readonly ThemedScrollView verticalScrollView;
 
+		private TimelineState timelineState;
 		private Vector2 cachedContainerSize;
 		private float cachedHorizontalScrollPosition;
 		private float cachedVerticalScrollPosition;
@@ -52,8 +54,11 @@ namespace Tangerine.UI.Timelines
 			}
 		}
 		
-		public Timeline()
+		protected Timeline()
 		{
+			// todo init timelineState
+			
+			timelineContent = CreateTimelineContent();
 			timelineMesh = new TimelineMesh();
 			timelineHitTest = new TimelineHitTest();
 			
@@ -69,12 +74,13 @@ namespace Tangerine.UI.Timelines
 			AddNode(ruler);
 			contentContainer = new Widget {
 				Id = "Profiler timeline content",
-				//Presenter = contentPresenter
+				// todo Presenter = contentPresenter
 			};
 			horizontalScrollView = new ThemedScrollView(ScrollDirection.Horizontal) {
 				Anchors = Anchors.LeftRightTopBottom,
 				HitTestTarget = true,
 				HitTestMethod = HitTestMethod.BoundingRect,
+				// todo run async hit test
 				Clicked = () => throw new NotImplementedException()
 			};
 			horizontalScrollView.Content.Layout = new HBoxLayout();
@@ -99,6 +105,8 @@ namespace Tangerine.UI.Timelines
 				isMeshRebuildRequired |= cachedContainerSize != Size;
 			};
 		}
+
+		protected abstract TimelineContent CreateTimelineContent();
 		
 		private IEnumerator<object> ScaleScrollTask()
 		{
@@ -116,6 +124,9 @@ namespace Tangerine.UI.Timelines
 					if (cachedMicrosecondsPerPixel != microsecondsPerPixel) {
 						cachedMicrosecondsPerPixel = microsecondsPerPixel;
 						isMeshRebuildRequired = true;
+						// todo mesh rebuild
+						// todo matrix rebuild
+						// todo content rebuild
 					}
 				}
 				yield return null;
@@ -132,6 +143,7 @@ namespace Tangerine.UI.Timelines
 				if (cachedHorizontalScrollPosition != horizontalScrollView.ScrollPosition) {
 					cachedHorizontalScrollPosition = horizontalScrollView.ScrollPosition;
 					isMeshRebuildRequired = true;
+					// todo mesh rebuild
 				}
 				yield return null;
 			}
@@ -153,19 +165,6 @@ namespace Tangerine.UI.Timelines
 		
 		protected struct TimelineState
 		{
-			/*/// <summary>
-			/// todo it is not TimelineState
-			/// 
-			/// </summary>
-			public List<TimePeriod> TimePeriods;
-			
-			/// <summary>
-			/// todo it is not TimelineState
-			/// todo rectangles already scaled
-			/// List of all rectangles that the user will see if the timeline is large enough to show them all.
-			/// </summary>
-			public List<Rectangle> Rectangles;*/
-			
 			/// <summary>
 			/// Defines the time interval visible by users.
 			/// </summary>
@@ -200,6 +199,29 @@ namespace Tangerine.UI.Timelines
 					TimePeriodVerticalMargin = TimeIntervalVerticalMargin,
 					TimePeriodHeight = TimeIntervalHeight
 				};
+		}
+
+		private class TimelinePresenter : IPresenter
+		{
+			public Lime.RenderObject GetRenderObject(Node node)
+			{
+				var ro = RenderObjectPool<RenderObject>.Acquire();
+				// todo ro.CaptureRenderState();
+				return ro;
+			}
+
+			public bool PartialHitTest(Node node, ref HitTestArgs args) => false;
+
+			private class RenderObject : WidgetRenderObject
+			{
+				public override void Render()
+				{
+					Renderer.Flush();
+					PrepareRenderState();
+					// todo render mesh
+					// todo render labels
+				}
+			}
 		}
 	}
 }
