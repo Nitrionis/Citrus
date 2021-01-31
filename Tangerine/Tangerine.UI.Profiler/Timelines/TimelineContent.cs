@@ -45,7 +45,32 @@ namespace Tangerine.UI.Timelines
 		void RescaleItemsAsync();
 	}
 
-	internal abstract class TimelineContent<TUsage> : TimelineContent where TUsage : struct
+	internal interface ITimelineItemLabel
+	{
+		/// <summary>
+		/// Label caption.
+		/// </summary>
+		string Text { get; }
+		
+		/// <summary>
+		/// Label width in pixels.
+		/// </summary>
+		float Width { get; }
+		
+		/// <summary>
+		///  Time period of a timeline item.
+		/// </summary>
+		TimePeriod Period { get; }
+		
+		/// <summary>
+		/// Defines the vertical location of an item, where a <= b.
+		/// </summary>
+		Range VerticalLocation { get; }
+	}
+	
+	internal abstract class TimelineContent<TUsage, TLabel> : TimelineContent
+		where TUsage : struct
+		where TLabel : struct, ITimelineItemLabel
 	{
 		private long newestRebuildTaskId;
 		private long newestRescaleTaskId;
@@ -70,7 +95,7 @@ namespace Tangerine.UI.Timelines
 		
 		public abstract IEnumerable<Rectangle> GetRectangles(TimePeriod timePeriod);
 
-		public abstract IEnumerable<ItemLabel> GetLabels(TimePeriod timePeriod);
+		public abstract IEnumerable<TLabel> GetVisibleLabels(TimePeriod timePeriod);
 		
 		public abstract IEnumerable<TimelineHitTest.ItemInfo> GetHitTestTargets();
 
@@ -147,14 +172,6 @@ namespace Tangerine.UI.Timelines
 				}
 				taskCompletionSource.SetResult(colors);
 			}
-		}
-		
-		public struct ItemLabel
-		{
-			public string Text;
-			public float TextWidth;
-			public float ItemWidth;
-			public float ItemCentralTimestamp;
 		}
 	}
 }

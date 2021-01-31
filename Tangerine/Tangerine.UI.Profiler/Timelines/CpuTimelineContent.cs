@@ -12,7 +12,7 @@ namespace Tangerine.UI.Timelines
 	using Task = System.Threading.Tasks.Task;
 	using SpacingParameters = PeriodPositions.SpacingParameters;
 
-	internal class CpuTimelineContent : TimelineContent<CpuUsage>
+	internal class CpuTimelineContent : TimelineContent<CpuUsage, CpuTimelineContent.ItemLabel>
 	{
 		private readonly AsyncContentBuilder contentBuilder;
 
@@ -24,8 +24,8 @@ namespace Tangerine.UI.Timelines
 		public override IEnumerable<Rectangle> GetRectangles(TimePeriod timePeriod) =>
 			contentBuilder.GetRectangles(timePeriod);
 
-		public override IEnumerable<ItemLabel> GetLabels(TimePeriod timePeriod) =>
-			contentBuilder.GetLabels(timePeriod);
+		public override IEnumerable<ItemLabel> GetVisibleLabels(TimePeriod timePeriod) =>
+			contentBuilder.GetVisibleLabels(timePeriod);
 		
 		public override IEnumerable<TimelineHitTest.ItemInfo> GetHitTestTargets() =>
 			contentBuilder.GetHitTestTargets();
@@ -41,6 +41,8 @@ namespace Tangerine.UI.Timelines
 			return RebuildAsync(LastRequestedFrame, task, LastRequestedFilter);
 		}
 
+		
+		
 		private class AsyncContentBuilder : IAsyncContentBuilder<CpuUsage>
 		{
 			private const int BreakReasonPreservedBitsCount = 1;
@@ -51,21 +53,18 @@ namespace Tangerine.UI.Timelines
 		
 			private static Color4[] defaultModeColors;
 			private static Color4[] breakReasonsModeColors;
-			private static LabelInfo[] usageReasonNames;
 			
-			private readonly TimelineContent<CpuUsage> timelineContent;
+			private readonly TimelineContent<CpuUsage, ItemLabel> timelineContent;
 			private readonly List<Rectangle> cachedRectangles;
 			private readonly uint[] colorsPackRasterizationTarget;
 			private readonly uint[] usageReasonToColors;
 			
 			private Item[] items;
 			private int itemsCount;
-			private LabelInfo[] labels;
-			private int labelsCount;
 
 			public TimelineMode Mode { get; set; } = TimelineMode.Default;
 			
-			public AsyncContentBuilder(TimelineContent<CpuUsage> timelineContent)
+			public AsyncContentBuilder(TimelineContent<CpuUsage, ItemLabel> timelineContent)
 			{
 				this.timelineContent = timelineContent;
 				ProfilerColors = ColorTheme.Current.Profiler;
@@ -74,13 +73,10 @@ namespace Tangerine.UI.Timelines
 				colorsPackRasterizationTarget = new uint[ColorsPack.MaxColorsCount];
 				usageReasonToColors = new uint[(int) CpuUsage.Reasons.MaxReasonIndex + 1];
 				FillUsageReasonToColors();
-				usageReasonNames = new LabelInfo[(uint)CpuUsage.Reasons.MaxReasonIndex + 1];
-				FillUsageReasonNames();
 			}
 
 			public IEnumerable<Rectangle> GetRectangles(TimePeriod timePeriod)
 			{
-				// todo optimize
 				float microsecondsPerPixel = 
 					timelineContent.SpacingParameters.MicrosecondsPerPixel;
 				float minX = timePeriod.StartTime / microsecondsPerPixel;
@@ -94,25 +90,19 @@ namespace Tangerine.UI.Timelines
 				}
 			}
 
-			public IEnumerable<ItemLabel> GetLabels(TimePeriod timePeriod)
+			public IEnumerable<ItemLabel> GetVisibleLabels(TimePeriod timePeriod)
 			{
-				// todo optimize
-				float microsecondsPerPixel = 
-					timelineContent.SpacingParameters.MicrosecondsPerPixel;
-				for (int i = 0; i < labelsCount; i++) {
-					var labelInfo = labels[i];
+				float pixelsPerMicrosecond = 
+					1f / timelineContent.SpacingParameters.MicrosecondsPerPixel;
+				for (int i = 0; i < itemsCount; i++) {
+					var label = items[i].CreateItemLabel();
 					if (
-						timePeriod.StartTime <= labelInfo.TimePeriod.FinishTime &&
-						labelInfo.TimePeriod.StartTime <= timePeriod.FinishTime
+						timePeriod.StartTime <= label.Period.FinishTime &&
+						timePeriod.FinishTime >= label.Period.StartTime &&
+						label.Period.Duration * pixelsPerMicrosecond >= label.Width
 						) 
 					{
-						var duration = labelInfo.TimePeriod.Duration;
-						yield return new ItemLabel {
-							Text = labelInfo.Text,
-							TextWidth = labelInfo.TextWidth,
-							ItemWidth = duration / microsecondsPerPixel,
-							ItemCentralTimestamp = labelInfo.TimePeriod.StartTime + duration
-						};
+						yield return label;
 					}
 				}
 			}
@@ -162,7 +152,7 @@ namespace Tangerine.UI.Timelines
 						return ColorsPack.EachBitAsColor(BreakReasonGrayColorBit);
 					} else {
 						if (isFilterPassed) {
-							uint reasonIndex = (uint)(usage.Reason & CpuUsage.Reasons.ReasonsBitMask);
+							uint reasonIndex = (uint)usage.Reason & CpuUsage.ReasonsBitMask;
 							return ColorsPack.SingleColor((byte)usageReasonToColors[reasonIndex]);
 						}
 						return ColorsPack.SingleColor(UnselectedItemColorIndex);
@@ -241,16 +231,6 @@ namespace Tangerine.UI.Timelines
 				}
 			}
 
-			private void FillUsageReasonNames()
-			{
-				foreach (var reasonObject in Enum.GetValues(typeof(CpuUsage.Reasons))) {
-					uint reason = (uint)reasonObject & (uint)CpuUsage.Reasons.ReasonsBitMask;
-					var text = ((CpuUsage.Reasons)reason).ToString();
-					float textWidth = FontPool.Instance.DefaultFont.MeasureTextLine(text, 20, 0.0f).X;
-					usageReasonNames[reason] = new LabelInfo { Text = text, TextWidth = textWidth };
-				}
-			}
-			
 			private void FillUsageReasonToColors()
 			{
 				var colors = GetDefaultModeColors();
@@ -357,6 +337,9 @@ namespace Tangerine.UI.Timelines
 				public ColorsPack ColorsPack;
 				public Range VerticalLocation;
 				public CpuUsage.Reasons UsageReason;
+
+				public ItemLabel CreateItemLabel() =>
+					new ItemLabel(UsageReason, TimePeriod, VerticalLocation);
 			}
 
 			public struct ColorsPack
@@ -403,15 +386,48 @@ namespace Tangerine.UI.Timelines
 					return pack;
 				}
 			}
+		}
+
+		internal struct ItemLabel : ITimelineItemLabel
+		{
+			private static readonly LabelInfo[] usageReasonNames;
+			
+			private readonly uint labelInfoIndex;
+			
+			public string Text => usageReasonNames[labelInfoIndex].Text;
+		
+			public float Width { get; }
+		
+			public TimePeriod Period { get; }
+		
+			public Range VerticalLocation { get; }
+
+			static ItemLabel()
+			{
+				usageReasonNames = new LabelInfo[(uint)CpuUsage.Reasons.MaxReasonIndex + 1];
+				foreach (var reasonObject in Enum.GetValues(typeof(CpuUsage.Reasons))) {
+					uint reason = (uint)reasonObject & CpuUsage.ReasonsBitMask;
+					var text = ((CpuUsage.Reasons)reason).ToString();
+					float textWidth = FontPool.Instance.DefaultFont.MeasureTextLine(text, 20, 0.0f).X;
+					usageReasonNames[reason] = new LabelInfo { Text = text, Width = textWidth };
+				}
+			}
+
+			public ItemLabel(CpuUsage.Reasons usageReason, TimePeriod timePeriod, Range verticalLocation)
+			{
+				labelInfoIndex = (uint)usageReason & CpuUsage.ReasonsBitMask;
+				Width = usageReasonNames[labelInfoIndex].Width;
+				Period = timePeriod;
+				VerticalLocation = verticalLocation;
+			}
 			
 			private struct LabelInfo
 			{
 				public string Text;
-				public float TextWidth;
-				public TimePeriod TimePeriod;
+				public float Width;
 			}
 		}
-
+		
 		public enum TimelineMode
 		{
 			Default,

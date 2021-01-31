@@ -15,6 +15,11 @@ namespace Lime.Profiler
 	public struct CpuUsage
 	{
 		/// <summary>
+		/// Mask all reasons without secondary data.
+		/// </summary>
+		public const uint ReasonsBitMask = 0xff;
+		
+		/// <summary>
 		/// Reason for using a processor.
 		/// </summary>
 		public Reasons Reason;
@@ -175,12 +180,7 @@ namespace Lime.Profiler
 			/// Max reason index.
 			/// </summary>
 			MaxReasonIndex = 21,
-			
-			/// <summary>
-			/// Mask all reasons without secondary data.
-			/// </summary>
-			ReasonsBitMask = 0xff,
-			
+
 			/// <summary>
 			/// Batch breaking due to the fact that there is no link to the previous batch.
 			/// </summary>
