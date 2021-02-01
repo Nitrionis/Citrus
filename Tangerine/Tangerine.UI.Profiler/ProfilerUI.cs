@@ -28,7 +28,7 @@ namespace Tangerine.UI
 			Layout = new VBoxLayout();
 			Anchors = Anchors.LeftRight;
 			var size = new Vector2(28, 22);
-			var padding = new Thickness(5, 2);
+			var padding = new Thickness(3, 0);
 			(ThemedButton, IconMaterial) CreateButton(string icon) {
 				var material = new IconMaterial();
 				return (new ThemedButton {
@@ -60,7 +60,7 @@ namespace Tangerine.UI
 					UpdateSkipOptions.NoSkip : UpdateSkipOptions.SkipAll;
 				ProfilerTerminal.SetSceneUpdateFrozen(nextState);
 			};
-			var (playNextButton, playNextMaterial) = CreateButton("Profiler.SkipNext");
+			var (playNextButton, playNextMaterial) = CreateButton("Profiler.Next");
 			playNextButton.Clicked += () => {
 				ProfilerTerminal.SetSceneUpdateFrozen(UpdateSkipOptions.SkipAllAfterNext);
 			};

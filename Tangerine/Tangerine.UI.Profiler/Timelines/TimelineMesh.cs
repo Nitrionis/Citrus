@@ -15,8 +15,7 @@ namespace Tangerine.UI.Timelines
 	{
 		private readonly RectanglesMesh rectanglesMesh;
 		private readonly List<RectanglesMesh.Chunk> chunks;
-
-		private bool hasRequest;
+		
 		private RebuildRequest pendingRequest;
 		private long newestTaskId;
 		private Task<RebuildingInfo> rebuildingTask;
@@ -46,7 +45,6 @@ namespace Tangerine.UI.Timelines
 			taskCompletionSource?.SetResult(true);
 			taskCompletionSource = new TaskCompletionSource<bool>(
 				TaskCreationOptions.RunContinuationsAsynchronously);
-			hasRequest = true;
 			pendingRequest = new RebuildRequest {
 				CurrentTaskId = Interlocked.Increment(ref newestTaskId),
 				Rectangles = rectangles,
@@ -59,7 +57,6 @@ namespace Tangerine.UI.Timelines
 		{
 			var ro = new RenderObject(this);
 			taskCompletionSource = null;
-			hasRequest = false;
 			return ro;
 		}
 		
@@ -142,7 +139,7 @@ namespace Tangerine.UI.Timelines
 			{
 				this.timelineMesh = timelineMesh;
 				request = timelineMesh.pendingRequest;
-				hasRequest = timelineMesh.hasRequest;
+				hasRequest = timelineMesh.taskCompletionSource != null;
 			}
 
 			public void Render() => timelineMesh.Draw(hasRequest, request);
