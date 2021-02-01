@@ -1,8 +1,8 @@
 ﻿#if PROFILER
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Lime;
 using Tangerine.UI.Charts;
@@ -14,17 +14,19 @@ namespace Tangerine.UI.Timelines
 	internal class TimelineMesh
 	{
 		private readonly RectanglesMesh rectanglesMesh;
-		private readonly ConcurrentQueue<RebuildRequest> pendingRequests;
-		private readonly Queue<List<RectanglesMesh.Chunk>> unusedResources;
+		private readonly List<RectanglesMesh.Chunk> chunks;
 
+		private bool hasRequest;
+		private RebuildRequest pendingRequest;
+		
+		private long newestTaskId;
 		private Task<RebuildingInfo> rebuildingTask;
+		private TaskCompletionSource<bool> taskCompletionSource;
 		
 		public TimelineMesh()
 		{
 			rectanglesMesh = new RectanglesMesh();
-			unusedResources = new Queue<List<RectanglesMesh.Chunk>>();
-			unusedResources.Enqueue(new List<RectanglesMesh.Chunk>());
-			pendingRequests = new ConcurrentQueue<RebuildRequest>();
+			chunks = new List<RectanglesMesh.Chunk>();
 		}
 
 		/// <summary>
@@ -42,62 +44,55 @@ namespace Tangerine.UI.Timelines
 		/// </remarks>
 		public Task RebuildAsync(IEnumerable<Rectangle> rectangles)
 		{
-			var taskCompletionSource = new TaskCompletionSource<bool>(
+			taskCompletionSource?.SetResult(true);
+			taskCompletionSource = new TaskCompletionSource<bool>(
 				TaskCreationOptions.RunContinuationsAsynchronously);
-			pendingRequests.Enqueue(new RebuildRequest {
+			hasRequest = true;
+			pendingRequest = new RebuildRequest {
+				CurrentTaskId = Interlocked.Increment(ref newestTaskId),
 				Rectangles = rectangles,
 				TaskCompletionSource = taskCompletionSource
-			});
+			};
 			return taskCompletionSource.Task;
 		}
 
-		public void Draw()
+		public RenderObject GetRenderObject()
+		{
+			var ro = new RenderObject(this);
+			taskCompletionSource = null;
+			hasRequest = false;
+			return ro;
+		}
+		
+		private void Draw(bool isRebuildRequired, RebuildRequest request)
 		{
 			if (rebuildingTask != null && rebuildingTask.IsCompleted) {
 				var meshData = rebuildingTask.Result.ChangeableMeshData;
-				unusedResources.Enqueue(meshData);
-				rectanglesMesh.Chunks = meshData;
+				if (!rebuildingTask.Result.IsCanceled) {
+					rectanglesMesh.Chunks = meshData;
+				}
 				rebuildingTask = null;
 			}
 			rectanglesMesh.Draw();
 			// At this point the data has already been copied to another buffer.
-			int pendingRequestsCount = pendingRequests.Count;
-			while (pendingRequestsCount > 1) {
-				if (pendingRequests.TryDequeue(out RebuildRequest request)) {
-					request.TaskCompletionSource.SetResult(true);
-					pendingRequestsCount--;
-				}
-			}
-			if (pendingRequestsCount == 1 && unusedResources.Count > 0) {
-				while (true) {
-					if (pendingRequests.TryDequeue(out RebuildRequest request)) {
-						var meshData = unusedResources.Dequeue();
-						rebuildingTask = Task.Run<RebuildingInfo>(() => {
-							RebuildMesh(new RebuildingInfo {
-								RebuildRequest = request,
-								ChangeableMeshData = meshData
-							});
-							request.TaskCompletionSource.SetResult(true);
-							return null;
-						});
-						break;
+			if (isRebuildRequired) {
+				rebuildingTask = Task.Run(() => {
+					bool isNotCanceled = 
+						request.CurrentTaskId != Interlocked.Read(ref newestTaskId);
+					var rebuildingInfo = new RebuildingInfo {
+						IsCanceled = !isNotCanceled,
+						RebuildRequest = request,
+						ChangeableMeshData = chunks
+					};
+					if (isNotCanceled) {
+						RebuildMesh(rebuildingInfo);
 					}
-				}
+					request.TaskCompletionSource.SetResult(true);
+					return rebuildingInfo;
+				});
 			}
 		}
 
-		private struct RebuildRequest
-		{
-			public IEnumerable<Rectangle> Rectangles;
-			public TaskCompletionSource<bool> TaskCompletionSource;
-		}
-
-		private struct RebuildingInfo
-		{
-			public RebuildRequest RebuildRequest;
-			public List<RectanglesMesh.Chunk> ChangeableMeshData;
-		}
-		
 		private static void RebuildMesh(RebuildingInfo rebuildingInfo)
 		{
 			var chunks = rebuildingInfo.ChangeableMeshData;
@@ -136,6 +131,36 @@ namespace Tangerine.UI.Timelines
 			for (int i = ++chunkIndex; i < chunks.Count; i++) {
 				SetVisibleRectanglesCount(i, 0);
 			}
+		}
+		
+		public struct RenderObject
+		{
+			private readonly TimelineMesh timelineMesh;
+			private readonly RebuildRequest request;
+			private readonly bool hasRequest;
+			
+			public RenderObject(TimelineMesh timelineMesh)
+			{
+				this.timelineMesh = timelineMesh;
+				request = timelineMesh.pendingRequest;
+				hasRequest = timelineMesh.hasRequest;
+			}
+
+			public void Render() => timelineMesh.Draw(hasRequest, request);
+		}
+		
+		private struct RebuildRequest
+		{
+			public long CurrentTaskId;
+			public IEnumerable<Rectangle> Rectangles;
+			public TaskCompletionSource<bool> TaskCompletionSource;
+		}
+
+		private struct RebuildingInfo
+		{
+			public bool IsCanceled;
+			public RebuildRequest RebuildRequest;
+			public List<RectanglesMesh.Chunk> ChangeableMeshData;
 		}
 		
 		private class RectanglesMesh
