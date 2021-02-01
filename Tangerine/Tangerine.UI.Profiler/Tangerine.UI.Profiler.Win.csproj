@@ -60,6 +60,7 @@
     <Compile Include="Timelines\CpuTimelineContent.cs" />
     <Compile Include="Timelines\TimelineContent.cs" />
     <Compile Include="Timelines\TimelineHitTest.cs" />
+    <Compile Include="Timelines\TimelineLabels.cs" />
     <Compile Include="Timelines\TimelineMesh.cs" />
     <Compile Include="Timelines\Rectangle.cs" />
     <Compile Include="Timelines\TimelineRuler.cs" />

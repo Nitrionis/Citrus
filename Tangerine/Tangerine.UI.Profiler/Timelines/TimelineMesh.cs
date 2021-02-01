@@ -18,7 +18,6 @@ namespace Tangerine.UI.Timelines
 
 		private bool hasRequest;
 		private RebuildRequest pendingRequest;
-		
 		private long newestTaskId;
 		private Task<RebuildingInfo> rebuildingTask;
 		private TaskCompletionSource<bool> taskCompletionSource;
