@@ -6,13 +6,16 @@ using Lime;
 
 namespace Tangerine.UI.Timelines
 {
-	internal abstract class Timeline : Widget
+	internal abstract class Timeline<TUsage, TLabel> : Widget 
+		where TUsage : struct
+		where TLabel : struct, ITimelineItemLabel
 	{
 		private const float ScaleScrollingSpeed = 1f / 1200f;
-		private const float MinMicrosecondsPerPixel = 0.2f;
+		private const float MinMicrosecondsPerPixel = 0.1f;
 		private const float MaxMicrosecondsPerPixel = 32f;
 
-		private readonly TimelineContent timelineContent;
+		private readonly TimelineContent<TUsage, TLabel> timelineContent;
+		private readonly TimelineLabels<TLabel> timelineLabels;
 		private readonly TimelineMesh timelineMesh;
 		private readonly TimelineHitTest timelineHitTest;
 		
@@ -59,6 +62,7 @@ namespace Tangerine.UI.Timelines
 			// todo init timelineState
 			
 			timelineContent = CreateTimelineContent();
+			timelineLabels = CreateTimelineLabels();
 			timelineMesh = new TimelineMesh();
 			timelineHitTest = new TimelineHitTest();
 			
@@ -106,7 +110,9 @@ namespace Tangerine.UI.Timelines
 			};
 		}
 
-		protected abstract TimelineContent CreateTimelineContent();
+		protected abstract TimelineContent<TUsage, TLabel> CreateTimelineContent();
+		
+		protected abstract TimelineLabels<TLabel> CreateTimelineLabels();
 		
 		private IEnumerator<object> ScaleScrollTask()
 		{
@@ -158,6 +164,7 @@ namespace Tangerine.UI.Timelines
 				if (cachedVerticalScrollPosition != horizontalScrollView.ScrollPosition) {
 					cachedVerticalScrollPosition = horizontalScrollView.ScrollPosition;
 					isMeshRebuildRequired = true;
+					// todo update matrix?
 				}
 				yield return null;
 			}

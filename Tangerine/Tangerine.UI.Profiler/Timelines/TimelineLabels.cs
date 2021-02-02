@@ -47,7 +47,7 @@ namespace Tangerine.UI.Timelines
 				TaskCreationOptions.RunContinuationsAsynchronously);
 			pendingRequest = new RebuildRequest {
 				CurrentTaskId = Interlocked.Increment(ref newestTaskId),
-				LabelsSrc = labels,
+				LabelsForCopy = labels,
 				TaskCompletionSource = taskCompletionSource
 			};
 			return taskCompletionSource.Task;
@@ -63,7 +63,7 @@ namespace Tangerine.UI.Timelines
 		private struct RebuildRequest
 		{
 			public long CurrentTaskId;
-			public IEnumerable<TLabel> LabelsSrc;
+			public IEnumerable<TLabel> LabelsForCopy;
 			public TaskCompletionSource<bool> TaskCompletionSource;
 		}
 
@@ -116,7 +116,7 @@ namespace Tangerine.UI.Timelines
 						if (!isCanceled) {
 							var labels = containerCopy.labels[writeTargetIndex];
 							labels.Clear();
-							labels.AddRange(request.LabelsSrc);
+							labels.AddRange(request.LabelsForCopy);
 						}
 						request.TaskCompletionSource.SetResult(true);
 						return new RebuildResponse {
