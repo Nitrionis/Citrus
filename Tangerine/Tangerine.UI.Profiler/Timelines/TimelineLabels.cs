@@ -42,6 +42,7 @@ namespace Tangerine.UI.Timelines
 		
 		public Task RebuildAsync(IEnumerable<TLabel> labels)
 		{
+			Window.Current.Invalidate();
 			taskCompletionSource?.SetResult(true);
 			taskCompletionSource = new TaskCompletionSource<bool>(
 				TaskCreationOptions.RunContinuationsAsynchronously);
@@ -102,7 +103,7 @@ namespace Tangerine.UI.Timelines
 					!newestTask.Result.IsCanceled
 					) 
 				{
-					container.writeTargetIndex = container.readTargetIndex;
+					container.writeTargetIndex = 1 - newestTask.Result.WriteTargetIndex;
 					container.readTargetIndex = newestTask.Result.WriteTargetIndex;
 				}
 				if (hasRequest) {

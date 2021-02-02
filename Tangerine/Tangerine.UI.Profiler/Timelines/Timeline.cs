@@ -6,18 +6,23 @@ using Lime;
 
 namespace Tangerine.UI.Timelines
 {
+	using Task = System.Threading.Tasks.Task;
+	
 	internal abstract class Timeline<TUsage, TLabel> : Widget 
 		where TUsage : struct
 		where TLabel : struct, ITimelineItemLabel
 	{
 		private const float ScaleScrollingSpeed = 1f / 1200f;
-		private const float MinMicrosecondsPerPixel = 0.1f;
-		private const float MaxMicrosecondsPerPixel = 32f;
+		private const float MinMicrosecondsPerPixel = 0.2f;
+		private const float MaxMicrosecondsPerPixel = 64f;
 
 		private readonly TimelineContent<TUsage, TLabel> timelineContent;
 		private readonly TimelineLabels<TLabel> timelineLabels;
 		private readonly TimelineMesh timelineMesh;
 		private readonly TimelineHitTest timelineHitTest;
+
+		protected readonly Queue<Task> contentModificationTasks;
+		protected readonly Queue<Task> allTasks;
 		
 		private readonly TimelineRuler ruler;
 		private readonly Widget contentContainer;
@@ -57,12 +62,15 @@ namespace Tangerine.UI.Timelines
 			}
 		}
 		
-		protected Timeline()
+		protected Timeline(TimelineContent<TUsage, TLabel> timelineContent, TimelineLabels<TLabel> timelineLabels)
 		{
+			contentModificationTasks = new Queue<Task>();
+			allTasks = new Queue<Task>();
+			
 			// todo init timelineState
 			
-			timelineContent = CreateTimelineContent();
-			timelineLabels = CreateTimelineLabels();
+			this.timelineContent = timelineContent;
+			this.timelineLabels = timelineLabels;
 			timelineMesh = new TimelineMesh();
 			timelineHitTest = new TimelineHitTest();
 			
@@ -95,8 +103,8 @@ namespace Tangerine.UI.Timelines
 			horizontalScrollView.Content.AddNode(verticalScrollView);
 			verticalScrollView.Content.AddNode(contentContainer);
 			AddNode(horizontalScrollView);
-			horizontalScrollView.Content.Tasks.Insert(0, new Task(HorizontalScrollTask()));
-			verticalScrollView.Content.Tasks.Insert(0, new Task(VerticalScrollTask()));
+			horizontalScrollView.Content.Tasks.Insert(0, new Lime.Task(HorizontalScrollTask()));
+			verticalScrollView.Content.Tasks.Insert(0, new Lime.Task(VerticalScrollTask()));
 			Tasks.Add(ScaleScrollTask);
 			Updated += (delta) => {
 				TimePeriod CalculateVisibleTimePeriod() {
@@ -133,6 +141,10 @@ namespace Tangerine.UI.Timelines
 						// todo mesh rebuild
 						// todo matrix rebuild
 						// todo content rebuild
+
+						var waitingTask = Task.
+						var scaleTask = timelineContent.SetSpacingParametersAsync();
+						contentModificationTasks.Enqueue(scaleTask);
 					}
 				}
 				yield return null;
@@ -163,7 +175,7 @@ namespace Tangerine.UI.Timelines
 				horizontalScrollView.Behaviour.StopScrolling();
 				if (cachedVerticalScrollPosition != horizontalScrollView.ScrollPosition) {
 					cachedVerticalScrollPosition = horizontalScrollView.ScrollPosition;
-					isMeshRebuildRequired = true;
+					// todo ? isMeshRebuildRequired = true;
 					// todo update matrix?
 				}
 				yield return null;

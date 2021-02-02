@@ -42,6 +42,7 @@ namespace Tangerine.UI.Timelines
 		/// </remarks>
 		public Task RebuildAsync(IEnumerable<Rectangle> rectangles)
 		{
+			Window.Current.Invalidate();
 			taskCompletionSource?.SetResult(true);
 			taskCompletionSource = new TaskCompletionSource<bool>(
 				TaskCreationOptions.RunContinuationsAsynchronously);
