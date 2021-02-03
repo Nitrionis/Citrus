@@ -115,7 +115,7 @@ namespace Tangerine.UI.Timelines
 
 			static ReasonsNames()
 			{
-				names = new string[64];
+				names = new string[CpuUsage.ReasonsBitMask + 1];
 				foreach (var v in Enum.GetValues(typeof(CpuUsage.Reasons))) {
 					uint value = (uint)v & CpuUsage.ReasonsBitMask;
 					if (value != 0) {
