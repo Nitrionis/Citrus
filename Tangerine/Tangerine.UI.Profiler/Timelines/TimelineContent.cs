@@ -12,10 +12,11 @@ namespace Tangerine.UI.Timelines
 {
 	using Task = System.Threading.Tasks.Task;
 	using SpacingParameters = PeriodPositions.SpacingParameters;
+	using OwnersPool = RingPool<ReferenceTable.RowIndex>;
 	
 	internal class TimelineContent
 	{
-		public delegate bool Filter<TUsage>(TUsage usage, FrameClipboard frameClipboard);
+		public delegate bool Filter<TUsage>(TUsage usage, OwnersPool pool, FrameClipboard frameClipboard);
 	}
 	
 	internal interface IAsyncContentBuilder<TItem> where TItem : struct

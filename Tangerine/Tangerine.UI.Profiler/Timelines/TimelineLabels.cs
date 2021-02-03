@@ -40,6 +40,18 @@ namespace Tangerine.UI.Timelines
 			});
 		}
 		
+		/// <summary>
+		/// Refreshes labels list.
+		/// </summary>
+		/// <param name="labels">
+		/// Labels list which will be copied to internal storage.
+		/// </param>
+		/// <returns>
+		/// The task by which you can find out when the request is completed.
+		/// </returns>
+		/// <remarks>
+		/// Must be called from the update thread only.
+		/// </remarks>
 		public Task RebuildAsync(IEnumerable<TLabel> labels)
 		{
 			Window.Current.Invalidate();

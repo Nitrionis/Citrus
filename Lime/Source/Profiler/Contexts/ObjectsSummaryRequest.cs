@@ -189,15 +189,13 @@ namespace Lime.Profiler.Contexts
 
 		private static class ReasonsNames
 		{
-			private const uint BitMask = 0x3F;
-
 			private static readonly string[] names;
 
 			static ReasonsNames()
 			{
 				names = new string[64];
 				foreach (var v in Enum.GetValues(typeof(CpuUsage.Reasons))) {
-					uint value = (uint)v & BitMask;
+					uint value = (uint)v & CpuUsage.ReasonsBitMask;
 					if (value != 0) {
 						names[value] = ((CpuUsage.Reasons)value).ToString();
 					}
@@ -206,7 +204,7 @@ namespace Lime.Profiler.Contexts
 
 			public static string TryGetName(CpuUsage.Reasons reasons)
 			{
-				uint value = (uint)reasons & BitMask;
+				uint value = (uint)reasons & CpuUsage.ReasonsBitMask;
 				return value == 0 ? null : names[value];
 			}
 		}

@@ -58,16 +58,20 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StopwatchExtension.cs" />
     <Compile Include="Timelines\ColorIndicesPack.cs" />
+    <Compile Include="Timelines\CpuTimeline.cs" />
     <Compile Include="Timelines\CpuTimelineColorSet.cs" />
     <Compile Include="Timelines\CpuTimelineContent.cs" />
     <Compile Include="Timelines\ITimelineItemLabel.cs" />
     <Compile Include="Timelines\TimelineContent.cs" />
+    <Compile Include="Timelines\TimelineFramePreloader.cs" />
     <Compile Include="Timelines\TimelineHitTest.cs" />
     <Compile Include="Timelines\TimelineLabels.cs" />
     <Compile Include="Timelines\TimelineMesh.cs" />
     <Compile Include="Timelines\Rectangle.cs" />
     <Compile Include="Timelines\TimelineRuler.cs" />
     <Compile Include="Timelines\Timeline.cs" />
+    <Compile Include="Timelines\TimelineState.cs" />
+    <Compile Include="Timelines\TimelineWidget.cs" />
     <Compile Include="Timelines\TimePeriod.cs" />
     <Compile Include="Timelines\PeriodPositions.cs" />
   </ItemGroup>

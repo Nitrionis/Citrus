@@ -2,230 +2,99 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Lime;
+using Lime.Profiler;
+using Tangerine.UI.Charts;
 
 namespace Tangerine.UI.Timelines
 {
 	using Task = System.Threading.Tasks.Task;
+	using SpacingParameters = PeriodPositions.SpacingParameters;
 	
-	internal abstract class Timeline<TUsage, TLabel> : Widget 
+	internal class Timeline<TUsage, TLabel> : TimelineWidget 
 		where TUsage : struct
 		where TLabel : struct, ITimelineItemLabel
 	{
-		private const float ScaleScrollingSpeed = 1f / 1200f;
-		private const float MinMicrosecondsPerPixel = 0.2f;
-		private const float MaxMicrosecondsPerPixel = 64f;
-
+		private readonly TimelineFramePreloader preloader;
 		private readonly TimelineContent<TUsage, TLabel> timelineContent;
 		private readonly TimelineLabels<TLabel> timelineLabels;
 		private readonly TimelineMesh timelineMesh;
 		private readonly TimelineHitTest timelineHitTest;
 
-		protected readonly Queue<Task> contentModificationTasks;
-		protected readonly Queue<Task> allTasks;
-		
-		private readonly TimelineRuler ruler;
-		private readonly Widget contentContainer;
-		private readonly ThemedScrollView horizontalScrollView;
-		private readonly ThemedScrollView verticalScrollView;
+		protected readonly Queue<(Task, TimelineState)> contentModificationTasks;
+		protected readonly Queue<Task> contentReadingTasks;
 
 		private TimelineState timelineState;
-		private Vector2 cachedContainerSize;
-		private float cachedHorizontalScrollPosition;
-		private float cachedVerticalScrollPosition;
-		private float cachedMicrosecondsPerPixel;
-		private bool isMeshRebuildRequired;
+		private long activeFrameIdentifier;
 		
-		private float itemHeight = 20;
-
-		public float ItemHeight
+		protected Timeline(
+			TimelineContent<TUsage, TLabel> timelineContent, 
+			TimelineLabels<TLabel> timelineLabels)
 		{
-			get { return itemHeight; }
-			set {
-				if (itemHeight != value) {
-					itemHeight = value;
-					isMeshRebuildRequired = true;
-				}
-			}
-		}
-
-		private float itemMargin = 2;
-
-		public float ItemMargin
-		{
-			get { return itemMargin; }
-			set {
-				if (itemMargin != value) {
-					itemMargin = value;
-					isMeshRebuildRequired = true;
-				}
-			}
-		}
-		
-		protected Timeline(TimelineContent<TUsage, TLabel> timelineContent, TimelineLabels<TLabel> timelineLabels)
-		{
-			contentModificationTasks = new Queue<Task>();
-			allTasks = new Queue<Task>();
-			
-			// todo init timelineState
-			
+			contentModificationTasks = new Queue<(Task, TimelineState)>();
+			contentReadingTasks = new Queue<Task>();
+			preloader = new TimelineFramePreloader();
 			this.timelineContent = timelineContent;
 			this.timelineLabels = timelineLabels;
 			timelineMesh = new TimelineMesh();
 			timelineHitTest = new TimelineHitTest();
 			
-			Layout = new VBoxLayout();
-			Presenter = new WidgetFlatFillPresenter(ColorTheme.Current.Profiler.TimelineTasksBackground);
-			ruler = new TimelineRuler(smallStepSize: 10, smallStepsPerBig: 10) {
-				Anchors = Anchors.LeftRight,
-				MinMaxHeight = 32,
-				RulerOffset = 0,
-				TextColor = ColorTheme.Current.Profiler.TimelineRulerText,
-				TimestampsColor = ColorTheme.Current.Profiler.TimelineRulerStep
-			};
-			AddNode(ruler);
-			contentContainer = new Widget {
-				Id = "Profiler timeline content",
-				// todo Presenter = contentPresenter
-			};
-			horizontalScrollView = new ThemedScrollView(ScrollDirection.Horizontal) {
-				Anchors = Anchors.LeftRightTopBottom,
-				HitTestTarget = true,
-				HitTestMethod = HitTestMethod.BoundingRect,
-				// todo run async hit test
-				Clicked = () => throw new NotImplementedException()
-			};
-			horizontalScrollView.Content.Layout = new HBoxLayout();
-			verticalScrollView = new ThemedScrollView(ScrollDirection.Vertical) {
-				Anchors = Anchors.LeftRightTopBottom
-			};
-			verticalScrollView.Content.Layout = new VBoxLayout();
-			horizontalScrollView.Content.AddNode(verticalScrollView);
-			verticalScrollView.Content.AddNode(contentContainer);
-			AddNode(horizontalScrollView);
-			horizontalScrollView.Content.Tasks.Insert(0, new Lime.Task(HorizontalScrollTask()));
-			verticalScrollView.Content.Tasks.Insert(0, new Lime.Task(VerticalScrollTask()));
-			Tasks.Add(ScaleScrollTask);
+			contentContainer.Presenter = new TimelinePresenter();
 			Updated += (delta) => {
 				TimePeriod CalculateVisibleTimePeriod() {
 					float scrollPosition = horizontalScrollView.ScrollPosition;
 					return new TimePeriod {
-						StartTime = Math.Max(0, scrollPosition - ruler.SmallStepSize) * cachedMicrosecondsPerPixel,
-						FinishTime = (scrollPosition + horizontalScrollView.Width) * cachedMicrosecondsPerPixel
+						StartTime = Math.Max(0, scrollPosition - ruler.SmallStepSize) * MicrosecondsPerPixel,
+						FinishTime = (scrollPosition + horizontalScrollView.Width) * MicrosecondsPerPixel
 					};
 				}
-				isMeshRebuildRequired |= cachedContainerSize != Size;
+				if (preloader.IsAttemptCompleted && activeFrameIdentifier != preloader.Frame.Identifier) {
+					activeFrameIdentifier = preloader.Frame.Identifier;
+					// todo need to create timelineContent.RebuildAsync(activeFrameIdentifier)
+					timelineContent.RebuildAsync(activeFrameIdentifier, , );
+				}
+				var visibleTimePeriod = CalculateVisibleTimePeriod();
+				timelineState = new TimelineState {
+					VisibleTimePeriod = visibleTimePeriod,
+					MicrosecondsPerPixel = ,
+					RelativeScale = ,
+					TimeIntervalHeight = ItemHeight,
+					TimeIntervalVerticalMargin = ItemMargin
+				};
+				contentContainer.Width = ;
 			};
 		}
 
-		protected abstract TimelineContent<TUsage, TLabel> CreateTimelineContent();
-		
-		protected abstract TimelineLabels<TLabel> CreateTimelineLabels();
-		
-		private IEnumerator<object> ScaleScrollTask()
-		{
-			while (true) {
-				if (
-					Input.IsKeyPressed(Key.Control) &&
-					(Input.WasKeyPressed(Key.MouseWheelDown) || Input.WasKeyPressed(Key.MouseWheelUp))
-					)
-				{
-					float microsecondsPerPixel = cachedMicrosecondsPerPixel;
-					microsecondsPerPixel += Input.WheelScrollAmount / ScaleScrollingSpeed;
-					microsecondsPerPixel = Mathf.Clamp(
-						microsecondsPerPixel, MinMicrosecondsPerPixel, MaxMicrosecondsPerPixel);
-					ruler.RulerScale = microsecondsPerPixel;
-					if (cachedMicrosecondsPerPixel != microsecondsPerPixel) {
-						cachedMicrosecondsPerPixel = microsecondsPerPixel;
-						isMeshRebuildRequired = true;
-						// todo mesh rebuild
-						// todo matrix rebuild
-						// todo content rebuild
+		public void SetFrame(long frameIdentifier) => preloader.Load(frameIdentifier);
 
-						var waitingTask = Task.
-						var scaleTask = timelineContent.SetSpacingParametersAsync();
-						contentModificationTasks.Enqueue(scaleTask);
-					}
-				}
-				yield return null;
-			}
-		}
-
-		private IEnumerator<object> HorizontalScrollTask()
+		private void SetColors(Color4[] colors)
 		{
-			while (true) {
-				bool isHorizontalMode = !Input.IsKeyPressed(Key.Shift) && !Input.IsKeyPressed(Key.Control);
-				horizontalScrollView.Behaviour.CanScroll = isHorizontalMode;
-				verticalScrollView.Behaviour.StopScrolling();
-				ruler.RulerOffset = horizontalScrollView.ScrollPosition;
-				if (cachedHorizontalScrollPosition != horizontalScrollView.ScrollPosition) {
-					cachedHorizontalScrollPosition = horizontalScrollView.ScrollPosition;
-					isMeshRebuildRequired = true;
-					// todo mesh rebuild
-				}
-				yield return null;
-			}
-		}
-
-		private IEnumerator<object> VerticalScrollTask()
-		{
-			while (true) {
-				bool isVerticalMode = Input.IsKeyPressed(Key.Shift) && !Input.IsKeyPressed(Key.Control);
-				verticalScrollView.Behaviour.CanScroll = isVerticalMode;
-				horizontalScrollView.Behaviour.StopScrolling();
-				if (cachedVerticalScrollPosition != horizontalScrollView.ScrollPosition) {
-					cachedVerticalScrollPosition = horizontalScrollView.ScrollPosition;
-					// todo ? isMeshRebuildRequired = true;
-					// todo update matrix?
-				}
-				yield return null;
+			var vectors = ((TimelinePresenter)contentContainer.Presenter).RectangleMaterial.Colors;
+			for (int i = 0; i < colors.Length; i++) {
+				vectors[i] = colors[i].ToVector4();
 			}
 		}
 		
-		protected struct TimelineState
-		{
-			/// <summary>
-			/// Defines the time interval visible by users.
-			/// </summary>
-			/// <remarks>
-			/// Values are measured in microseconds where 0 corresponds to the beginning of the frame.
-			/// </remarks>
-			public TimePeriod VisibleTimePeriod;
-			
-			/// <summary>
-			/// Defines the scale of the timeline.
-			/// </summary>
-			public float MicrosecondsPerPixel;
-
-			/// <summary>
-			/// Not scalable vertical distance in pixels between time intervals.
-			/// </summary>
-			public float TimeIntervalVerticalMargin;
-			
-			/// <summary>
-			/// Not scalable height in pixels of one time interval.
-			/// </summary>
-			public float TimeIntervalHeight;
-			
-			/// <summary>
-			/// Mouse position relative to widget with time intervals.
-			/// </summary>
-			public Vector2 LocalMousePosition;
-
-			public PeriodPositions.SpacingParameters SpacingParameters => 
-				new PeriodPositions.SpacingParameters {
-					MicrosecondsPerPixel = MicrosecondsPerPixel,
-					TimePeriodVerticalMargin = TimeIntervalVerticalMargin,
-					TimePeriodHeight = TimeIntervalHeight
-				};
-		}
-
 		private class TimelinePresenter : IPresenter
 		{
+			public readonly ChartsMaterial RectangleMaterial = new ChartsMaterial();
+
 			public Lime.RenderObject GetRenderObject(Node node)
 			{
+				var timeline = (Timeline<TUsage, TLabel>)node;
 				var ro = RenderObjectPool<RenderObject>.Acquire();
-				// todo ro.CaptureRenderState();
+				ro.CaptureRenderState(node.AsWidget);
+				ro.RectangleMaterial = RectangleMaterial;
+				var timelineState = timeline.timelineState;
+				ro.RelativeScale = timelineState.RelativeScale;
+				ro.MeshRenderObject = timeline.timelineMesh.GetRenderObject();
+				ro.LabelsRenderObject = timeline.timelineLabels.GetRenderObject(
+					new TimePeriod {
+						StartTime = timelineState.VisibleTimePeriod.StartTime * timelineState.RelativeScale,
+						FinishTime = timelineState.VisibleTimePeriod.FinishTime * timelineState.RelativeScale
+					},
+					1f / timelineState.MicrosecondsPerPixel * timelineState.RelativeScale);
 				return ro;
 			}
 
@@ -233,12 +102,23 @@ namespace Tangerine.UI.Timelines
 
 			private class RenderObject : WidgetRenderObject
 			{
+				public float RelativeScale;
+				public ChartsMaterial RectangleMaterial;
+				public TimelineMesh.RenderObject MeshRenderObject;
+				public TimelineLabels<TLabel>.RenderObject LabelsRenderObject;
+
 				public override void Render()
 				{
 					Renderer.Flush();
 					PrepareRenderState();
-					// todo render mesh
-					// todo render labels
+					RectangleMaterial.Matrix =  
+					    Renderer.FixupWVP(
+						    Matrix44.CreateScale(RelativeScale, 1f, 1f) *
+						    (Matrix44)LocalToWorldTransform *
+						    Renderer.ViewProjection);
+					RectangleMaterial.Apply(0);
+					MeshRenderObject.Render();
+					LabelsRenderObject.Render();
 				}
 			}
 		}

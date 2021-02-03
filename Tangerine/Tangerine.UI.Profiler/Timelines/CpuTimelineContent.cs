@@ -11,7 +11,8 @@ namespace Tangerine.UI.Timelines
 {
 	using Task = System.Threading.Tasks.Task;
 	using SpacingParameters = PeriodPositions.SpacingParameters;
-
+	using OwnersPool = RingPool<ReferenceTable.RowIndex>;
+	
 	internal class CpuTimelineContent : TimelineContent<CpuUsage, CpuTimelineContent.ItemLabel>
 	{
 		private readonly AsyncContentBuilder contentBuilder;
@@ -119,7 +120,9 @@ namespace Tangerine.UI.Timelines
 				
 				itemsCount = 0;
 				cachedRectangles.Clear();
-				var usages = frameData.Clipboard.UpdateCpuUsages;
+				var clipboard = frameData.Clipboard;
+				
+				var usages = GetUsages(clipboard.UpdateCpuUsages, clipboard.RenderCpuUsages) ;
 				var spacingParameters = timelineContent.SpacingParameters;
 				
 				long stopwatchFrequency = frameData.ProfiledFrame.StopwatchFrequency;
@@ -127,14 +130,13 @@ namespace Tangerine.UI.Timelines
 				
 				var periods = GetPeriods(usages, updateThreadStartTime, stopwatchFrequency);
 				var positions = new PeriodPositions(periods, spacingParameters);
+				
 				float ticksPerMicrosecond = stopwatchFrequency / 1000f;
-
 				TimePeriod UsageToTimePeriod(CpuUsage usage) => new TimePeriod(
 					startTime: (usage.StartTime - updateThreadStartTime) / ticksPerMicrosecond,
 					finishTime: (usage.FinishTime - updateThreadStartTime) / ticksPerMicrosecond);
-
-				ColorIndicesPack CreateColorsPack(CpuUsage usage) {
-					bool isFilterPassed = filter(usage, frameData.Clipboard);
+				ColorIndicesPack CreateColorsPack(CpuUsage usage, OwnersPool pool) {
+					bool isFilterPassed = filter(usage, pool, frameData.Clipboard);
 					if (Mode == TimelineMode.BatchBreakReasons) {
 						var reasons = usage.Reason;
 						if (isFilterPassed && (reasons & CpuUsage.Reasons.BatchRender) != 0) {
@@ -151,8 +153,7 @@ namespace Tangerine.UI.Timelines
 						return ColorIndicesPack.SingleColor(UnselectedItemColorIndex);
 					}
 				}
-				
-				foreach (var (usage, position) in usages.Zip(positions, Tuple.Create)) {
+				void CreateItem(CpuUsage usage, OwnersPool pool, Vector2 position) {
 					var period = UsageToTimePeriod(usage);
 					var item = new Item {
 						TimePeriod = period,
@@ -160,7 +161,7 @@ namespace Tangerine.UI.Timelines
 							A = position.Y, 
 							B = position.Y + spacingParameters.TimePeriodHeight
 						},
-						ColorIndicesPack = CreateColorsPack(usage),
+						ColorIndicesPack = CreateColorsPack(usage, pool),
 						UsageReason = usage.Reason
 					};
 					if (itemsCount >= items.Length) {
@@ -169,9 +170,27 @@ namespace Tangerine.UI.Timelines
 					items[itemsCount++] = item;
 					CreateRectanglesFor(item, position);
 				}
+				foreach (var (usage, position) in clipboard.UpdateCpuUsages.Zip(positions, Tuple.Create)) {
+					CreateItem(usage, clipboard.UpdateOwnersPool, position);
+				}
+				foreach (var (usage, position) in clipboard.RenderCpuUsages.Zip(positions, Tuple.Create)) {
+					CreateItem(usage, clipboard.RenderOwnersPool, position);
+				}
 				return Mode == TimelineMode.Default ? 
 					CpuTimelineColorSet.GetDefaultModeColors() : 
 					CpuTimelineColorSet.GetBatchBreakReasonsColors();
+			}
+
+			private IEnumerable<CpuUsage> GetUsages(
+				IEnumerable<CpuUsage> firstItems, 
+				IEnumerable<CpuUsage> secondItems)
+			{
+				foreach (var usage in firstItems) {
+					yield return usage;
+				}
+				foreach (var usage in secondItems) {
+					yield return usage;
+				}
 			}
 
 			public void RescaleItemsAsync()
@@ -208,7 +227,7 @@ namespace Tangerine.UI.Timelines
 				}
 			}
 
-			private IEnumerable<TimePeriod> GetPeriods(List<CpuUsage> usages, long frameTimestamp, long frequency)
+			private IEnumerable<TimePeriod> GetPeriods(IEnumerable<CpuUsage> usages, long frameTimestamp, long frequency)
 			{
 				float ticksPerMicrosecond = frequency / 1000f;
 				foreach (var usage in usages) {
