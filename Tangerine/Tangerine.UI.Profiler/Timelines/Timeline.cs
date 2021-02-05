@@ -22,8 +22,10 @@ namespace Tangerine.UI.Timelines
 		private readonly TimelineMesh timelineMesh;
 		private readonly TimelineHitTest timelineHitTest;
 		
-		protected readonly Queue<Action<Task>> contentReadingProtoTasks;
-		protected readonly Queue<Task> runningContentReadingTasks;
+		private readonly Queue<Action<Task>> contentReadingProtoTasks;
+		private readonly Queue<Task> runningContentReadingTasks;
+		private readonly Queue<Task<int>> hitTestTasks;
+		private readonly Queue<Task<Color4[]>> meshRebuildingTasks;
 		
 		private TimelineState timelineState;
 		private long activeFrameIdentifier;
