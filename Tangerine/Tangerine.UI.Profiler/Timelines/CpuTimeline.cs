@@ -2,6 +2,7 @@
 
 using System;
 using System.Text.RegularExpressions;
+using Lime;
 using Lime.Profiler;
 using Lime.Profiler.Contexts;
 
@@ -10,28 +11,30 @@ namespace Tangerine.UI.Timelines
 	using Content = TimelineContent<CpuUsage, CpuTimelineContent.ItemLabel>;
 	using Labels = TimelineLabels<CpuTimelineContent.ItemLabel>;
 	using OwnersPool = RingPool<ReferenceTable.RowIndex>;
+	using SpacingParameters = PeriodPositions.SpacingParameters;
 	
-	internal class CpuTimeline : Timeline<CpuUsage, CpuTimelineContent.ItemLabel>
+	internal class CpuTimeline : Widget
 	{
 		private const string EmptyOwnersText = "Empty_Owners";
 		private const string ObjectNoNameText = "No_Object_Name";
 		private const string EmptyOwnersListText = "Empty_Owners_List";
 		
-		private static readonly TimelineContent.Filter<CpuUsage> defaultFilter;
+		private Timeline<CpuUsage, CpuTimelineContent.ItemLabel> timeline;
 
-		private TimelineContent.Filter<CpuUsage> activeFilter;
-		
-		static CpuTimeline() => defaultFilter = (usage, pool, clipboard) => true;
-
-		public CpuTimeline() : base(CreateContentBuilder(), new Labels())
+		public CpuTimeline()
 		{
-			activeFilter = defaultFilter;
+			var contentBuilder = new CpuTimelineContent(new SpacingParameters {
+				MicrosecondsPerPixel = 1f,
+				TimePeriodHeight = TimelineWidget.DefaultItemHeight,
+				TimePeriodVerticalMargin = TimelineWidget.DefaultItemMargin
+			});
+			timeline = new Timeline<CpuUsage, CpuTimelineContent.ItemLabel>(contentBuilder, new Labels());
 		}
 
 		public bool TrySetFilter(string expression)
 		{
 			if (string.IsNullOrEmpty(expression)) {
-				activeFilter = defaultFilter;
+				timeline.Filter = timeline.DefaultFilter;
 			} else {
 				Regex regexp = null;
 				try {
@@ -40,9 +43,7 @@ namespace Tangerine.UI.Timelines
 					return false;
 				}
 				var mode = GetMode(expression);
-				activeFilter = CreateFilter(mode, regexp);
-				// todo create rebuild request
-				throw new NotImplementedException();
+				timeline.Filter = CreateFilter(mode, regexp);
 			}
 			return true;
 		}
@@ -102,13 +103,7 @@ namespace Tangerine.UI.Timelines
 			}
 			return FilterMode.ObjectName;
 		}
-		
-		private static Content CreateContentBuilder()
-		{
-			// todo default spacing parameters
-			throw new InvalidOperationException();
-		}
-		
+
 		private static class ReasonsNames
 		{
 			private static readonly string[] names;

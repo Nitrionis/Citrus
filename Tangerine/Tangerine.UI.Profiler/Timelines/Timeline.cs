@@ -21,24 +21,44 @@ namespace Tangerine.UI.Timelines
 		private readonly TimelineLabels<TLabel> timelineLabels;
 		private readonly TimelineMesh timelineMesh;
 		private readonly TimelineHitTest timelineHitTest;
-
-		protected readonly Queue<(Task, TimelineState)> contentModificationTasks;
-		protected readonly Queue<Task> contentReadingTasks;
-
+		
+		protected readonly Queue<Action<Task>> contentReadingProtoTasks;
+		protected readonly Queue<Task> runningContentReadingTasks;
+		protected Task newestContentModificationTask;
+		
 		private TimelineState timelineState;
 		private long activeFrameIdentifier;
+
+		public readonly TimelineContent.Filter<TUsage> DefaultFilter;
+
+		private bool isFilterChanged;
+		private TimelineContent.Filter<TUsage> filter;
 		
-		protected Timeline(
+		public TimelineContent.Filter<TUsage> Filter
+		{
+			get { return filter; }
+			set {
+				filter = value;
+				isFilterChanged = true;
+			}
+		}
+		
+		public Timeline(
 			TimelineContent<TUsage, TLabel> timelineContent, 
 			TimelineLabels<TLabel> timelineLabels)
 		{
-			contentModificationTasks = new Queue<(Task, TimelineState)>();
-			contentReadingTasks = new Queue<Task>();
 			preloader = new TimelineFramePreloader();
 			this.timelineContent = timelineContent;
 			this.timelineLabels = timelineLabels;
 			timelineMesh = new TimelineMesh();
 			timelineHitTest = new TimelineHitTest();
+
+			contentReadingProtoTasks = new Queue<Action<Task>>();
+			runningContentReadingTasks = new Queue<Task>();
+			newestContentModificationTask = Task.CompletedTask;
+
+			DefaultFilter = (usage, pool, clipboard) => true;
+			filter = DefaultFilter;
 			
 			contentContainer.Presenter = new TimelinePresenter();
 			Updated += (delta) => {
@@ -49,11 +69,18 @@ namespace Tangerine.UI.Timelines
 						FinishTime = (scrollPosition + horizontalScrollView.Width) * MicrosecondsPerPixel
 					};
 				}
-				if (preloader.IsAttemptCompleted && activeFrameIdentifier != preloader.Frame.Identifier) {
-					activeFrameIdentifier = preloader.Frame.Identifier;
-					// todo need to create timelineContent.RebuildAsync(activeFrameIdentifier)
-					timelineContent.RebuildAsync(activeFrameIdentifier, , );
+				if (preloader.IsAttemptCompleted) {
+					if (activeFrameIdentifier != preloader.Frame.Identifier) {
+						activeFrameIdentifier = preloader.Frame.Identifier;
+						// todo need to create timelineContent.RebuildAsync(activeFrameIdentifier)
+						timelineContent.RebuildAsync(activeFrameIdentifier, , );
+						
+					} else {
+						
+					}
 				}
+				
+				
 				var visibleTimePeriod = CalculateVisibleTimePeriod();
 				timelineState = new TimelineState {
 					VisibleTimePeriod = visibleTimePeriod,

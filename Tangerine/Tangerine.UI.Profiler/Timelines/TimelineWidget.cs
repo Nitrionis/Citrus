@@ -9,6 +9,9 @@ namespace Tangerine.UI.Timelines
 {
 	internal class TimelineWidget : Widget
 	{
+		public const float DefaultItemHeight = 20;
+		public const float DefaultItemMargin = 2;
+		
 		protected const float ScaleScrollingSpeed = 1f / 1200f;
 		protected const float MinMicrosecondsPerPixel = 0.2f;
 		protected const float MaxMicrosecondsPerPixel = 64f;
@@ -27,7 +30,7 @@ namespace Tangerine.UI.Timelines
 		private float cachedMicrosecondsPerPixel;
 		private float cachedHorizontalScrollPosition;
 		
-		private float itemHeight = 20;
+		private float itemHeight = DefaultItemHeight;
 
 		public float ItemHeight
 		{
@@ -40,7 +43,7 @@ namespace Tangerine.UI.Timelines
 			}
 		}
 
-		private float itemMargin = 2;
+		private float itemMargin = DefaultItemMargin;
 
 		public float ItemMargin
 		{
