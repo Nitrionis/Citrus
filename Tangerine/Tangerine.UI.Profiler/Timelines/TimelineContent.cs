@@ -55,7 +55,7 @@ namespace Tangerine.UI.Timelines
 		private readonly Func<long> actualRebuildIdGetter;
 		private readonly Func<long> actualHitTestIdGetter;
 		
-		protected Task NewestContentModificationTask { get; private set; }
+		public Task NewestContentModificationTask { get; private set; }
 		
 		protected long LastRequestedFrame { get; private set; }
 		

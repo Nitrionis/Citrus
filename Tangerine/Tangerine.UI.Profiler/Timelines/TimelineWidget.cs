@@ -11,7 +11,7 @@ namespace Tangerine.UI.Timelines
 	{
 		public const float DefaultItemHeight = 20;
 		public const float DefaultItemMargin = 2;
-		
+
 		protected const float ScaleScrollingSpeed = 1f / 1200f;
 		protected const float MinMicrosecondsPerPixel = 0.2f;
 		protected const float MaxMicrosecondsPerPixel = 64f;
@@ -21,41 +21,8 @@ namespace Tangerine.UI.Timelines
 		protected readonly ThemedScrollView horizontalScrollView;
 		protected readonly ThemedScrollView verticalScrollView;
 		
-		protected bool IsContentRebuildingRequired { get; private set; }
-		protected bool IsScaleChanged { get; private set; }
-		protected bool IsHorizontalScrollPositionChanged { get; private set; }
+		protected float MicrosecondsPerPixel { get; private set; }
 
-		protected float MicrosecondsPerPixel => cachedMicrosecondsPerPixel;
-		
-		private float cachedMicrosecondsPerPixel;
-		private float cachedHorizontalScrollPosition;
-		
-		private float itemHeight = DefaultItemHeight;
-
-		public float ItemHeight
-		{
-			get { return itemHeight; }
-			set {
-				if (itemHeight != value) {
-					itemHeight = value;
-					IsContentRebuildingRequired = true;
-				}
-			}
-		}
-
-		private float itemMargin = DefaultItemMargin;
-
-		public float ItemMargin
-		{
-			get { return itemMargin; }
-			set {
-				if (itemMargin != value) {
-					itemMargin = value;
-					IsContentRebuildingRequired = true;
-				}
-			}
-		}
-		
 		protected TimelineWidget()
 		{
 			Layout = new VBoxLayout();
@@ -97,15 +64,10 @@ namespace Tangerine.UI.Timelines
 					(Input.WasKeyPressed(Key.MouseWheelDown) || Input.WasKeyPressed(Key.MouseWheelUp))
 					)
 				{
-					float microsecondsPerPixel = cachedMicrosecondsPerPixel;
-					microsecondsPerPixel += Input.WheelScrollAmount / ScaleScrollingSpeed;
-					microsecondsPerPixel = Mathf.Clamp(
-						microsecondsPerPixel, MinMicrosecondsPerPixel, MaxMicrosecondsPerPixel);
-					ruler.RulerScale = microsecondsPerPixel;
-					if (cachedMicrosecondsPerPixel != microsecondsPerPixel) {
-						cachedMicrosecondsPerPixel = microsecondsPerPixel;
-						IsScaleChanged = true;
-					}
+					MicrosecondsPerPixel += Input.WheelScrollAmount / ScaleScrollingSpeed;
+					MicrosecondsPerPixel = Mathf.Clamp(
+						MicrosecondsPerPixel, MinMicrosecondsPerPixel, MaxMicrosecondsPerPixel);
+					ruler.RulerScale = MicrosecondsPerPixel;
 				}
 				yield return null;
 			}
@@ -118,10 +80,6 @@ namespace Tangerine.UI.Timelines
 				horizontalScrollView.Behaviour.CanScroll = isHorizontalMode;
 				verticalScrollView.Behaviour.StopScrolling();
 				ruler.RulerOffset = horizontalScrollView.ScrollPosition;
-				if (cachedHorizontalScrollPosition != horizontalScrollView.ScrollPosition) {
-					cachedHorizontalScrollPosition = horizontalScrollView.ScrollPosition;
-					IsHorizontalScrollPositionChanged = true;
-				}
 				yield return null;
 			}
 		}

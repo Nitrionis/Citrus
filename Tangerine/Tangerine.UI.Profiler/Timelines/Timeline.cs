@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Lime;
-using Lime.Profiler;
 using Tangerine.UI.Charts;
 
 namespace Tangerine.UI.Timelines
@@ -24,8 +23,7 @@ namespace Tangerine.UI.Timelines
 		
 		private readonly Queue<Action<Task>> contentReadingProtoTasks;
 		private readonly Queue<Task> runningContentReadingTasks;
-		private readonly Queue<Task<int>> hitTestTasks;
-		private readonly Queue<Task<Color4[]>> meshRebuildingTasks;
+		private readonly Queue<Task> contentRebuildingTasks;
 		
 		private TimelineState timelineState;
 		private long activeFrameIdentifier;
@@ -44,6 +42,34 @@ namespace Tangerine.UI.Timelines
 			}
 		}
 		
+		private bool isContentRebuildingRequired;
+		
+		private float itemHeight = DefaultItemHeight;
+
+		public float ItemHeight
+		{
+			get { return itemHeight; }
+			set {
+				if (itemHeight != value) {
+					itemHeight = value;
+					isContentRebuildingRequired = true;
+				}
+			}
+		}
+
+		private float itemMargin = DefaultItemMargin;
+
+		public float ItemMargin
+		{
+			get { return itemMargin; }
+			set {
+				if (itemMargin != value) {
+					itemMargin = value;
+					isContentRebuildingRequired = true;
+				}
+			}
+		}
+		
 		public Timeline(
 			TimelineContent<TUsage, TLabel> timelineContent, 
 			TimelineLabels<TLabel> timelineLabels)
@@ -56,11 +82,28 @@ namespace Tangerine.UI.Timelines
 
 			contentReadingProtoTasks = new Queue<Action<Task>>();
 			runningContentReadingTasks = new Queue<Task>();
-
+			contentRebuildingTasks = new Queue<Task>();
+			
 			DefaultFilter = (usage, pool, clipboard) => true;
 			filter = DefaultFilter;
 			
 			contentContainer.Presenter = new TimelinePresenter();
+			horizontalScrollView.Content.Clicked += () => {
+				if (
+					preloader.IsAttemptCompleted &&
+					contentRebuildingTasks.Count == 0 && 
+					timelineContent.NewestContentModificationTask.IsCompleted
+					) 
+				{
+					var mp = horizontalScrollView.Content.LocalMousePosition();
+					contentRebuildingTasks.Enqueue(timelineHitTest.RunAsyncHitTest(
+						mousePosition: new TimelineHitTest.ClickPoint {
+							Timestamp = mp.X * timelineState.MicrosecondsPerPixel * timelineState.RelativeScale,
+							VerticalPosition = mp.Y
+						},
+						items: timelineContent.GetHitTestTargets()));
+				}
+			};
 			Updated += (delta) => {
 				TimePeriod CalculateVisibleTimePeriod() {
 					float scrollPosition = horizontalScrollView.ScrollPosition;
@@ -72,16 +115,47 @@ namespace Tangerine.UI.Timelines
 				if (preloader.IsAttemptCompleted) {
 					if (activeFrameIdentifier != preloader.Frame.Identifier) {
 						activeFrameIdentifier = preloader.Frame.Identifier;
-						// todo need to create timelineContent.RebuildAsync(activeFrameIdentifier)
-						timelineContent.RebuildAsync(activeFrameIdentifier, , );
-						
+						contentRebuildingTasks.Enqueue(timelineContent.RebuildAsync(
+							preloader.Frame.Identifier,
+							Task.WhenAll(runningContentReadingTasks),
+							Filter));
+						runningContentReadingTasks.Clear();
+						contentReadingProtoTasks.Clear();
+						isFilterChanged = false;
 					} else {
-						
+						if (timelineState.MicrosecondsPerPixel != MicrosecondsPerPixel) {
+							timelineState.MicrosecondsPerPixel = MicrosecondsPerPixel;
+							contentRebuildingTasks.Enqueue(timelineContent.SetSpacingParametersAsync(
+								Task.WhenAll(runningContentReadingTasks),
+								timelineState.SpacingParameters));
+							runningContentReadingTasks.Clear();
+						}
+						if (isFilterChanged) {
+							contentRebuildingTasks.Enqueue(timelineContent.RebuildAsync());
+							isFilterChanged = false;
+						}
+						if (
+							contentRebuildingTasks.Count == 0 && 
+							timelineContent.NewestContentModificationTask.IsCompleted
+							) 
+						{
+							
+						}
 					}
 				}
 				
 				
-				var visibleTimePeriod = CalculateVisibleTimePeriod();
+				if (
+					preloader.IsAttemptCompleted &&
+					contentRebuildingTasks.Count == 0 && 
+					timelineContent.NewestContentModificationTask.IsCompleted
+					) 
+				{
+					
+				}
+				
+				
+				/*var visibleTimePeriod = CalculateVisibleTimePeriod();
 				timelineState = new TimelineState {
 					VisibleTimePeriod = visibleTimePeriod,
 					MicrosecondsPerPixel = ,
@@ -89,7 +163,10 @@ namespace Tangerine.UI.Timelines
 					TimeIntervalHeight = ItemHeight,
 					TimeIntervalVerticalMargin = ItemMargin
 				};
-				contentContainer.Width = ;
+				contentContainer.Width = ;*/
+
+				
+				isContentRebuildingRequired = false;
 			};
 		}
 
@@ -148,6 +225,12 @@ namespace Tangerine.UI.Timelines
 					LabelsRenderObject.Render();
 				}
 			}
+		}
+		
+		private struct HitTestProtoTask
+		{
+			public TimelineHitTest.ClickPoint MousePosition;
+			public IEnumerable<TimelineHitTest.ItemInfo> Items;
 		}
 	}
 }
