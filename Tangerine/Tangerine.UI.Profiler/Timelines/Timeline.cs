@@ -24,7 +24,6 @@ namespace Tangerine.UI.Timelines
 		
 		protected readonly Queue<Action<Task>> contentReadingProtoTasks;
 		protected readonly Queue<Task> runningContentReadingTasks;
-		protected Task newestContentModificationTask;
 		
 		private TimelineState timelineState;
 		private long activeFrameIdentifier;
@@ -55,7 +54,6 @@ namespace Tangerine.UI.Timelines
 
 			contentReadingProtoTasks = new Queue<Action<Task>>();
 			runningContentReadingTasks = new Queue<Task>();
-			newestContentModificationTask = Task.CompletedTask;
 
 			DefaultFilter = (usage, pool, clipboard) => true;
 			filter = DefaultFilter;
