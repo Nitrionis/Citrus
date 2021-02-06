@@ -88,30 +88,44 @@ namespace Tangerine.UI.Timelines
 			filter = DefaultFilter;
 			
 			contentContainer.Presenter = new TimelinePresenter();
-			horizontalScrollView.Content.Clicked += () => {
-				if (
-					preloader.IsAttemptCompleted &&
-					contentRebuildingTasks.Count == 0 && 
-					timelineContent.NewestContentModificationTask.IsCompleted
-					) 
-				{
-					var mp = horizontalScrollView.Content.LocalMousePosition();
-					contentRebuildingTasks.Enqueue(timelineHitTest.RunAsyncHitTest(
-						mousePosition: new TimelineHitTest.ClickPoint {
-							Timestamp = mp.X * timelineState.MicrosecondsPerPixel * timelineState.RelativeScale,
-							VerticalPosition = mp.Y
-						},
-						items: timelineContent.GetHitTestTargets()));
-				}
-			};
-			Updated += (delta) => {
-				TimePeriod CalculateVisibleTimePeriod() {
-					float scrollPosition = horizontalScrollView.ScrollPosition;
-					return new TimePeriod {
-						StartTime = Math.Max(0, scrollPosition - ruler.SmallStepSize) * MicrosecondsPerPixel,
-						FinishTime = (scrollPosition + horizontalScrollView.Width) * MicrosecondsPerPixel
-					};
-				}
+			horizontalScrollView.Content.Clicked += OnContentClicked;
+			Updated += delta => OnUpdated();
+		}
+
+		public void SetFrame(long frameIdentifier) => preloader.Load(frameIdentifier);
+
+		private void SetColors(Color4[] colors)
+		{
+			var vectors = ((TimelinePresenter)contentContainer.Presenter).RectangleMaterial.Colors;
+			for (int i = 0; i < colors.Length; i++) {
+				vectors[i] = colors[i].ToVector4();
+			}
+		}
+
+		private void OnContentClicked()
+		{
+			if (
+				preloader.IsAttemptCompleted &&
+				contentRebuildingTasks.Count == 0 && 
+				timelineContent.NewestContentModificationTask.IsCompleted
+				) 
+			{
+				var mp = horizontalScrollView.Content.LocalMousePosition();
+				contentRebuildingTasks.Enqueue(timelineHitTest.RunAsyncHitTest(
+					mousePosition: new TimelineHitTest.ClickPoint {
+						Timestamp = mp.X * timelineState.MicrosecondsPerPixel * timelineState.RelativeScale,
+						VerticalPosition = mp.Y
+					},
+					items: timelineContent.GetHitTestTargets()));
+			}
+		}
+		
+		private void OnUpdated()
+		{
+			
+				
+				
+				
 				if (preloader.IsAttemptCompleted) {
 					if (activeFrameIdentifier != preloader.Frame.Identifier) {
 						activeFrameIdentifier = preloader.Frame.Identifier;
@@ -167,17 +181,6 @@ namespace Tangerine.UI.Timelines
 
 				
 				isContentRebuildingRequired = false;
-			};
-		}
-
-		public void SetFrame(long frameIdentifier) => preloader.Load(frameIdentifier);
-
-		private void SetColors(Color4[] colors)
-		{
-			var vectors = ((TimelinePresenter)contentContainer.Presenter).RectangleMaterial.Colors;
-			for (int i = 0; i < colors.Length; i++) {
-				vectors[i] = colors[i].ToVector4();
-			}
 		}
 		
 		private class TimelinePresenter : IPresenter

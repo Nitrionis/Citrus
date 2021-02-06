@@ -2,6 +2,7 @@
 
 #if PROFILER
 
+using System;
 using System.Collections.Generic;
 using Lime;
 
@@ -20,6 +21,11 @@ namespace Tangerine.UI.Timelines
 		protected readonly Widget contentContainer;
 		protected readonly ThemedScrollView horizontalScrollView;
 		protected readonly ThemedScrollView verticalScrollView;
+
+		/// <summary>
+		/// Duration of a time interval in microseconds in which all timeline content can be placed.
+		/// </summary>
+		protected float ContentDuration { get; set; }
 		
 		protected float MicrosecondsPerPixel { get; private set; }
 
@@ -56,6 +62,15 @@ namespace Tangerine.UI.Timelines
 			Tasks.Add(ScaleScrollTask);
 		}
 		
+		protected TimePeriod CalculateVisibleTimePeriod()
+		{
+			float scrollPosition = horizontalScrollView.ScrollPosition;
+			return new TimePeriod {
+				StartTime = Math.Max(0, scrollPosition - ruler.SmallStepSize) / MicrosecondsPerPixel,
+				FinishTime = (scrollPosition + horizontalScrollView.Width) / MicrosecondsPerPixel
+			};
+		}
+		
 		private IEnumerator<object> ScaleScrollTask()
 		{
 			while (true) {
@@ -68,6 +83,7 @@ namespace Tangerine.UI.Timelines
 					MicrosecondsPerPixel = Mathf.Clamp(
 						MicrosecondsPerPixel, MinMicrosecondsPerPixel, MaxMicrosecondsPerPixel);
 					ruler.RulerScale = MicrosecondsPerPixel;
+					
 				}
 				yield return null;
 			}
