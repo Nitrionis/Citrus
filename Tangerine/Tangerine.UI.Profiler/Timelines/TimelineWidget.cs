@@ -14,21 +14,39 @@ namespace Tangerine.UI.Timelines
 		public const float DefaultItemMargin = 2;
 
 		protected const float ScaleScrollingSpeed = 1f / 1200f;
-		protected const float MinMicrosecondsPerPixel = 0.2f;
-		protected const float MaxMicrosecondsPerPixel = 64f;
-		
+
 		protected readonly TimelineRuler ruler;
+		protected readonly Widget leftContentBorder;
 		protected readonly Widget contentContainer;
+		protected readonly Widget rightContentBorder;
 		protected readonly ThemedScrollView horizontalScrollView;
 		protected readonly ThemedScrollView verticalScrollView;
 
+		private float scale = 1f;
+		
 		/// <summary>
 		/// Duration of a time interval in microseconds in which all timeline content can be placed.
 		/// </summary>
-		protected float ContentDuration { get; set; }
-		
-		protected float MicrosecondsPerPixel { get; private set; }
+		protected float ContentDuration { get; private set; }
 
+		protected float OriginalMicrosecondsPerPixel => ContentDuration / Width;
+		
+		protected float MicrosecondsPerPixel => scale * OriginalMicrosecondsPerPixel;
+
+		/// <remarks>
+		/// We increase the width of the content by 3 times because we need an
+		/// equal distribution of the width between the content and each border.
+		/// </remarks>
+		protected float OriginalContentWidth => 3f * Width;
+		
+		/// <summary>
+		/// The position of the scroll in the horizontal scroll view at which all content
+		/// is visible provided that it has the original width.
+		/// </summary>
+		private float OriginalScrollPosition => Width;
+		
+		private float OriginalScale => 1f;
+		
 		protected TimelineWidget()
 		{
 			Layout = new VBoxLayout();
@@ -41,9 +59,11 @@ namespace Tangerine.UI.Timelines
 				TimestampsColor = ColorTheme.Current.Profiler.TimelineRulerStep
 			};
 			AddNode(ruler);
+			leftContentBorder = new Widget();
 			contentContainer = new Widget {
 				Id = "Profiler timeline content"
 			};
+			rightContentBorder = new Widget();
 			horizontalScrollView = new ThemedScrollView(ScrollDirection.Horizontal) {
 				Anchors = Anchors.LeftRightTopBottom,
 				HitTestTarget = true,
@@ -55,22 +75,33 @@ namespace Tangerine.UI.Timelines
 			};
 			verticalScrollView.Content.Layout = new VBoxLayout();
 			horizontalScrollView.Content.AddNode(verticalScrollView);
+			verticalScrollView.Content.AddNode(leftContentBorder);
 			verticalScrollView.Content.AddNode(contentContainer);
+			verticalScrollView.Content.AddNode(rightContentBorder);
 			AddNode(horizontalScrollView);
 			horizontalScrollView.Content.Tasks.Insert(0, new Task(HorizontalScrollTask()));
 			verticalScrollView.Content.Tasks.Insert(0, new Task(VerticalScrollTask()));
 			Tasks.Add(ScaleScrollTask);
 		}
 		
-		protected TimePeriod CalculateVisibleTimePeriod()
+		/// <param name="contentDuration">Value for <see cref="ContentDuration"/>.</param>
+		public void ResetScale(float contentDuration)
 		{
-			float scrollPosition = horizontalScrollView.ScrollPosition;
-			return new TimePeriod {
-				StartTime = Math.Max(0, scrollPosition - ruler.SmallStepSize) / MicrosecondsPerPixel,
-				FinishTime = (scrollPosition + horizontalScrollView.Width) / MicrosecondsPerPixel
-			};
+			scale = OriginalScale;
+			ContentDuration = contentDuration;
+			float newWidth = OriginalContentWidth;
+			horizontalScrollView.Content.MinMaxWidth = newWidth;
+			horizontalScrollView.Content.Width = newWidth;
+			horizontalScrollView.ScrollPosition = OriginalScrollPosition;
+			float segmentWidth = newWidth / 3;
+			leftContentBorder.MinMaxWidth = segmentWidth;
+			contentContainer.MinMaxWidth = segmentWidth;
+			rightContentBorder.MinMaxWidth = segmentWidth;
+			OnResetScale();
 		}
-		
+
+		protected virtual void OnResetScale() { }
+
 		private IEnumerator<object> ScaleScrollTask()
 		{
 			while (true) {
@@ -79,11 +110,21 @@ namespace Tangerine.UI.Timelines
 					(Input.WasKeyPressed(Key.MouseWheelDown) || Input.WasKeyPressed(Key.MouseWheelUp))
 					)
 				{
-					MicrosecondsPerPixel += Input.WheelScrollAmount / ScaleScrollingSpeed;
-					MicrosecondsPerPixel = Mathf.Clamp(
-						MicrosecondsPerPixel, MinMicrosecondsPerPixel, MaxMicrosecondsPerPixel);
+					var sv = horizontalScrollView;
+					scale += Input.WheelScrollAmount * ScaleScrollingSpeed;
+					scale = Mathf.Clamp(scale, Width / OriginalContentWidth, 32f);
 					ruler.RulerScale = MicrosecondsPerPixel;
-					
+					float sp = sv.ScrollPosition;
+					float mp = sv.Content.LocalMousePosition().X;
+					float oldWidth = sv.Content.Width;
+					float newWidth = OriginalContentWidth * scale;
+					sv.Content.MinMaxWidth = newWidth;
+					sv.Content.Width = newWidth;
+					float segmentWidth = newWidth / 3;
+					leftContentBorder.MinMaxWidth = segmentWidth;
+					contentContainer.MinMaxWidth = segmentWidth;
+					rightContentBorder.MinMaxWidth = segmentWidth;
+					sv.ScrollPosition = (mp / oldWidth - (mp - sp) / newWidth) * newWidth;
 				}
 				yield return null;
 			}
