@@ -97,7 +97,13 @@ namespace Tangerine.UI
 					)
 				{
 					scale += sv.Input.WheelScrollAmount / 1200f;
-					scale = Mathf.Clamp(scale, 5f / 6f, 10f);
+					scale = Mathf.Clamp(scale, 500f / 1800f, 10f);
+					float sp = sv.ScrollPosition;
+					float mp = sv.Content.LocalMousePosition().X;
+					float oldWidth = sv.Content.Width;
+					float newWidth = 1800 * scale;
+					sv.Content.MinMaxWidth = newWidth;
+					sv.Content.Width = newWidth;
 					int index = 0;
 					foreach (var n in sv.Content.Nodes[0].Nodes) {
 						if (index == 0 || index == sv.Content.Nodes[0].Nodes.Count - 1) {
@@ -107,11 +113,6 @@ namespace Tangerine.UI
 						}
 						index++;
 					}
-					float sp = sv.ScrollPosition;
-					float mp = sv.Content.LocalMousePosition().X;
-					float oldWidth = sv.Content.Width;
-					float newWidth = 1800 * scale;
-					sv.Content.MinMaxWidth = newWidth;
 					sv.ScrollPosition = (mp / oldWidth - (mp - sp) / newWidth) * newWidth;
 				}
 				yield return null;
