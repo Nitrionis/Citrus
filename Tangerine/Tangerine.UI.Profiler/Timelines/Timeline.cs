@@ -20,14 +20,16 @@ namespace Tangerine.UI.Timelines
 		private readonly TimelineLabels<TLabel> timelineLabels;
 		private readonly TimelineMesh timelineMesh;
 		private readonly TimelineHitTest timelineHitTest;
-
-		private readonly Queue<Action<Task>> contentReadingProtoTasks;
-		private readonly Queue<Task> runningContentReadingTasks;
+		
+		private readonly Queue<Task> contentReadingTasks;
 		private readonly Queue<Task> contentRebuildingTasks;
-
-		private TimelineState timelineState;
+		
 		private long activeFrameIdentifier;
 		private bool isContentRebuildingRequired;
+		private bool isContentChanged;
+		private float microsecondsPerPixel;
+		private float relativeScale;
+		private TimePeriod timePeriod;
 		
 		public readonly TimelineContent.Filter<TUsage> DefaultFilter;
 		
@@ -67,7 +69,21 @@ namespace Tangerine.UI.Timelines
 				}
 			}
 		}
+		
+		private SpacingParameters SpacingParameters => 
+			new SpacingParameters {
+				MicrosecondsPerPixel = MicrosecondsPerPixel,
+				TimePeriodHeight = ItemHeight,
+				TimePeriodVerticalMargin = ItemMargin
+			};
 
+		private bool AreContentRebuildingTasksCompleted =>
+			preloader.IsAttemptCompleted &&
+			contentRebuildingTasks.Count == 0 &&
+			timelineContent.NewestContentModificationTask.IsCompleted;
+		
+		private readonly Queue<Func<Task, Task>> externalContentRebuildingRequests;
+		
 		public Timeline(
 			TimelineContent<TUsage, TLabel> timelineContent,
 			TimelineLabels<TLabel> timelineLabels)
@@ -78,20 +94,29 @@ namespace Tangerine.UI.Timelines
 			timelineMesh = new TimelineMesh();
 			timelineHitTest = new TimelineHitTest();
 
-			contentReadingProtoTasks = new Queue<Action<Task>>();
-			runningContentReadingTasks = new Queue<Task>();
+			contentReadingTasks = new Queue<Task>();
 			contentRebuildingTasks = new Queue<Task>();
 
 			DefaultFilter = (usage, pool, clipboard) => true;
 			filter = DefaultFilter;
 
-			contentContainer.Presenter = new TimelinePresenter();
+			contentContainer.Presenter = new TimelinePresenter(this);
 			horizontalScrollView.Content.Clicked += OnContentClicked;
 			Updated += delta => OnUpdated();
+
+			microsecondsPerPixel = 1f;
+			relativeScale = 1f;
+
+			externalContentRebuildingRequests = new Queue<Func<Task, Task>>();
+			
+			ResetScale(contentDuration: 1f);
 		}
 
 		public void SetFrame(long frameIdentifier) => preloader.Load(frameIdentifier);
 
+		public void AddContentRebuildingRequest(Func<Task, Task> rebuildingRequest) =>
+			externalContentRebuildingRequests.Enqueue(rebuildingRequest);
+		
 		private void SetColors(Color4[] colors)
 		{
 			var vectors = ((TimelinePresenter)contentContainer.Presenter).RectangleMaterial.Colors;
@@ -102,103 +127,143 @@ namespace Tangerine.UI.Timelines
 
 		private void OnContentClicked()
 		{
-			if (
-				preloader.IsAttemptCompleted &&
-				contentRebuildingTasks.Count == 0 &&
-				timelineContent.NewestContentModificationTask.IsCompleted
-				) 
-			{
+			if (AreContentRebuildingTasksCompleted) {
 				var mp = horizontalScrollView.Content.LocalMousePosition();
-				contentRebuildingTasks.Enqueue(timelineHitTest.RunAsyncHitTest(
+				contentReadingTasks.Enqueue(timelineHitTest.RunAsyncHitTest(
 					mousePosition: new TimelineHitTest.ClickPoint {
-						Timestamp = mp.X * timelineState.MicrosecondsPerPixel * timelineState.RelativeScale,
+						Timestamp = mp.X * MicrosecondsPerPixel,
 						VerticalPosition = mp.Y
 					},
 					items: timelineContent.GetHitTestTargets()));
 			}
 		}
 
+		private TimePeriod CalculateVisibleTimePeriod() 
+		{
+			float scrollPosition = horizontalScrollView.ScrollPosition;
+			return new TimePeriod {
+				StartTime = Math.Max(0, scrollPosition - ruler.SmallStepSize) / MicrosecondsPerPixel,
+				FinishTime = (scrollPosition + horizontalScrollView.Width) / MicrosecondsPerPixel
+			};
+		}
+		
 		private void OnUpdated()
 		{
-			TimePeriod CalculateVisibleTimePeriod() {
-				float scrollPosition = horizontalScrollView.ScrollPosition;
-				return new TimePeriod {
-					StartTime = Math.Max(0, scrollPosition - ruler.SmallStepSize) / MicrosecondsPerPixel,
-					FinishTime = (scrollPosition + horizontalScrollView.Width) / MicrosecondsPerPixel
-				};
-			}
-
+			relativeScale = MicrosecondsPerPixel / microsecondsPerPixel;
 			if (preloader.IsAttemptCompleted) {
 				if (activeFrameIdentifier != preloader.Frame.Identifier) {
 					activeFrameIdentifier = preloader.Frame.Identifier;
-					contentRebuildingTasks.Enqueue(timelineContent.RebuildAsync(
-						preloader.Frame.Identifier,
-						Task.WhenAll(runningContentReadingTasks),
-						Filter));
-					runningContentReadingTasks.Clear();
-					contentReadingProtoTasks.Clear();
-					isFilterChanged = false;
+					contentRebuildingTasks.Enqueue(
+						timelineContent.RebuildAsync(
+							preloader.Frame.Identifier,
+							Task.WhenAll(contentReadingTasks),
+							Filter,
+							SpacingParameters));
+					contentReadingTasks.Clear();
 				} else {
-					if (timelineState.MicrosecondsPerPixel != MicrosecondsPerPixel) {
-						timelineState.MicrosecondsPerPixel = MicrosecondsPerPixel;
-						contentRebuildingTasks.Enqueue(timelineContent.SetSpacingParametersAsync(
-							Task.WhenAll(runningContentReadingTasks),
-							timelineState.SpacingParameters));
-						runningContentReadingTasks.Clear();
-					}
-
-					if (isFilterChanged) {
-						contentRebuildingTasks.Enqueue(timelineContent.RebuildAsync());
-						isFilterChanged = false;
-					}
-
-					if (
-						contentRebuildingTasks.Count == 0 &&
-						timelineContent.NewestContentModificationTask.IsCompleted
-						) {
+					ProcessContentRebuildingResults();
+					RunContentRebuildingTasks();
+					if (AreContentRebuildingTasksCompleted) {
+						RunContentReadingTasks();
 					}
 				}
 			}
-
-			if (
-				preloader.IsAttemptCompleted &&
-				contentRebuildingTasks.Count == 0 &&
-				timelineContent.NewestContentModificationTask.IsCompleted
-				) {
-			}
-
-			/*var visibleTimePeriod = CalculateVisibleTimePeriod();
-			timelineState = new TimelineState {
-				VisibleTimePeriod = visibleTimePeriod,
-				MicrosecondsPerPixel = ,
-				RelativeScale = ,
-				TimeIntervalHeight = ItemHeight,
-				TimeIntervalVerticalMargin = ItemMargin
-			};
-			contentContainer.Width = ;*/
-
-			isContentRebuildingRequired = false;
 		}
 
+		private void ProcessContentRebuildingResults()
+		{
+			float contentHeight = verticalScrollView.Content.Height;
+			Color4[] changedColors = null;
+			while (contentRebuildingTasks.Count > 0) {
+				var task = contentRebuildingTasks.Peek();
+				if (task.IsCompleted) {
+					contentRebuildingTasks.Dequeue();
+					switch (task) {
+						case Task<ContentChanges<Color4[]>> t:
+							if (!t.Result.IsTaskSkipped) {
+								changedColors = t.Result.Value;
+								microsecondsPerPixel = t.Result.SpacingParameters.MicrosecondsPerPixel;
+								contentHeight = t.Result.ContentHeight;
+							}
+							break;
+						case Task<ContentChanges<EmptyData>> t:
+							if (!t.Result.IsTaskSkipped) {
+								microsecondsPerPixel = t.Result.SpacingParameters.MicrosecondsPerPixel;
+								contentHeight = t.Result.ContentHeight;
+							}
+							break;
+					}
+					isContentChanged = true;
+				}
+			}
+			relativeScale = MicrosecondsPerPixel / microsecondsPerPixel;
+			verticalScrollView.Content.Height = contentHeight;
+			if (changedColors != null) {
+				SetColors(changedColors);
+			}
+		}
+
+		public void RunContentRebuildingTasks()
+		{
+			if (Math.Abs(microsecondsPerPixel - MicrosecondsPerPixel) > 1e-2) {
+				contentRebuildingTasks.Enqueue(timelineContent.SetSpacingParametersAsync(
+					Task.WhenAll(contentReadingTasks),
+					SpacingParameters));
+				contentReadingTasks.Clear();
+			}
+			if (isContentRebuildingRequired) {
+				isContentRebuildingRequired = false;
+				contentRebuildingTasks.Enqueue(timelineContent.RebuildAsync(
+					preloader.Frame.Identifier,
+					Task.WhenAll(contentReadingTasks),
+					Filter,
+					SpacingParameters));
+				contentReadingTasks.Clear();
+			}
+			while (externalContentRebuildingRequests.Count > 0) {
+				var request = externalContentRebuildingRequests.Dequeue();
+				var waitingTask = Task.WhenAll(contentReadingTasks);
+				contentRebuildingTasks.Enqueue(request(waitingTask));
+				contentReadingTasks.Clear();
+			}
+		}
+
+		private void RunContentReadingTasks()
+		{
+			var timePeriod = CalculateVisibleTimePeriod();
+			bool isTimePeriodChanged =
+				Math.Abs(timePeriod.StartTime - this.timePeriod.StartTime) > 1e-2 ||
+				Math.Abs(timePeriod.FinishTime - this.timePeriod.FinishTime) > 1e-2;
+			if (isContentChanged || isTimePeriodChanged) {
+				this.timePeriod = timePeriod;
+				contentReadingTasks.Enqueue(
+					timelineMesh.RebuildAsync(
+						timelineContent.GetRectangles(timePeriod)));
+				contentReadingTasks.Enqueue(
+					timelineLabels.RebuildAsync(
+						timelineContent.GetVisibleLabels(timePeriod)));
+			}
+			isContentChanged = false;
+		}
+		
 		private class TimelinePresenter : IPresenter
 		{
 			public readonly ChartsMaterial RectangleMaterial = new ChartsMaterial();
 
+			private readonly Timeline<TUsage, TLabel> timeline;
+
+			public TimelinePresenter(Timeline<TUsage, TLabel> timeline) => this.timeline = timeline;
+			
 			public Lime.RenderObject GetRenderObject(Node node)
 			{
-				var timeline = (Timeline<TUsage, TLabel>) node;
 				var ro = RenderObjectPool<RenderObject>.Acquire();
 				ro.CaptureRenderState(node.AsWidget);
 				ro.RectangleMaterial = RectangleMaterial;
-				var timelineState = timeline.timelineState;
-				ro.RelativeScale = timelineState.RelativeScale;
+				ro.RelativeScale = timeline.relativeScale;
 				ro.MeshRenderObject = timeline.timelineMesh.GetRenderObject();
 				ro.LabelsRenderObject = timeline.timelineLabels.GetRenderObject(
-					new TimePeriod {
-						StartTime = timelineState.VisibleTimePeriod.StartTime * timelineState.RelativeScale,
-						FinishTime = timelineState.VisibleTimePeriod.FinishTime * timelineState.RelativeScale
-					},
-					1f / timelineState.MicrosecondsPerPixel * timelineState.RelativeScale);
+					timeline.CalculateVisibleTimePeriod(),
+					1f / timeline.MicrosecondsPerPixel);
 				return ro;
 			}
 
@@ -218,19 +283,13 @@ namespace Tangerine.UI.Timelines
 					RectangleMaterial.Matrix =
 						Renderer.FixupWVP(
 							Matrix44.CreateScale(RelativeScale, 1f, 1f) *
-							(Matrix44) LocalToWorldTransform *
+							(Matrix44)LocalToWorldTransform *
 							Renderer.ViewProjection);
 					RectangleMaterial.Apply(0);
 					MeshRenderObject.Render();
 					LabelsRenderObject.Render();
 				}
 			}
-		}
-
-		private struct HitTestProtoTask
-		{
-			public TimelineHitTest.ClickPoint MousePosition;
-			public IEnumerable<TimelineHitTest.ItemInfo> Items;
 		}
 	}
 }

@@ -1,5 +1,6 @@
 #if PROFILER
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Lime;
@@ -13,14 +14,29 @@ namespace Tangerine.UI.Timelines
 	{
 		private readonly SpacingParameters parameters;
 		private readonly IEnumerable<TimePeriod> periods;
-
-		public PeriodPositions(IEnumerable<TimePeriod> periods, SpacingParameters parameters)
+		private readonly Func<List<float>> getter;
+		
+		/// <param name="periods">
+		/// Time intervals to which positions will be assigned.
+		/// </param>
+		/// <param name="getter">
+		/// Will be used to get a list describing the free space in each line for each enumerator.
+		/// </param>
+		public PeriodPositions(
+			IEnumerable<TimePeriod> periods, 
+			SpacingParameters parameters,
+			Func<List<float>> getter)
 		{
 			this.periods = periods;
 			this.parameters = parameters;
+			this.getter = getter;
 		}
 
-		public IEnumerator<Vector2> GetEnumerator() => new Enumerator(periods.GetEnumerator(), parameters);
+		public static float GetContentHeight(SpacingParameters parameters, List<float> freeSpaceOfLines) => 
+			(freeSpaceOfLines.Count + 1) * (parameters.TimePeriodHeight + parameters.TimePeriodVerticalMargin);
+		
+		public IEnumerator<Vector2> GetEnumerator() => 
+			new Enumerator(periods.GetEnumerator(), parameters, getter());
 
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -30,11 +46,15 @@ namespace Tangerine.UI.Timelines
 			private readonly SpacingParameters parameters;
 			private readonly IEnumerator<TimePeriod> periods;
 
-			public Enumerator(IEnumerator<TimePeriod> periods, SpacingParameters parameters)
+			public Enumerator(
+				IEnumerator<TimePeriod> periods, 
+				SpacingParameters parameters,
+				List<float> freeSpaceOfLines)
 			{
 				this.periods = periods;
 				this.parameters = parameters;
-				freeSpaceOfLines = new List<float>();
+				this.freeSpaceOfLines = freeSpaceOfLines;
+				freeSpaceOfLines.Clear();
 			}
 
 			public Vector2 Current { get; private set; }

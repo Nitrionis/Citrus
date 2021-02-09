@@ -7,6 +7,7 @@ using Lime;
 using Lime.Profiler;
 using Lime.Profiler.Contexts;
 using Tangerine.Core;
+using Tangerine.UI.Timelines;
 
 namespace Tangerine.UI
 {
@@ -26,6 +27,7 @@ namespace Tangerine.UI
 		{
 			chartsResponses = new Queue<ChartsDataResponseProcessor>();
 			Layout = new VBoxLayout();
+			Padding = new Thickness(4);
 			Anchors = Anchors.LeftRight;
 			var size = new Vector2(28, 22);
 			var padding = new Thickness(3, 0);
@@ -69,7 +71,14 @@ namespace Tangerine.UI
 			profilingMode.Items.Add(new CommonDropDownList.Item("Tangerine"));
 			profilingMode.Items.Add(new CommonDropDownList.Item("Remote Game"));
 			profilingMode.Index = 0;
-			var optionsButton = new ThemedButton("Options");
+			var (optionsButton, optionsMaterial) = CreateButton("Profiler.Options");
+			optionsMaterial.Color = defaultButtonColor;
+			var (nextFrameButton, nextFrameMaterial) = CreateButton("Profiler.Next");
+			nextFrameMaterial.Color = defaultButtonColor;
+			var (previousFrameButton, previousFrameMaterial) = CreateButton("Profiler.Previous");
+			previousFrameMaterial.Color = defaultButtonColor;
+			var (lastFrameButton, lastFrameMaterial) = CreateButton("Profiler.Last");
+			lastFrameMaterial.Color = defaultButtonColor;
 			Image CreateSearchIcon() => new Image(IconPool.GetTexture("Profiler.Search")) {
 				Material = new IconMaterial {
 					Color = defaultButtonColor
@@ -81,11 +90,12 @@ namespace Tangerine.UI
 			Nodes.Add(new Widget {
 				Presenter = new WidgetFlatFillPresenter(Theme.Colors.ControlBorder),
 				Layout = new HBoxLayout(),
-				Padding = new Thickness(4),
+				Padding = new Thickness(0, 0, 0, 4),
 				Anchors = Anchors.LeftRight,
 				MaxWidth = float.PositiveInfinity,
 				MaxHeight = size.Y,
 				Nodes = {
+					optionsButton,
 					new ThemedSimpleText("Profiler") {
 						VAlignment = VAlignment.Center,
 						Padding = new Thickness(4, 4, 2, 0)
@@ -98,17 +108,26 @@ namespace Tangerine.UI
 					playButton,
 					pauseButton,
 					playNextButton,
+					new ThemedSimpleText("Frame") {
+						VAlignment = VAlignment.Center,
+						Padding = new Thickness(8, 4, 2, 0)
+					},
+					new ThemedSimpleText("#######") {
+						VAlignment = VAlignment.Center,
+						Padding = new Thickness(0, 4, 2, 0)
+					},
+					previousFrameButton,
+					nextFrameButton,
+					lastFrameButton,
 					new ThemedSimpleText("Data source") {
 						VAlignment = VAlignment.Center,
 						Padding = new Thickness(8, 4, 2, 0)
 					},
 					profilingMode,
-					optionsButton,
 					new ThemedSimpleText("Select") {
 						VAlignment = VAlignment.Center,
 						Padding = new Thickness(8, 4, 2, 0)
 					},
-					CreateSearchIcon(),
 					(regexFilter = new ThemedEditBox { MinMaxWidth = 256 }),
 					new ThemedSimpleText("in Charts") {
 						VAlignment = VAlignment.Center,
@@ -126,13 +145,14 @@ namespace Tangerine.UI
 			
 			var chartsPanel = new ChartsPanel(out var chartVisibilityControllers);
 			var optionsPanel = new OptionsPanel(chartVisibilityControllers, new TimelineVisibilityControllers {
-				MainThreadTimelineSetVisible = (b => { }),
-				RenderThreadTimelineSetVisible = (b => {}),
+				CpuTimelineSetVisible = (b => { }),
 				GpuTimelineSetVisible = (b => {})
 			});
 			optionsButton.Clicked += () => optionsPanel.Visible = !optionsPanel.Visible;
 			Nodes.Add(optionsPanel);
 			Nodes.Add(chartsPanel);
+			var timeline = new CpuTimeline();
+			AddNode(timeline);
 			Updating += delta => {
 				recordMaterial.Color = 
 					ProfilerTerminal.ProfilerEnabled ? recordButtonColor : defaultButtonColor;
@@ -151,7 +171,7 @@ namespace Tangerine.UI
 				}
 			};
 			chartsPanel.FrameSelected += frameIdentifier => {
-				throw new NotImplementedException();
+				timeline.SetFrame(frameIdentifier);
 			};
 			regexFilter.Submitted += pattern => {
 				bool IsValidRegex() {

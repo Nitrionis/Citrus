@@ -1,4 +1,4 @@
-﻿#if PROFILER
+#if PROFILER
 
 using System;
 using Lime;
@@ -20,8 +20,7 @@ namespace Tangerine.UI
 
 	internal struct TimelineVisibilityControllers
 	{
-		public Action<bool> MainThreadTimelineSetVisible;
-		public Action<bool> RenderThreadTimelineSetVisible;
+		public Action<bool> CpuTimelineSetVisible;
 		public Action<bool> GpuTimelineSetVisible;
 	}
 	
@@ -86,8 +85,7 @@ namespace Tangerine.UI
 						Padding = new Thickness(4),
 						Layout = new VBoxLayout { Spacing = 4 },
 						Nodes = {
-							CreateCheckBox("CPU Main Thread", out var mainTheadTimelineCheckBox),
-							CreateCheckBox("CPU Render Thread", out var renderTheadTimelineCheckBox),
+							CreateCheckBox("CPU Main Thread", out var cpuTimelineCheckBox),
 							CreateCheckBox("GPU (In developing)", out var gpuTimelineCheckBox),
 						}
 					}
@@ -133,10 +131,8 @@ namespace Tangerine.UI
 				this.chartVisibilityControllers.UpdateGcChartsSetVisible(args.Value);
 			renderGcChartsCheckBox.Changed += args =>
 				this.chartVisibilityControllers.RenderGcChartsSetVisible(args.Value);
-			mainTheadTimelineCheckBox.Changed += args =>
-				this.timelineVisibilityControllers.MainThreadTimelineSetVisible(args.Value);
-			renderTheadTimelineCheckBox.Changed += args =>
-				this.timelineVisibilityControllers.RenderThreadTimelineSetVisible(args.Value);
+			cpuTimelineCheckBox.Changed += args =>
+				this.timelineVisibilityControllers.CpuTimelineSetVisible(args.Value);
 			gpuTimelineCheckBox.Changed += args =>
 				this.timelineVisibilityControllers.GpuTimelineSetVisible(args.Value);
 		}

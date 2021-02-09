@@ -1,4 +1,4 @@
-﻿// ReSharper disable CompareOfFloatsByEqualityOperator
+// ReSharper disable CompareOfFloatsByEqualityOperator
 
 #if PROFILER
 
@@ -27,7 +27,7 @@ namespace Tangerine.UI.Timelines
 		/// <summary>
 		/// Duration of a time interval in microseconds in which all timeline content can be placed.
 		/// </summary>
-		protected float ContentDuration { get; private set; }
+		public float ContentDuration { get; private set; }
 
 		protected float OriginalMicrosecondsPerPixel => ContentDuration / Width;
 		

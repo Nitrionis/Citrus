@@ -56,24 +56,36 @@ namespace Tangerine.UI
 			LegendItemDescription CreateFloatLegendItem(string name) =>
 				new LegendItemDescription {
 					Label = name,
-					ValueFormat = "{0:0.00}"
+					ValueFormat = "{0:00.00}"
 				};
 			LegendItemDescription CreateIntLegendItem(string name) =>
 				new LegendItemDescription {
 					Label = name,
 					ValueFormat = "{0:0.}"
 				};
+			Widget CreateChartsBackground(Widget widget) {
+				const float maxChartsWidth = (HistorySize - 1) * ControlPointsSpacing;
+				widget.MaxWidth = maxChartsWidth;
+				return new Widget {
+					Layout = new HBoxLayout(),
+					Presenter = new WidgetFlatFillPresenter(Theme.Colors.ControlBorder),
+					Anchors = Anchors.LeftRight,
+					MaxWidth = float.PositiveInfinity,
+					Nodes = {widget, Spacer.HStretch()}
+				};
+			}
 			ChartsInfo<LineCharts> CreateLineCharts(string name, ChartsLegend.ItemDescription[] items) {
 				var chartsGroup = new LineCharts(GetParameters(items.Length)) { IndependentScaling = true };
 				var linesContainer = new LinesContainer(1, new EmptyScaleProvider());
 				var chartsLegend = new ChartsLegend(new [] { chartsGroup }, items);
+				var chartsContainer = new ChartsContainer(new Widget[] { linesContainer, chartsGroup }) {
+					BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground
+				};
 				chartsGroup.SliceSelected += OnSliceSelected;
 				return new ChartsInfo<LineCharts> {
 					ChartsGroup = chartsGroup,
 					ChartsLegend = chartsLegend,
-					ChartsContainer = new ChartsContainer(new Widget[] { linesContainer, chartsGroup }) {
-						BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground
-					},
+					ChartsContainer = CreateChartsBackground(chartsContainer),
 					LegendWrapper = CreateLegendWrapper(name, chartsLegend),
 					LinesContainer = linesContainer
 				};
@@ -82,13 +94,14 @@ namespace Tangerine.UI
 				var chartsGroup = new StackedAreaCharts(GetParameters(items.Length));
 				var linesContainer = new LinesContainer(5, new StackedAreaChartsScaleProvider(chartsGroup));
 				var chartsLegend = new ChartsLegend(new [] { chartsGroup }, items);
+				var chartsContainer = new ChartsContainer(new Widget[] { linesContainer, chartsGroup }) {
+					BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground
+				};
 				chartsGroup.SliceSelected += OnSliceSelected;
 				return new ChartsInfo<StackedAreaCharts> {
 					ChartsGroup = chartsGroup,
 					ChartsLegend = chartsLegend,
-					ChartsContainer = new ChartsContainer(new Widget[] { linesContainer, chartsGroup }) {
-						BackgroundColor = ColorTheme.Current.Profiler.ChartsBackground
-					},
+					ChartsContainer = CreateChartsBackground(chartsContainer),
 					LegendWrapper = CreateLegendWrapper(name, chartsLegend),
 					LinesContainer = linesContainer
 				};
@@ -516,7 +529,7 @@ namespace Tangerine.UI
 			public ChartsLegend ChartsLegend;
 			public ChartsType ChartsGroup;
 			public LinesContainer LinesContainer;
-			public ChartsContainer ChartsContainer;
+			public Widget ChartsContainer;
 		}
 		
 		private struct ExtendedFrame

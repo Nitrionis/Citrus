@@ -33,11 +33,6 @@ namespace Tangerine.UI.Timelines
 		/// Not scalable height in pixels of one time interval.
 		/// </summary>
 		public float TimeIntervalHeight;
-			
-		/// <summary>
-		/// Mouse position relative to widget with time intervals.
-		/// </summary>
-		public Vector2 LocalMousePosition;
 
 		public PeriodPositions.SpacingParameters SpacingParameters => 
 			new PeriodPositions.SpacingParameters {

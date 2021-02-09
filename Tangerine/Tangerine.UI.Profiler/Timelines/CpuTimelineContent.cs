@@ -40,7 +40,7 @@ namespace Tangerine.UI.Timelines
 				 await waitingTask;
 				 contentBuilder.Mode = mode;
 			});
-			return RebuildAsync(LastRequestedFrame, task, LastRequestedFilter);
+			return RebuildAsync(LastRequestedFrame, task, LastRequestedFilter, LastRequestedSpacingParameters);
 		}
 
 		private class AsyncContentBuilder : IAsyncContentBuilder<CpuUsage>
@@ -55,6 +55,7 @@ namespace Tangerine.UI.Timelines
 			private readonly List<Rectangle> cachedRectangles;
 			private readonly uint[] colorsPackRasterizationTarget;
 			private readonly uint[] usageReasonToColors;
+			private readonly Func<List<float>> freeSpaceOfLinesGetter;
 			
 			private Item[] items;
 			private int itemsCount;
@@ -68,12 +69,14 @@ namespace Tangerine.UI.Timelines
 				cachedRectangles = new List<Rectangle>();
 				colorsPackRasterizationTarget = new uint[ColorIndicesPack.MaxColorsCount];
 				usageReasonToColors = CpuTimelineColorSet.GetUsageReasonColorIndices();
+				var freeSpaceOfLines = new List<float>();
+				freeSpaceOfLinesGetter = () => freeSpaceOfLines;
 			}
 
 			public IEnumerable<Rectangle> GetRectangles(TimePeriod timePeriod)
 			{
 				float microsecondsPerPixel = 
-					timelineContent.SpacingParameters.MicrosecondsPerPixel;
+					timelineContent.AsyncSpacingParameters.MicrosecondsPerPixel;
 				float minX = timePeriod.StartTime / microsecondsPerPixel;
 				float maxX = timePeriod.FinishTime / microsecondsPerPixel;
 				foreach (var rectangle in cachedRectangles) {
@@ -88,7 +91,7 @@ namespace Tangerine.UI.Timelines
 			public IEnumerable<ItemLabel> GetVisibleLabels(TimePeriod timePeriod)
 			{
 				float pixelsPerMicrosecond = 
-					1f / timelineContent.SpacingParameters.MicrosecondsPerPixel;
+					1f / timelineContent.AsyncSpacingParameters.MicrosecondsPerPixel;
 				for (int i = 0; i < itemsCount; i++) {
 					var label = items[i].CreateItemLabel();
 					if (
@@ -113,24 +116,23 @@ namespace Tangerine.UI.Timelines
 				}
 			}
 
-			public Color4[] RebuildAsync(FrameDataResponse frameData, Filter<CpuUsage> filter)
+			public (float, Color4[]) RebuildAsync(FrameDataResponse frameData, Filter<CpuUsage> filter)
 			{
-				if (!frameData.IsSucceed) {
-					return null;
-				}
-				
 				itemsCount = 0;
 				cachedRectangles.Clear();
+				if (!frameData.IsSucceed) {
+					return (0, null);
+				}
 				var clipboard = frameData.Clipboard;
 				
 				var usages = GetUsages(clipboard.UpdateCpuUsages, clipboard.RenderCpuUsages) ;
-				var spacingParameters = timelineContent.SpacingParameters;
+				var spacingParameters = timelineContent.AsyncSpacingParameters;
 				
 				long stopwatchFrequency = frameData.ProfiledFrame.StopwatchFrequency;
 				long updateThreadStartTime = frameData.ProfiledFrame.UpdateThreadStartTime;
 				
 				var periods = GetPeriods(usages, updateThreadStartTime, stopwatchFrequency);
-				var positions = new PeriodPositions(periods, spacingParameters);
+				var positions = new PeriodPositions(periods, spacingParameters, freeSpaceOfLinesGetter);
 				
 				float ticksPerMicrosecond = stopwatchFrequency / 1000f;
 				TimePeriod UsageToTimePeriod(CpuUsage usage) => new TimePeriod(
@@ -177,9 +179,11 @@ namespace Tangerine.UI.Timelines
 				foreach (var (usage, position) in clipboard.RenderCpuUsages.Zip(positions, Tuple.Create)) {
 					CreateItem(usage, clipboard.RenderOwnersPool, position);
 				}
-				return Mode == TimelineMode.Default ? 
-					CpuTimelineColorSet.GetDefaultModeColors() : 
-					CpuTimelineColorSet.GetBatchBreakReasonsColors();
+				return (
+					PeriodPositions.GetContentHeight(spacingParameters, freeSpaceOfLinesGetter()), 
+					Mode == TimelineMode.Default ? 
+						CpuTimelineColorSet.GetDefaultModeColors() : 
+						CpuTimelineColorSet.GetBatchBreakReasonsColors());
 			}
 
 			private IEnumerable<CpuUsage> GetUsages(
@@ -194,11 +198,14 @@ namespace Tangerine.UI.Timelines
 				}
 			}
 
-			public void RescaleItemsAsync()
+			public float RescaleItemsAsync()
 			{
 				cachedRectangles.Clear();
-				var spacingParameters = timelineContent.SpacingParameters;
-				var positions = new PeriodPositions(GetCachedPeriods(), spacingParameters).GetEnumerator();
+				var spacingParameters = timelineContent.AsyncSpacingParameters;
+				var positions = new PeriodPositions(
+					GetCachedPeriods(), 
+					spacingParameters, 
+					freeSpaceOfLinesGetter).GetEnumerator();
 				positions.MoveNext();
 				for (int i = 0; i < itemsCount; i++, positions.MoveNext()) {
 					var position = positions.Current;
@@ -210,11 +217,12 @@ namespace Tangerine.UI.Timelines
 					items[i] = item;
 					CreateRectanglesFor(item, position);
 				}
+				return PeriodPositions.GetContentHeight(spacingParameters, freeSpaceOfLinesGetter());
 			}
 
 			private void CreateRectanglesFor(Item item, Vector2 position)
 			{
-				var spacingParameters = timelineContent.SpacingParameters;
+				var spacingParameters = timelineContent.AsyncSpacingParameters;
 				uint colorsCount = item.ColorIndicesPack.RasterizeTo(colorsPackRasterizationTarget);
 				var rectangleSize = new Vector2(
 					x: item.TimePeriod.Duration / spacingParameters.MicrosecondsPerPixel,

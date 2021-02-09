@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Security.AccessControl;
 using System.Threading;
 using System.Threading.Tasks;
 using Lime;
@@ -13,6 +14,16 @@ namespace Tangerine.UI.Timelines
 	using Task = System.Threading.Tasks.Task;
 	using SpacingParameters = PeriodPositions.SpacingParameters;
 	using OwnersPool = RingPool<ReferenceTable.RowIndex>;
+
+	internal struct EmptyData {}
+
+	internal struct ContentChanges<T>
+	{
+		public bool IsTaskSkipped;
+		public SpacingParameters SpacingParameters;
+		public float ContentHeight;
+		public T Value;
+	}
 	
 	internal class TimelineContent
 	{
@@ -29,21 +40,24 @@ namespace Tangerine.UI.Timelines
 		/// this method. Otherwise we get undefined behavior.
 		/// </param>
 		/// <returns>
-		/// Colors for timeline material. 
+		/// Content height and colors for timeline material.
 		/// </returns>
 		/// <remarks>
 		/// This method will not be called in parallel.
 		/// Returns null if rebuilding was canceled.
 		/// </remarks>
-		Color4[] RebuildAsync(FrameDataResponse frameData, TimelineContent.Filter<TItem> filter);
+		(float, Color4[]) RebuildAsync(FrameDataResponse frameData, TimelineContent.Filter<TItem> filter);
 
 		/// <summary>
 		/// Updates elements locations.
 		/// </summary>
+		/// <returns>
+		/// Content height.
+		/// </returns>
 		/// <remarks>
 		/// This method will not be called in parallel.
 		/// </remarks>
-		void RescaleItemsAsync();
+		float RescaleItemsAsync();
 	}
 
 	internal abstract class TimelineContent<TUsage, TLabel> : TimelineContent
@@ -60,15 +74,21 @@ namespace Tangerine.UI.Timelines
 		protected long LastRequestedFrame { get; private set; }
 		
 		protected Filter<TUsage> LastRequestedFilter { get; private set; }
+
+		protected SpacingParameters LastRequestedSpacingParameters { get; private set; }
 		
-		public SpacingParameters SpacingParameters { get; private set; }
+		private readonly Action<SpacingParameters> SpacingParametersSetter;
+		
+		/// <remarks>Data for asynchronous code.</remarks>
+		public SpacingParameters AsyncSpacingParameters { get; private set; }
 		
 		protected TimelineContent(SpacingParameters spacingParameters)
 		{
-			SpacingParameters = spacingParameters;
+			AsyncSpacingParameters = spacingParameters;
 			actualRebuildIdGetter = () => Interlocked.Read(ref newestRebuildTaskId);
 			actualHitTestIdGetter = () => Interlocked.Read(ref newestRescaleTaskId);
 			NewestContentModificationTask = Task.CompletedTask;
+			SpacingParametersSetter = s => AsyncSpacingParameters = s;
 		}
 		
 		public abstract IEnumerable<Rectangle> GetRectangles(TimePeriod timePeriod);
@@ -77,37 +97,64 @@ namespace Tangerine.UI.Timelines
 		
 		public abstract IEnumerable<TimelineHitTest.ItemInfo> GetHitTestTargets();
 
-		public Task<Color4[]> RebuildAsync(long frameIndex, Task waitingTask, Filter<TUsage> filter)
+		public Task<ContentChanges<Color4[]>> RebuildAsync(
+			long frameIndex, 
+			Task waitingTask, 
+			Filter<TUsage> filter,
+			SpacingParameters spacingParameters)
 		{
 			LastRequestedFrame = frameIndex;
 			LastRequestedFilter = filter;
+			LastRequestedSpacingParameters = spacingParameters;
 			long currentTaskId = Interlocked.Increment(ref newestRebuildTaskId);
 			var contentBuilder = GetContentBuilder();
 			var frameProcessor = new AsyncFrameProcessor(
 				Task.WhenAll(waitingTask, NewestContentModificationTask),
-				currentTaskId,
-				actualRebuildIdGetter,
+				new TaskIdInfo {
+					SelfRebuildId = currentTaskId,
+					ActualRebuildIdGetter = actualRebuildIdGetter
+				},
 				contentBuilder,
-				filter);
+				filter,
+				new SpacingInfo {
+					SpacingParameters = spacingParameters,
+					Setter = SpacingParametersSetter
+				});
 			ProfilerTerminal.GetFrame(frameIndex, frameProcessor);
 			NewestContentModificationTask = frameProcessor.Completed;
 			return frameProcessor.Completed;
 		}
 
-		public Task SetSpacingParametersAsync(Task waitingTask, SpacingParameters spacingParameters)
+		public Task<ContentChanges<EmptyData>> SetSpacingParametersAsync(
+			Task waitingTask, 
+			SpacingParameters spacingParameters)
 		{
+			LastRequestedSpacingParameters = spacingParameters;
+			long currentRebuildId = newestRebuildTaskId;
 			long currentTaskId = Interlocked.Increment(ref newestRescaleTaskId);
 			var previousContentModificationTask = NewestContentModificationTask;
 			var contentBuilder = GetContentBuilder();
-			NewestContentModificationTask = Task.Run(async () => {
+			var task = Task.Run(async () => {
 				await waitingTask;
 				await previousContentModificationTask;
-				if (currentTaskId == actualHitTestIdGetter()) {
-					SpacingParameters = spacingParameters;
+				if (
+					currentTaskId == actualHitTestIdGetter() &&
+					currentRebuildId == actualRebuildIdGetter()
+					) 
+				{
+					AsyncSpacingParameters = spacingParameters;
 					contentBuilder.RescaleItemsAsync();
+					return new ContentChanges<EmptyData> {
+						IsTaskSkipped = false, 
+						SpacingParameters = spacingParameters
+					};
 				}
+				return new ContentChanges<EmptyData> {
+					IsTaskSkipped = true
+				};
 			});
-			return NewestContentModificationTask;
+			NewestContentModificationTask = task;
+			return task;
 		}
 		
 		protected abstract IAsyncContentBuilder<TUsage> GetContentBuilder();
@@ -115,27 +162,27 @@ namespace Tangerine.UI.Timelines
 		private class AsyncFrameProcessor : AsyncResponseProcessor<FrameDataResponse>
 		{
 			private readonly Task waitingTask;
-			private readonly long selfRebuildId;
-			private readonly Func<long> actualRebuildIdGetter;
+			private readonly TaskIdInfo idInfo;
 			private readonly IAsyncContentBuilder<TUsage> contentBuilder;
-			private readonly TaskCompletionSource<Color4[]> taskCompletionSource;
 			private readonly TimelineContent.Filter<TUsage> filter;
+			private readonly SpacingInfo spacingInfo;
+			private readonly TaskCompletionSource<ContentChanges<Color4[]>> taskCompletionSource;
 			
-			public Task<Color4[]> Completed => taskCompletionSource.Task;
+			public Task<ContentChanges<Color4[]>> Completed => taskCompletionSource.Task;
 
 			public AsyncFrameProcessor(
 				Task waitingTask,
-				long selfRebuildId,
-				Func<long> actualRebuildIdGetter,
+				TaskIdInfo idInfo,
 				IAsyncContentBuilder<TUsage> contentBuilder,
-				TimelineContent.Filter<TUsage> filter)
+				TimelineContent.Filter<TUsage> filter,
+				SpacingInfo spacingInfo)
 			{
 				this.waitingTask = waitingTask;
 				this.contentBuilder = contentBuilder;
-				this.selfRebuildId = selfRebuildId;
-				this.actualRebuildIdGetter = actualRebuildIdGetter;
+				this.idInfo = idInfo;
 				this.filter = filter;
-				taskCompletionSource = new TaskCompletionSource<Color4[]>(
+				this.spacingInfo = spacingInfo;
+				taskCompletionSource = new TaskCompletionSource<ContentChanges<Color4[]>>(
 					TaskCreationOptions.RunContinuationsAsynchronously);
 			}
 			
@@ -144,12 +191,31 @@ namespace Tangerine.UI.Timelines
 				if (waitingTask != null) {
 					await waitingTask;
 				}
+				spacingInfo.Setter(spacingInfo.SpacingParameters);
+				float contentHeight = 0;
 				Color4[] colors = null;
-				if (selfRebuildId == actualRebuildIdGetter()) {
-					colors = contentBuilder.RebuildAsync(response, filter);
+				if (idInfo.SelfRebuildId == idInfo.ActualRebuildIdGetter()) {
+					(contentHeight, colors) = contentBuilder.RebuildAsync(response, filter);
 				}
-				taskCompletionSource.SetResult(colors);
+				taskCompletionSource.SetResult(new ContentChanges<Color4[]> {
+					IsTaskSkipped = colors == null,
+					SpacingParameters = spacingInfo.SpacingParameters,
+					ContentHeight = contentHeight,
+					Value = colors
+				});
 			}
+		}
+		
+		private struct TaskIdInfo
+		{
+			public long SelfRebuildId;
+			public Func<long> ActualRebuildIdGetter;
+		}
+		
+		private struct SpacingInfo
+		{
+			public SpacingParameters SpacingParameters;
+			public Action<SpacingParameters> Setter;
 		}
 	}
 }

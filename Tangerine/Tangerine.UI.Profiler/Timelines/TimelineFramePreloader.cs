@@ -10,19 +10,26 @@ namespace Tangerine.UI.Timelines
 	{
 		private Task<FrameDataResponse> newestTask;
 
+		private static ProfiledFrame InvalidFrame => new ProfiledFrame { Identifier = -1 };
+		
 		public bool IsAttemptCompleted
 		{
 			get
 			{
 				if (newestTask != null && newestTask.IsCompleted) {
-					Frame = newestTask.Result.ProfiledFrame;
+					var data = newestTask.Result;
+					if (data.IsSucceed) {
+						Frame = newestTask.Result.ProfiledFrame;
+					} else {
+						Frame = InvalidFrame;
+					}
 					return true;
 				}
 				return false;
 			}
 		}
-		
-		public ProfiledFrame Frame { get; private set; }
+
+		public ProfiledFrame Frame { get; private set; } = InvalidFrame;
 
 		public void Load(long frameIdentifier)
 		{
