@@ -1,4 +1,4 @@
-﻿#if PROFILER
+#if PROFILER
 
 namespace Tangerine.UI.Timelines
 {
@@ -31,7 +31,8 @@ namespace Tangerine.UI.Timelines
 				}
 				return colorSlotIndex;
 			} else {
-				return InternalData;
+				rasterizationTarget[0] = InternalData;
+				return 1;
 			}
 		}
 

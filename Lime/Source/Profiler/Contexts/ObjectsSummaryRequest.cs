@@ -43,10 +43,6 @@ namespace Lime.Profiler.Contexts
 
 		private void Execute(IProfilerDatabase database, BinaryWriter writer, ITypeIdentifiersCache types)
 		{
-			if (IsRunning) {
-				throw new InvalidOperationException("Profiler: The request execution has already started!");
-			}
-			IsRunning = true;
 			var serializer = new BinarySerializer();
 			Regex regexp = null;
 			try {

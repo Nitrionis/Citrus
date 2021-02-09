@@ -39,10 +39,6 @@ namespace Lime.Profiler.Contexts
 		/// <inheritdoc/>
 		public void FetchData(IProfilerDatabase database, BinaryWriter writer)
 		{
-			if (IsRunning) {
-				throw new InvalidOperationException("Profiler: The request execution has already started!");
-			}
-			IsRunning = true;
 			var serializer = new BinarySerializer();
 			var frame = database.GetFrame(FrameIdentifier);
 			bool canAccessFrame = frame != null;
@@ -54,21 +50,21 @@ namespace Lime.Profiler.Contexts
 						dictionary.EnsureKeyValuePairFor(usage.TypeIdentifier);
 						writer.Write((uint)usage.Reason);
 						writer.Write(usage.TypeIdentifier.Value);
-						writer.Write(usage.Owners.PackedData);
 						writer.Write(usage.StartTime);
 						writer.Write(usage.FinishTime);
+						writer.Write(usage.Owners.PackedData);
 						SerializeOwners(usage.Owners, pool, database.NativeReferenceTable, writer);
 					}
 					void SerializeGpuUsage(GpuUsage usage, RingPool<ReferenceTable.RowIndex> pool) {
 						dictionary.EnsureKeyValuePairFor(usage.MaterialTypeIdentifier);
 						writer.Write(usage.MaterialTypeIdentifier.Value);
 						writer.Write(usage.RenderPassIndex);
-						writer.Write(usage.Owners.PackedData);
 						writer.Write(usage.StartTime);
 						writer.Write(usage.AllPreviousFinishTime);
 						writer.Write(usage.FinishTime);
 						writer.Write(usage.TrianglesCount);
 						writer.Write(usage.VerticesCount);
+						writer.Write(usage.Owners.PackedData);
 						SerializeOwners(usage.Owners, pool, database.NativeReferenceTable, writer);
 					}
 					for (int i = 0; i < requiredDescriptions.Length; i++) {
@@ -93,7 +89,7 @@ namespace Lime.Profiler.Contexts
 						writer.Write(i);
 						var description = database.NativeReferenceTable[i];
 						writer.Write(description.IsPartOfScene);
-						writer.Write(description.ObjectName);
+						writer.Write(description.ObjectName ?? "");
 						writer.Write(description.TypeName);
 						writer.Write(description.ParentRowIndex.Value);
 					}
@@ -108,18 +104,18 @@ namespace Lime.Profiler.Contexts
 			void RequestDescription(ReferenceTable.RowIndex rowIndex) {
 				while (rowIndex.IsValid) {
 					if (rowIndex.Value >= requiredDescriptions.Length) {
-						int newLength = Math.Max(1 + (int) rowIndex.Value, 2 * requiredDescriptions.Length);
+						int newLength = Math.Max(1 + (int)rowIndex.Value, 2 * requiredDescriptions.Length);
 						Array.Resize(ref requiredDescriptions, newLength);
 					}
-
+					if (requiredDescriptions[rowIndex.Value]) {
+						break;
+					}
 					requiredDescriptions[rowIndex.Value] = true;
-					var parentRowIndex = table[rowIndex.Value].ParentRowIndex;
-					rowIndex = requiredDescriptions[parentRowIndex.Value] ? 
-						ReferenceTable.RowIndex.Invalid : parentRowIndex;
+					rowIndex = table[rowIndex.Value].ParentRowIndex;
 				}
 			}
 			if (!owners.IsEmpty) {
-				if (owners.IsListDescriptor && !owners.AsListDescriptor.IsNull) {
+				if (owners.IsListDescriptor) {
 					writer.Write(pool.GetLength(owners.AsListDescriptor));
 					foreach (var owner in pool.Enumerate(owners.AsListDescriptor)) {
 						RequestDescription(owner);
@@ -142,13 +138,15 @@ namespace Lime.Profiler.Contexts
 	internal class FrameDataResponseBuilder : IDataSelectionResponseBuilder
 	{
 		private static uint nextRowIndex;
-		private static uint[] ownersRedirection;
-		
-		[YuzuMember]
-		public bool IsSucceed { get; }
+		private static uint[] ownersRedirection = new uint[16];
 
 		[YuzuMember]
-		public ProfiledFrame ProfiledFrame { get; }
+		public bool IsSucceed { get; set; }
+
+		[YuzuMember]
+		public ProfiledFrame ProfiledFrame { get; set; }
+
+		public FrameDataResponseBuilder() {}
 
 		public FrameDataResponseBuilder(bool isSucceed, ProfiledFrame profiledFrame)
 		{
@@ -159,7 +157,7 @@ namespace Lime.Profiler.Contexts
 		/// <inheritdoc/>
 		public IDataSelectionResponse Build(FrameClipboard clipboard, BinaryReader reader)
 		{
-			CpuUsage DeserializeCpuUsage(RingPool<ReferenceTable.RowIndex> ownersPool) {
+			CpuUsage DeserializeCpuUsage(OwnersPool ownersPool) {
 				var usage = new CpuUsage {
 					Reason = (CpuUsage.Reasons)reader.ReadUInt32(),
 					TypeIdentifier = new TypeIdentifier(reader.ReadInt32()),
@@ -169,7 +167,7 @@ namespace Lime.Profiler.Contexts
 				};
 				return usage;
 			}
-			GpuUsage DeserializeGpuUsage(RingPool<ReferenceTable.RowIndex> ownersPool) {
+			GpuUsage DeserializeGpuUsage(OwnersPool ownersPool) {
 				var usage = new GpuUsage {
 					MaterialTypeIdentifier = new TypeIdentifier(reader.ReadInt32()),
 					RenderPassIndex = reader.ReadInt32(),
@@ -182,32 +180,17 @@ namespace Lime.Profiler.Contexts
 				};
 				return usage;
 			}
-			Owners DeserializeOwners(RingPool<ReferenceTable.RowIndex> ownersPool) {
-				ReferenceTable.RowIndex ReflectRowIndex() {
-					uint rowIndex = reader.ReadUInt32();
-					if (rowIndex >= ownersRedirection.Length) {
-						int oldLength = ownersRedirection.Length;
-						int newLength = Math.Max(
-							1 + (int)rowIndex,
-							2 * ownersRedirection.Length);
-						Array.Resize(ref ownersRedirection, newLength);
-						for (int i = oldLength; i < newLength; i++) {
-							ownersRedirection[i] = Owners.InvalidData;
-						}
-					}
-					return (ReferenceTable.RowIndex)(ownersRedirection[rowIndex] == Owners.InvalidData ?
-						(ownersRedirection[rowIndex] = nextRowIndex++) : ownersRedirection[rowIndex]);
-				}
+			Owners DeserializeOwners(OwnersPool ownersPool) {
 				var owners = new Owners(reader.ReadUInt32());
 				if (!owners.IsEmpty) {
-					if (owners.IsListDescriptor && !owners.AsListDescriptor.IsNull) {
+					if (owners.IsListDescriptor) {
 						uint length = reader.ReadUInt32();
 						owners.AsListDescriptor = ownersPool.AcquireList();
 						for (int i = 0; i < length; i++) {
-							ownersPool.AddToNewestList(ReflectRowIndex());
+							ownersPool.AddToNewestList(ReflectRowIndex(reader.ReadUInt32()));
 						}
 					} else {
-						owners.AsIndex = ReflectRowIndex();
+						owners.AsIndex = ReflectRowIndex(owners.AsIndex.Value);
 					}
 				}
 				return owners;
@@ -230,18 +213,21 @@ namespace Lime.Profiler.Contexts
 			var deserializer = new BinaryDeserializer();
 			var updateCpuUsagesCount = reader.ReadUInt32();
 			var updateCpuUsages = clipboard.UpdateCpuUsages;
+			updateCpuUsages.Clear();
 			for (int i = 0; i < updateCpuUsagesCount; i++) {
-				updateCpuUsages[i] = DeserializeCpuUsage(updateOwnersPool);
+				updateCpuUsages.Add(DeserializeCpuUsage(updateOwnersPool));
 			}
 			var renderCpuUsagesCount = reader.ReadUInt32();
 			var renderCpuUsages = clipboard.RenderCpuUsages;
+			renderCpuUsages.Clear();
 			for (int i = 0; i < renderCpuUsagesCount; i++) {
-				renderCpuUsages[i] = DeserializeCpuUsage(renderOwnersPool);
+				renderCpuUsages.Add(DeserializeCpuUsage(renderOwnersPool));
 			}
 			var gpuUsagesCount = reader.ReadUInt32();
 			var gpuUsages = clipboard.GpuUsages;
+			gpuUsages.Clear();
 			for (int i = 0; i < gpuUsagesCount; i++) {
-				gpuUsages[i] = DeserializeGpuUsage(renderOwnersPool);
+				gpuUsages.Add(DeserializeGpuUsage(renderOwnersPool));
 			}
 			clipboard.TypesDictionary = deserializer.FromReader<TypesDictionary>(reader);
 			if (!(clipboard.ReferenceTable is DeserializableReferenceTable)) {
@@ -253,6 +239,24 @@ namespace Lime.Profiler.Contexts
 				ProfiledFrame = ProfiledFrame,
 				Clipboard = clipboard
 			};
+		}
+
+		private static ReferenceTable.RowIndex ReflectRowIndex(uint rowIndex) {
+			if (rowIndex == ReferenceTable.RowIndex.Invalid.Value) {
+				return ReferenceTable.RowIndex.Invalid;
+			}
+			if (rowIndex >= ownersRedirection.Length) {
+				int oldLength = ownersRedirection.Length;
+				int newLength = Math.Max(
+					1 + (int)rowIndex,
+					2 * ownersRedirection.Length);
+				Array.Resize(ref ownersRedirection, newLength);
+				for (int i = oldLength; i < newLength; i++) {
+					ownersRedirection[i] = ReferenceTable.RowIndex.Invalid.Value;
+				}
+			}
+			return (ReferenceTable.RowIndex)(ownersRedirection[rowIndex] == ReferenceTable.RowIndex.Invalid.Value ?
+				(ownersRedirection[rowIndex] = nextRowIndex++) : ownersRedirection[rowIndex]);
 		}
 
 		private class DeserializableReferenceTable : ReferenceTable
@@ -268,7 +272,7 @@ namespace Lime.Profiler.Contexts
 				}
 				uint nativeIndex;
 				while ((nativeIndex = reader.ReadUInt32()) != uint.MaxValue) {
-					uint index = ownersRedirection[nativeIndex];
+					uint index = ReflectRowIndex(nativeIndex).Value;
 					var description = (rows[index].ObjectDescription as ObjectDescription) ?? new ObjectDescription();
 					description.IsPartOfScene = reader.ReadBoolean();
 					description.ObjectName = reader.ReadString();

@@ -151,8 +151,13 @@ namespace Tangerine.UI.Timelines
 		{
 			relativeScale = MicrosecondsPerPixel / microsecondsPerPixel;
 			if (preloader.IsAttemptCompleted) {
-				if (activeFrameIdentifier != preloader.Frame.Identifier) {
-					activeFrameIdentifier = preloader.Frame.Identifier;
+				var frame = preloader.Frame;
+				if (activeFrameIdentifier != frame.Identifier) {
+					activeFrameIdentifier = frame.Identifier;
+					ResetScale(
+						(frame.RenderThreadStartTime +
+						 frame.RenderBodyElapsedTicks -
+						 frame.UpdateThreadStartTime) / (frame.StopwatchFrequency / 1_000_000));
 					contentRebuildingTasks.Enqueue(
 						timelineContent.RebuildAsync(
 							preloader.Frame.Identifier,
@@ -194,6 +199,8 @@ namespace Tangerine.UI.Timelines
 							break;
 					}
 					isContentChanged = true;
+				} else {
+					break;
 				}
 			}
 			relativeScale = MicrosecondsPerPixel / microsecondsPerPixel;

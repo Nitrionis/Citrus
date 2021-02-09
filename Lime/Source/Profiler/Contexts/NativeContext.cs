@@ -58,7 +58,8 @@ namespace Lime.Profiler.Contexts
 		/// <inheritdoc />
 		public void MainWindowUpdating()
 		{
-			while (requests.Count > 0) {
+			bool isLoopBreakRequested = false;
+			while (requests.Count > 0 && !isLoopBreakRequested) {
 				switch (requests.Peek()) {
 					case IDataSelectionRequest dataSelectionRequest:
 						if (!dataSelectionRequest.IsRunning) {
@@ -72,19 +73,18 @@ namespace Lime.Profiler.Contexts
 							database.PreventProfilingWhileRunning(new Task(() => {
 								var responseProcessor = dataSelectionRequest.AsyncResponseProcessor;
 								if (shouldUseCachedResponse) {
-									ProcessResponse(lastFrameDataResponse, responseProcessor);
+									responseProcessor.ProcessResponseAsync(lastFrameDataResponse);
 								} else {
 									memoryStream.Position = 0;
 									dataSelectionRequest.FetchData(database, binaryWriter);
 									memoryStream.Position = 0;
 									var response = deserializer.FromReader(binaryReader);
-									if (response is FrameDataResponse frameDataResponse) {
-										lastFrameDataResponse = frameDataResponse;
-									}
-									ProcessResponse(lastFrameDataResponse, responseProcessor);
+									ProcessResponse(response, responseProcessor);
 								}
 								isDataSelectionRequestCompleted = true;
 							}));
+						} else {
+							isLoopBreakRequested = true;
 						}
 						if (isDataSelectionRequestCompleted) {
 							requests.Dequeue();
@@ -111,6 +111,9 @@ namespace Lime.Profiler.Contexts
 		{
 			if (response is IDataSelectionResponseBuilder dataResponse) {
 				var data = dataResponse.Build(frameClipboard, binaryReader);
+				if (data is FrameDataResponse frameDataResponse) {
+					lastFrameDataResponse = frameDataResponse;
+				}
 				asyncResponseProcessor.ProcessResponseAsync(data);
 			} else {
 				throw new System.Exception("Profiler: Wrong response!");

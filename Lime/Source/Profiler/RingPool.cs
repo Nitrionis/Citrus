@@ -15,7 +15,7 @@ namespace Lime.Profiler
 		public struct ListDescriptor
 		{
 			/// <remarks>~0x_8000_0000 is hack for compatibility with <see cref="Owners"/> struct.</remarks>
-			private const uint InvalidValue = uint.MaxValue & ~0x_8000_0000;
+			private const uint InvalidValue = ~0x_8000_0000;
 
 			/// <summary>
 			/// Creates an invalid descriptor.
@@ -416,7 +416,7 @@ namespace Lime.Profiler
 					items = pool.listsItems;
 					var redirection = pool.lists[descriptor.Value];
 					itemsCount = (int)redirection.Length;
-					itemIndex = (int)redirection.Offset + itemsCount - 1;
+					itemIndex = ((int)redirection.Offset + itemsCount - 1 + items.Length) % items.Length;
 					processedItemsCount = -1;
 					Current = new ListItemType();
 				}
