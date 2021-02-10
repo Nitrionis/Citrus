@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Lime.Profiler.Formatting;
 using Lime.Profiler.Graphics;
 using Lime.Profiler.Network;
+using Yuzu.Binary;
 
 namespace Lime.Profiler.Contexts
 {
@@ -18,6 +19,7 @@ namespace Lime.Profiler.Contexts
 	{
 		private readonly Client client;
 		private readonly ConcurrentQueue<object> requests;
+		private readonly BinarySerializer serializer;
 		
 		private IProfilerDatabase database;
 		private long lastProcessedFrame;
@@ -41,6 +43,7 @@ namespace Lime.Profiler.Contexts
 		public RemoteDatabaseContext(IPEndPoint ipEndPoint)
 		{
 			requests = new ConcurrentQueue<object>();
+			serializer = new BinarySerializer();
 			client = new Client(ipEndPoint, this);
 			shouldSendProfilerOptions = true;
 		}
@@ -152,7 +155,7 @@ namespace Lime.Profiler.Contexts
 		{
 			if (@object is IDataSelectionRequest dataSelectionRequest) {
 				try {
-					dataSelectionRequest.FetchData(database, writer);
+					dataSelectionRequest.FetchData(database, writer, serializer);
 				} finally {
 					taskCompletionSource.SetResult(true);
 				}

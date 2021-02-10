@@ -134,7 +134,7 @@ namespace Tangerine.UI.Timelines
 				var periods = GetPeriods(usages, updateThreadStartTime, stopwatchFrequency);
 				var positions = new PeriodPositions(periods, spacingParameters, freeSpaceOfLinesGetter);
 				
-				float ticksPerMicrosecond = stopwatchFrequency / 1000f;
+				float ticksPerMicrosecond = stopwatchFrequency / 1_000_000f;
 				TimePeriod UsageToTimePeriod(CpuUsage usage) => new TimePeriod(
 					startTime: (usage.StartTime - updateThreadStartTime) / ticksPerMicrosecond,
 					finishTime: (usage.FinishTime - updateThreadStartTime) / ticksPerMicrosecond);

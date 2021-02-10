@@ -4,6 +4,7 @@ using System.IO;
 using Lime.Profiler.Graphics;
 using Lime.Profiler.Network;
 using Yuzu;
+using Yuzu.Binary;
 
 namespace Lime.Profiler.Contexts
 {
@@ -45,7 +46,7 @@ namespace Lime.Profiler.Contexts
 		/// <remarks>
 		/// Profiling data collection and scene update will be paused before this method starts executing.
 		/// </remarks>
-		void FetchData(IProfilerDatabase database, BinaryWriter writer);
+		void FetchData(IProfilerDatabase database, BinaryWriter writer, BinarySerializer serializer);
 	}
 
 	/// <summary>

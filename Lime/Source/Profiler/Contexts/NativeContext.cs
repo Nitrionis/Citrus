@@ -16,6 +16,7 @@ namespace Lime.Profiler.Contexts
 		private readonly BinaryWriter binaryWriter;
 		private readonly BinaryReader binaryReader;
 		private readonly BinaryDeserializer deserializer;
+		private readonly BinarySerializer serializer;
 		private readonly Queue<IRequest> requests;
 		private readonly FrameClipboard frameClipboard;
 
@@ -37,6 +38,7 @@ namespace Lime.Profiler.Contexts
 			binaryWriter = new BinaryWriter(memoryStream);
 			binaryReader = new BinaryReader(memoryStream);
 			deserializer = new BinaryDeserializer();
+			serializer = new BinarySerializer();
 			requests = new Queue<IRequest>();
 			frameClipboard = new FrameClipboard();
 			isDataSelectionRequestCompleted = true;
@@ -76,7 +78,7 @@ namespace Lime.Profiler.Contexts
 									responseProcessor.ProcessResponseAsync(lastFrameDataResponse);
 								} else {
 									memoryStream.Position = 0;
-									dataSelectionRequest.FetchData(database, binaryWriter);
+									dataSelectionRequest.FetchData(database, binaryWriter, serializer);
 									memoryStream.Position = 0;
 									var response = deserializer.FromReader(binaryReader);
 									ProcessResponse(response, responseProcessor);

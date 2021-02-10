@@ -75,6 +75,8 @@ namespace Tangerine.UI
 					}
 				}
 			});
+			gpuChartsCheckBox.Checked = false;
+			gpuChartsCheckBox.Enabled = false;
 			Nodes.Add(new Widget {
 				Layout = new VBoxLayout(),
 				Nodes = {
@@ -85,12 +87,14 @@ namespace Tangerine.UI
 						Padding = new Thickness(4),
 						Layout = new VBoxLayout { Spacing = 4 },
 						Nodes = {
-							CreateCheckBox("CPU Main Thread", out var cpuTimelineCheckBox),
+							CreateCheckBox("CPU Main/Render Thread", out var cpuTimelineCheckBox),
 							CreateCheckBox("GPU (In developing)", out var gpuTimelineCheckBox),
 						}
 					}
 				}
 			});
+			gpuTimelineCheckBox.Checked = false;
+			gpuTimelineCheckBox.Enabled = false;
 			Nodes.Add(new Widget {
 				Layout = new VBoxLayout(),
 				Nodes = {
@@ -108,6 +112,8 @@ namespace Tangerine.UI
 					}
 				}
 			});
+			gpuProfilingCheckBox.Checked = false;
+			gpuProfilingCheckBox.Enabled = false;
 			Nodes.Add(Spacer.HFill());
 			Updating += delta => {
 				batchBreakReasonsCheckBox.Checked = ProfilerTerminal.BatchBreakReasonsRequired;

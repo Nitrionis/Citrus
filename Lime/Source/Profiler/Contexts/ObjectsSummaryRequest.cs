@@ -38,12 +38,11 @@ namespace Lime.Profiler.Contexts
 			AsyncResponseProcessor = asyncResponseProcessor;
 		}
 
-		public void FetchData(IProfilerDatabase database, BinaryWriter writer) =>
-			TypeIdentifiersCache.SafeAccess(types => Execute(database, writer, types));
+		public void FetchData(IProfilerDatabase database, BinaryWriter writer, BinarySerializer serializer) =>
+			TypeIdentifiersCache.SafeAccess(types => Execute(database, writer, types, serializer));
 
-		private void Execute(IProfilerDatabase database, BinaryWriter writer, ITypeIdentifiersCache types)
+		private void Execute(IProfilerDatabase database, BinaryWriter writer, ITypeIdentifiersCache types, BinarySerializer serializer)
 		{
-			var serializer = new BinarySerializer();
 			Regex regexp = null;
 			try {
 				regexp = new Regex(this.regexp);

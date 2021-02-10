@@ -31,6 +31,7 @@ namespace Tangerine.UI
 		private readonly ChartsInfo<LineCharts> renderGcCharts;
 
 		private int currentSliceIndex = -1;
+		private int unfilledSlicesCount = HistorySize - 1;
 
 		public event Action<long> FrameSelected; 
 		
@@ -143,13 +144,13 @@ namespace Tangerine.UI
 				};
 			}
 			updateCharts = CreateAreaCharts("Main Thread", new[] {
-				CreateFloatLegendItem("Update"),
-				CreateFloatLegendItem("Body"),
+				CreateFloatLegendItem("External Code"),
+				CreateFloatLegendItem("Internal Code"),
 				CreateFloatLegendItem("Selected")
 			});
 			renderCharts = CreateAreaCharts("Render Thread",new[] {
-				CreateFloatLegendItem("Render"),
-				CreateFloatLegendItem("Body"),
+				CreateFloatLegendItem("External code"),
+				CreateFloatLegendItem("Internal Code"),
 				CreateFloatLegendItem("Selected"),
 				CreateFloatLegendItem("Wait GPU")
 			});
@@ -158,7 +159,7 @@ namespace Tangerine.UI
 				CreateFloatLegendItem("Selected")
 			});
 			var geometryChartsDescriptions = new [] {
-				CreateIntLegendItem("Batching"),
+				CreateIntLegendItem("Saved By Batching"),
 				CreateIntLegendItem("Draw Calls"),
 				CreateIntLegendItem("Vertices"),
 				CreateIntLegendItem("Triangles"),
@@ -286,14 +287,13 @@ namespace Tangerine.UI
 
 		private void EnqueueFrameValuesToCharts(ProfiledFrame frame)
 		{
+			unfilledSlicesCount = Math.Max(unfilledSlicesCount - 1, 0);
 			history.Enqueue(new ExtendedFrame {
 				Frame = frame,
 				SelectedData = new SelectedData()
 			});
 			currentSliceIndex = currentSliceIndex >= 0 ? currentSliceIndex - 1 : -1;
-				
 			RemoteStopwatchExtension.Frequency = frame.StopwatchFrequency;
-
 			void MoveSlice(Line[] lines) {
 				lines[0].Start.X -= ControlPointsSpacing;
 				lines[0].End.X -= ControlPointsSpacing;
@@ -438,6 +438,9 @@ namespace Tangerine.UI
 					charts[1].Heights[i] = logarithmizedFull * selectedPercent;
 				}
 			}
+			updateCharts.ChartsGroup.Invalidate();
+			renderCharts.ChartsGroup.Invalidate();
+			gpuCharts.ChartsGroup.Invalidate();
 		}
 		
 		private void SetFrameValuesToLegend(ProfiledFrame frame, SelectedData selectedData)
@@ -473,7 +476,7 @@ namespace Tangerine.UI
 			legend.SetValue(frame.EndOfUpdateMemory, 0);
 			for (int i = 0; i < updateGcCharts.ChartsGroup.Charts.Count - 1; i++) {
 				var garbageCollections = frame.UpdateThreadGarbageCollections;
-				int gcCount = i < garbageCollections.Length ? garbageCollections[i] : 0;
+				int gcCount = i < (garbageCollections?.Length ?? -1) ? garbageCollections[i] : 0;
 				legend.SetValue(gcCount, i + 1);
 			}
 
@@ -505,7 +508,30 @@ namespace Tangerine.UI
 			SetSlicePosition(renderGcCharts.LinesContainer.Lines);
 			FrameSelected?.Invoke(data.Frame.Identifier);
 		}
-		
+
+		public void SetSlice(long frameIdentifier)
+		{
+			var firstFrameIdentifier = history.GetItem(0).Frame.Identifier;
+			currentSliceIndex = (int)Mathf.Clamp(frameIdentifier - firstFrameIdentifier + unfilledSlicesCount, -1, HistorySize);
+			float position = currentSliceIndex * ControlPointsSpacing;
+			void UpdateSlice(Line[] lines) {
+				lines[0].Start.X = position;
+				lines[0].End.X = position;
+			}
+			UpdateSlice(updateCharts.LinesContainer.Lines);
+			UpdateSlice(renderCharts.LinesContainer.Lines);
+			UpdateSlice(gpuCharts.LinesContainer.Lines);
+			UpdateSlice(sceneGeometryCharts.LinesContainer.Lines);
+			UpdateSlice(fullGeometryCharts.LinesContainer.Lines);
+			UpdateSlice(updateGcCharts.LinesContainer.Lines);
+			UpdateSlice(renderGcCharts.LinesContainer.Lines);
+			if (currentSliceIndex >= 0) {
+				var data = history.GetItem(currentSliceIndex);
+				SetFrameValuesToLegend(data.Frame, data.SelectedData);
+			}
+			FrameSelected?.Invoke(frameIdentifier);
+		}
+
 		private static float Logarithm(float value) => value <= 33.3f ? value :
 			33.3f + (float)(Math.Log((value - 33.3) / 8.0 + 2.0, 2) - 1) * 8;
 

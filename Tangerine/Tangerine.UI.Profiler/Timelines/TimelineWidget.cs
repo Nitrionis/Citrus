@@ -97,6 +97,7 @@ namespace Tangerine.UI.Timelines
 			leftContentBorder.MinMaxWidth = segmentWidth;
 			contentContainer.MinMaxWidth = segmentWidth;
 			rightContentBorder.MinMaxWidth = segmentWidth;
+			ruler.RulerScale = MicrosecondsPerPixel;
 			OnResetScale();
 		}
 
@@ -136,7 +137,7 @@ namespace Tangerine.UI.Timelines
 				bool isHorizontalMode = !Input.IsKeyPressed(Key.Shift) && !Input.IsKeyPressed(Key.Control);
 				horizontalScrollView.Behaviour.CanScroll = isHorizontalMode;
 				verticalScrollView.Behaviour.StopScrolling();
-				ruler.RulerOffset = horizontalScrollView.ScrollPosition;
+				ruler.RulerOffset = (horizontalScrollView.ScrollPosition * MicrosecondsPerPixel - ContentDuration);
 				yield return null;
 			}
 		}

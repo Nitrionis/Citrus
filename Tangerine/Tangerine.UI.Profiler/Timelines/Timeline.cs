@@ -27,7 +27,8 @@ namespace Tangerine.UI.Timelines
 		private long activeFrameIdentifier;
 		private bool isContentRebuildingRequired;
 		private bool isContentChanged;
-		private float microsecondsPerPixel;
+		private float contentMicrosecondsPerPixel;
+		private float requestedMicrosecondsPerPixel;
 		private float relativeScale;
 		private TimePeriod timePeriod;
 		
@@ -104,7 +105,8 @@ namespace Tangerine.UI.Timelines
 			horizontalScrollView.Content.Clicked += OnContentClicked;
 			Updated += delta => OnUpdated();
 
-			microsecondsPerPixel = 1f;
+			contentMicrosecondsPerPixel = 1f;
+			requestedMicrosecondsPerPixel = 1f;
 			relativeScale = 1f;
 
 			externalContentRebuildingRequests = new Queue<Func<Task, Task>>();
@@ -142,28 +144,34 @@ namespace Tangerine.UI.Timelines
 		{
 			float scrollPosition = horizontalScrollView.ScrollPosition;
 			return new TimePeriod {
-				StartTime = Math.Max(0, scrollPosition - ruler.SmallStepSize) / MicrosecondsPerPixel,
-				FinishTime = (scrollPosition + horizontalScrollView.Width) / MicrosecondsPerPixel
+				StartTime = Math.Max(0, scrollPosition - ruler.SmallStepSize) * MicrosecondsPerPixel,
+				FinishTime = (scrollPosition + horizontalScrollView.Width) * MicrosecondsPerPixel
 			};
 		}
 		
 		private void OnUpdated()
 		{
-			relativeScale = MicrosecondsPerPixel / microsecondsPerPixel;
+			relativeScale = MicrosecondsPerPixel / contentMicrosecondsPerPixel;
 			if (preloader.IsAttemptCompleted) {
 				var frame = preloader.Frame;
 				if (activeFrameIdentifier != frame.Identifier) {
 					activeFrameIdentifier = frame.Identifier;
-					ResetScale(
-						(frame.RenderThreadStartTime +
-						 frame.RenderBodyElapsedTicks -
-						 frame.UpdateThreadStartTime) / (frame.StopwatchFrequency / 1_000_000));
+					if (frame.StopwatchFrequency == 0) {
+						ResetScale(contentDuration: 1);
+					} else {
+						ResetScale(contentDuration:
+							(frame.RenderThreadStartTime +
+							 frame.RenderBodyElapsedTicks -
+							 frame.UpdateThreadStartTime) / (frame.StopwatchFrequency / 1_000_000));
+					}
+					var spacingParameters = SpacingParameters;
+					requestedMicrosecondsPerPixel = spacingParameters.MicrosecondsPerPixel;
 					contentRebuildingTasks.Enqueue(
 						timelineContent.RebuildAsync(
 							preloader.Frame.Identifier,
 							Task.WhenAll(contentReadingTasks),
 							Filter,
-							SpacingParameters));
+							spacingParameters));
 					contentReadingTasks.Clear();
 				} else {
 					ProcessContentRebuildingResults();
@@ -187,13 +195,13 @@ namespace Tangerine.UI.Timelines
 						case Task<ContentChanges<Color4[]>> t:
 							if (!t.Result.IsTaskSkipped) {
 								changedColors = t.Result.Value;
-								microsecondsPerPixel = t.Result.SpacingParameters.MicrosecondsPerPixel;
+								contentMicrosecondsPerPixel = t.Result.SpacingParameters.MicrosecondsPerPixel;
 								contentHeight = t.Result.ContentHeight;
 							}
 							break;
 						case Task<ContentChanges<EmptyData>> t:
 							if (!t.Result.IsTaskSkipped) {
-								microsecondsPerPixel = t.Result.SpacingParameters.MicrosecondsPerPixel;
+								contentMicrosecondsPerPixel = t.Result.SpacingParameters.MicrosecondsPerPixel;
 								contentHeight = t.Result.ContentHeight;
 							}
 							break;
@@ -203,7 +211,7 @@ namespace Tangerine.UI.Timelines
 					break;
 				}
 			}
-			relativeScale = MicrosecondsPerPixel / microsecondsPerPixel;
+			relativeScale = MicrosecondsPerPixel / contentMicrosecondsPerPixel;
 			verticalScrollView.Content.Height = contentHeight;
 			if (changedColors != null) {
 				SetColors(changedColors);
@@ -212,19 +220,23 @@ namespace Tangerine.UI.Timelines
 
 		public void RunContentRebuildingTasks()
 		{
-			if (Math.Abs(microsecondsPerPixel - MicrosecondsPerPixel) > 1e-2) {
+			if (Math.Abs(requestedMicrosecondsPerPixel - MicrosecondsPerPixel) > 1e-2) {
+				var spacingParameters = SpacingParameters;
+				requestedMicrosecondsPerPixel = spacingParameters.MicrosecondsPerPixel;
 				contentRebuildingTasks.Enqueue(timelineContent.SetSpacingParametersAsync(
 					Task.WhenAll(contentReadingTasks),
-					SpacingParameters));
+					spacingParameters));
 				contentReadingTasks.Clear();
 			}
 			if (isContentRebuildingRequired) {
 				isContentRebuildingRequired = false;
+				var spacingParameters = SpacingParameters;
+				requestedMicrosecondsPerPixel = spacingParameters.MicrosecondsPerPixel;
 				contentRebuildingTasks.Enqueue(timelineContent.RebuildAsync(
 					preloader.Frame.Identifier,
 					Task.WhenAll(contentReadingTasks),
 					Filter,
-					SpacingParameters));
+					spacingParameters));
 				contentReadingTasks.Clear();
 			}
 			while (externalContentRebuildingRequests.Count > 0) {
@@ -249,6 +261,9 @@ namespace Tangerine.UI.Timelines
 				contentReadingTasks.Enqueue(
 					timelineLabels.RebuildAsync(
 						timelineContent.GetVisibleLabels(timePeriod)));
+			}
+			while (contentReadingTasks.Count > 0 && contentReadingTasks.Peek().IsCompleted) {
+				contentReadingTasks.Dequeue();
 			}
 			isContentChanged = false;
 		}

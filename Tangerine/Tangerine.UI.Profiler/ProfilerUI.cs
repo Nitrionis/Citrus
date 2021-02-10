@@ -22,7 +22,10 @@ namespace Tangerine.UI
 		private readonly Vector4 recordButtonColor = new Color4(255, 87, 34).ToVector4();
 		private readonly Vector4 playButtonColor = new Color4(33, 150, 243).ToVector4();
 		private readonly Vector4 pauseButtonColor = new Color4(255, 152, 0).ToVector4();
-		
+
+		private long frameIdentifier;
+		private ProfiledFrame lastFrame;
+
 		public ProfilerUI()
 		{
 			chartsResponses = new Queue<ChartsDataResponseProcessor>();
@@ -79,13 +82,11 @@ namespace Tangerine.UI
 			previousFrameMaterial.Color = defaultButtonColor;
 			var (lastFrameButton, lastFrameMaterial) = CreateButton("Profiler.Last");
 			lastFrameMaterial.Color = defaultButtonColor;
-			Image CreateSearchIcon() => new Image(IconPool.GetTexture("Profiler.Search")) {
-				Material = new IconMaterial {
-					Color = defaultButtonColor
-				},
-				Padding = new Thickness(2),
-				MinMaxSize = new Vector2(22, 22),
-				Size = new Vector2(22, 22),
+			var (searchButton, searchMaterial) = CreateButton("Profiler.Updating");
+			searchMaterial.Color = defaultButtonColor;
+			var frameLabel = new ThemedSimpleText("#######") {
+				VAlignment = VAlignment.Center,
+				Padding = new Thickness(0, 4, 2, 0)
 			};
 			Nodes.Add(new Widget {
 				Presenter = new WidgetFlatFillPresenter(Theme.Colors.ControlBorder),
@@ -112,10 +113,7 @@ namespace Tangerine.UI
 						VAlignment = VAlignment.Center,
 						Padding = new Thickness(8, 4, 2, 0)
 					},
-					new ThemedSimpleText("#######") {
-						VAlignment = VAlignment.Center,
-						Padding = new Thickness(0, 4, 2, 0)
-					},
+					frameLabel,
 					previousFrameButton,
 					nextFrameButton,
 					lastFrameButton,
@@ -129,6 +127,7 @@ namespace Tangerine.UI
 						Padding = new Thickness(8, 4, 2, 0)
 					},
 					(regexFilter = new ThemedEditBox { MinMaxWidth = 256 }),
+					searchButton,
 					new ThemedSimpleText("in Charts") {
 						VAlignment = VAlignment.Center,
 						Padding = new Thickness(8, 4, 2, 0)
@@ -142,12 +141,15 @@ namespace Tangerine.UI
 					Spacer.HFill()
 				}
 			});
-			
 			var chartsPanel = new ChartsPanel(out var chartVisibilityControllers);
-			var optionsPanel = new OptionsPanel(chartVisibilityControllers, new TimelineVisibilityControllers {
-				CpuTimelineSetVisible = (b => { }),
-				GpuTimelineSetVisible = (b => {})
-			});
+			var optionsPanel = new OptionsPanel(
+				chartVisibilityControllers,
+				new TimelineVisibilityControllers {
+					CpuTimelineSetVisible = (b => { }),
+					GpuTimelineSetVisible = (b => {})
+				});
+			optionsPanel.Visible = false;
+			chartVisibilityControllers.GpuChartsSetVisible(false);
 			optionsButton.Clicked += () => optionsPanel.Visible = !optionsPanel.Visible;
 			Nodes.Add(optionsPanel);
 			Nodes.Add(chartsPanel);
@@ -162,37 +164,52 @@ namespace Tangerine.UI
 						playButtonColor : defaultButtonColor;
 				pauseMaterial.Color =
 					ProfilerTerminal.IsSceneUpdateFrozen ? pauseButtonColor : defaultButtonColor;
-				ChartsDataResponseProcessor lastResponse = null;
 				while (chartsResponses.Count > 0 && chartsResponses.Peek().IsFinished) {
-					lastResponse = chartsResponses.Dequeue();
-				}
-				if (lastResponse != null) {
-					chartsPanel.SetSelectedAreaInTimeCharts(lastResponse.Response);
+					chartsPanel.SetSelectedAreaInTimeCharts(chartsResponses.Dequeue().Response);
 				}
 			};
 			chartsPanel.FrameSelected += frameIdentifier => {
-				timeline.SetFrame(frameIdentifier);
+				this.frameIdentifier = frameIdentifier;
+				frameLabel.Text = frameIdentifier.ToString();
 			};
-			regexFilter.Submitted += pattern => {
-				bool IsValidRegex() {
-					if (!string.IsNullOrEmpty(pattern)) {
-						try {
-							new Regex(pattern);
-						} catch (ArgumentException) {
-							return false;
-						}
-						return true;
+			nextFrameButton.Clicked += () => {
+				timeline.SetFrame(frameIdentifier + 1);
+				chartsPanel.SetSlice(frameIdentifier + 1);
+			};
+			previousFrameButton.Clicked += () => {
+				timeline.SetFrame(frameIdentifier - 1);
+				chartsPanel.SetSlice(frameIdentifier - 1);
+			};
+			lastFrameButton.Clicked += () => {
+				timeline.SetFrame(lastFrame.Identifier);
+				chartsPanel.SetSlice(lastFrame.Identifier);
+			};
+			searchButton.Clicked += () => FilterSubmitted(regexFilter.Text);
+			regexFilter.Submitted += FilterSubmitted;
+			ProfilerTerminal.FrameProfilingFinished += frame => lastFrame = frame;
+		}
+
+		private void FilterSubmitted(string pattern)
+		{
+			Debug.Write("regexFilter.Submitted");
+			bool IsValidRegex() {
+				if (!string.IsNullOrEmpty(pattern)) {
+					try {
+						new Regex(pattern);
+					} catch (ArgumentException) {
+						return false;
 					}
-					return false;
+					return true;
 				}
-				if (IsValidRegex()) {
-					var processor = new ChartsDataResponseProcessor();
-					ProfilerTerminal.SelectTime(pattern, processor);
-					chartsResponses.Enqueue(processor);
-				} else {
-					chartsResponses.Enqueue(ChartsDataResponseProcessor.Empty);
-				}
-			};
+				return false;
+			}
+			if (IsValidRegex()) {
+				var processor = new ChartsDataResponseProcessor();
+				ProfilerTerminal.SelectTime(pattern, processor);
+				chartsResponses.Enqueue(processor);
+			} else {
+				chartsResponses.Enqueue(ChartsDataResponseProcessor.Empty);
+			}
 		}
 
 		private class ChartsDataResponseProcessor : AsyncResponseProcessor<ObjectsSummaryResponse>

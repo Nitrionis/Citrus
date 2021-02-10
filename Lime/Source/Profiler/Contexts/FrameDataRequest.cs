@@ -37,9 +37,8 @@ namespace Lime.Profiler.Contexts
 		}
 
 		/// <inheritdoc/>
-		public void FetchData(IProfilerDatabase database, BinaryWriter writer)
+		public void FetchData(IProfilerDatabase database, BinaryWriter writer, BinarySerializer serializer)
 		{
-			var serializer = new BinarySerializer();
 			var frame = database.GetFrame(FrameIdentifier);
 			bool canAccessFrame = frame != null;
 			var profiledFrame = canAccessFrame ? frame.CommonData : new ProfiledFrame { Identifier = FrameIdentifier };
