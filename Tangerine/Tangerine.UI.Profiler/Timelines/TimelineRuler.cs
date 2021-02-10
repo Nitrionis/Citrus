@@ -9,10 +9,10 @@ namespace Tangerine.UI.Timelines
 		/// <summary>
 		/// Use to scale.
 		/// </summary>
-		public float RulerScale = 1.0f;
+		public float MicrosecondsPerPixel = 1.0f;
 
 		/// <summary>
-		/// Pixel spacing for small marks for <see cref="RulerScale"/> = 1.0
+		/// Pixel spacing for small marks for <see cref="MicrosecondsPerPixel"/> = 1.0
 		/// </summary>
 		public float SmallStepSize;
 
@@ -24,7 +24,7 @@ namespace Tangerine.UI.Timelines
 		/// <summary>
 		/// Defines the initial values of the timeline.
 		/// </summary>
-		public float RulerOffset;
+		public float StartTime;
 
 		/// <summary>
 		/// Timestamps labels color.
@@ -54,10 +54,10 @@ namespace Tangerine.UI.Timelines
 				var ro = RenderObjectPool<RenderObject>.Acquire();
 				ro.CaptureRenderState(timelineRuler);
 				ro.ContainerWidth = node.AsWidget.Width;
-				ro.RulerScale = timelineRuler.RulerScale;
+				ro.MicrosecondsPerPixel = timelineRuler.MicrosecondsPerPixel;
 				ro.SmallStepSize = timelineRuler.SmallStepSize;
 				ro.SmallStepsPerBig = timelineRuler.SmallStepsPerBig;
-				ro.RulerOffset = timelineRuler.RulerOffset;
+				ro.StartTime = timelineRuler.StartTime;
 				ro.TextColor = timelineRuler.TextColor;
 				ro.TimestampsColor = timelineRuler.TimestampsColor;
 				return ro;
@@ -68,10 +68,10 @@ namespace Tangerine.UI.Timelines
 			private class RenderObject : WidgetRenderObject
 			{
 				public float ContainerWidth;
-				public float RulerScale;
+				public float MicrosecondsPerPixel;
 				public float SmallStepSize;
 				public float SmallStepsPerBig;
-				public float RulerOffset;
+				public float StartTime;
 				public Color4 TextColor;
 				public Color4 TimestampsColor;
 
@@ -81,9 +81,10 @@ namespace Tangerine.UI.Timelines
 					var offsetSmall = new Vector2(1, -6);
 					var offsetBig = new Vector2(1, -16);
 					var offsetText = new Vector2(4, -24);
-					float scaledSmallStep = SmallStepSize * RulerScale;
-					int stepIndex = (RulerOffset / SmallStepSize).Floor();
-					var startPosition = new Vector2(SmallStepSize - RulerOffset % SmallStepSize, 26);
+					float scaledSmallStep = SmallStepSize * MicrosecondsPerPixel;
+					int stepIndex = (StartTime / scaledSmallStep).Floor();
+					var startPosition = new Vector2(StartTime % SmallStepSize, 26);
+					Debug.Write(startPosition.X);
 					for (; startPosition.X < ContainerWidth; startPosition.X += SmallStepSize, stepIndex++) {
 						Vector2 endPosition;
 						if (stepIndex % SmallStepsPerBig == 0) {
