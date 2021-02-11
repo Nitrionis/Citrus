@@ -171,6 +171,7 @@ namespace Tangerine.UI
 			chartsPanel.FrameSelected += frameIdentifier => {
 				this.frameIdentifier = frameIdentifier;
 				frameLabel.Text = frameIdentifier.ToString();
+				timeline.SetFrame(frameIdentifier);
 			};
 			nextFrameButton.Clicked += () => {
 				timeline.SetFrame(frameIdentifier + 1);

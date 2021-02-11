@@ -142,10 +142,10 @@ namespace Tangerine.UI.Timelines
 
 		private TimePeriod CalculateVisibleTimePeriod() 
 		{
-			float scrollPosition = horizontalScrollView.ScrollPosition;
+			float scrollPosition = horizontalScrollView.ScrollPosition - OriginalContentWidth / 3;
 			return new TimePeriod {
-				StartTime = Math.Max(0, scrollPosition - ruler.SmallStepSize) * MicrosecondsPerPixel,
-				FinishTime = (scrollPosition + horizontalScrollView.Width) * MicrosecondsPerPixel
+				StartTime = scrollPosition * MicrosecondsPerPixel,
+				FinishTime = (scrollPosition + OriginalContentWidth / 3) * MicrosecondsPerPixel
 			};
 		}
 		
@@ -158,6 +158,7 @@ namespace Tangerine.UI.Timelines
 					activeFrameIdentifier = frame.Identifier;
 					if (frame.StopwatchFrequency == 0) {
 						ResetScale(contentDuration: 1);
+						Debug.Write("Get frame failed");
 					} else {
 						ResetScale(contentDuration:
 							(frame.RenderThreadStartTime +
@@ -287,6 +288,7 @@ namespace Tangerine.UI.Timelines
 					timeline.CalculateVisibleTimePeriod(),
 					1f / timeline.MicrosecondsPerPixel);
 
+				// todo
 				ro.MicrosecondsPerPixel = timeline.MicrosecondsPerPixel;
 				ro.Width = timeline.ContentDuration / timeline.MicrosecondsPerPixel;
 
@@ -310,8 +312,8 @@ namespace Tangerine.UI.Timelines
 					Renderer.Flush();
 					PrepareRenderState();
 
-					Renderer.DrawRect(Vector2.Zero, 50 * Vector2.One, Color4.Red);
-					Renderer.DrawRect(new Vector2(Width, 0), new Vector2(Width + 50, 50), Color4.Red);
+					Renderer.DrawRect(Vector2.Zero, 25 * Vector2.One, Color4.Red);
+					Renderer.DrawRect(new Vector2(Width, 0), new Vector2(Width + 25, 25), Color4.Red);
 
 					RectangleMaterial.Matrix =
 						Renderer.FixupWVP(

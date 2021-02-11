@@ -70,15 +70,15 @@ namespace Lime.Profiler.Contexts
 						requiredDescriptions[i] = false;
 					}
 					writer.Write(database.UpdateCpuUsagesPool.GetLength(frame.UpdateCpuUsagesList));
-					foreach (var usage in database.UpdateCpuUsagesPool.Reversed(frame.UpdateCpuUsagesList)) {
+					foreach (var usage in database.UpdateCpuUsagesPool.Enumerate(frame.UpdateCpuUsagesList)) {
 						SerializeCpuUsage(usage, database.UpdateOwnersPool);
 					}
 					writer.Write(database.RenderCpuUsagesPool.GetLength(frame.RenderCpuUsagesList));
-					foreach (var usage in database.RenderCpuUsagesPool.Reversed(frame.RenderCpuUsagesList)) {
+					foreach (var usage in database.RenderCpuUsagesPool.Enumerate(frame.RenderCpuUsagesList)) {
 						SerializeCpuUsage(usage, database.RenderOwnersPool);
 					}
 					writer.Write(database.GpuUsagesPool.GetLength(frame.DrawingGpuUsagesList));
-					foreach (var usage in database.GpuUsagesPool.Reversed(frame.DrawingGpuUsagesList)) {
+					foreach (var usage in database.GpuUsagesPool.Enumerate(frame.DrawingGpuUsagesList)) {
 						SerializeGpuUsage(usage, database.RenderOwnersPool);
 					}
 					serializer.ToWriter(dictionary.FindAndGetTypeNames(database), writer);

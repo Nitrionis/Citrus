@@ -173,12 +173,25 @@ namespace Tangerine.UI.Timelines
 					items[itemsCount++] = item;
 					CreateRectanglesFor(item, position);
 				}
+
+				long prevStartTime = -100000000;
+
 				foreach (var (usage, position) in clipboard.UpdateCpuUsages.Zip(positions, Tuple.Create)) {
 					CreateItem(usage, clipboard.UpdateOwnersPool, position);
+					//if (prevStartTime > usage.StartTime) {
+					//	Debug.Write("prevStartTime > usage.StartTime");
+					//}
+					//prevStartTime = usage.StartTime;
 				}
 				foreach (var (usage, position) in clipboard.RenderCpuUsages.Zip(positions, Tuple.Create)) {
 					CreateItem(usage, clipboard.RenderOwnersPool, position);
+					//if (prevStartTime > usage.StartTime) {
+					//	Debug.Write("prevStartTime > usage.StartTime");
+					//}
+					//prevStartTime = usage.StartTime;
 				}
+				Debug.Write("Finish prevStartTime > usage.StartTime");
+				Debug.Write($"Content height {PeriodPositions.GetContentHeight(spacingParameters, freeSpaceOfLinesGetter())}");
 				return (
 					PeriodPositions.GetContentHeight(spacingParameters, freeSpaceOfLinesGetter()), 
 					Mode == TimelineMode.Default ? 

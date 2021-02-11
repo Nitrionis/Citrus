@@ -1,4 +1,4 @@
-﻿#if PROFILER
+#if PROFILER
 
 using System;
 using System.Collections.Generic;
@@ -74,14 +74,14 @@ namespace Tangerine.UI.Timelines
 			// At this point the data has already been copied to another buffer.
 			if (isRebuildRequired) {
 				rebuildingTask = Task.Run(() => {
-					bool isNotCanceled = 
+					bool isCanceled = 
 						request.CurrentTaskId != Interlocked.Read(ref newestTaskId);
 					var rebuildingInfo = new RebuildingInfo {
-						IsCanceled = !isNotCanceled,
+						IsCanceled = isCanceled,
 						RebuildRequest = request,
 						ChangeableMeshData = chunks
 					};
-					if (isNotCanceled) {
+					if (!isCanceled) {
 						RebuildMesh(rebuildingInfo);
 					}
 					request.TaskCompletionSource.SetResult(true);

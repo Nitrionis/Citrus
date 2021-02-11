@@ -27,13 +27,7 @@ namespace Tangerine.UI.Timelines
 		/// <summary>
 		/// Duration of a time interval in microseconds in which all timeline content can be placed.
 		/// </summary>
-		//public float ContentDuration { get; private set; };
-
-		public float ContentDuration
-		{
-			get => 16_000;
-			private set {}
-		}
+		public float ContentDuration { get; private set; }
 
 		protected float OriginalMicrosecondsPerPixel => ContentDuration / Width;
 		
@@ -115,7 +109,7 @@ namespace Tangerine.UI.Timelines
 			contentContainer.MinMaxWidth = segmentWidth;
 			rightContentBorder.MinMaxWidth = segmentWidth;
 			ruler.MicrosecondsPerPixel = MicrosecondsPerPixel;
-			ruler.StartTime = ContentDuration; // todo 0
+			ruler.StartTime = 0;
 			OnResetScale();
 		}
 
@@ -160,7 +154,6 @@ namespace Tangerine.UI.Timelines
 				horizontalScrollView.Behaviour.CanScroll = isHorizontalMode;
 				verticalScrollView.Behaviour.StopScrolling();
 				ruler.StartTime = horizontalScrollView.ScrollPosition * MicrosecondsPerPixel - ContentDuration;
-				//horizontalScrollView.ScrollPosition += 0.1f;
 				yield return null;
 			}
 		}
