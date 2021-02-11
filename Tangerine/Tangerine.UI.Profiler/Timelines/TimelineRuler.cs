@@ -1,6 +1,7 @@
 #if PROFILER
 
 using Lime;
+using System;
 
 namespace Tangerine.UI.Timelines
 {
@@ -82,9 +83,10 @@ namespace Tangerine.UI.Timelines
 					var offsetBig = new Vector2(1, -16);
 					var offsetText = new Vector2(4, -24);
 					float scaledSmallStep = SmallStepSize * MicrosecondsPerPixel;
-					int stepIndex = (StartTime / scaledSmallStep).Floor();
-					var startPosition = new Vector2(StartTime % SmallStepSize, 26);
-					Debug.Write(startPosition.X);
+					int stepIndex = (StartTime / scaledSmallStep).Truncate();
+					Debug.Write($"{StartTime / scaledSmallStep:0.000000}");
+					float value = (float)Math.Round(-StartTime / MicrosecondsPerPixel, 2);
+					var startPosition = new Vector2(value % SmallStepSize, 26);
 					for (; startPosition.X < ContainerWidth; startPosition.X += SmallStepSize, stepIndex++) {
 						Vector2 endPosition;
 						if (stepIndex % SmallStepsPerBig == 0) {

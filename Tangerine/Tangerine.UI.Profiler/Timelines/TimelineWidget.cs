@@ -65,11 +65,19 @@ namespace Tangerine.UI.Timelines
 				TimestampsColor = ColorTheme.Current.Profiler.TimelineRulerStep
 			};
 			AddNode(ruler);
-			leftContentBorder = new Widget();
+			leftContentBorder = new Widget() {
+				Presenter = new WidgetFlatFillPresenter(Color4.Gray),
+				MinMaxHeight = 100,
+				Height = 100
+			};
 			contentContainer = new Widget {
 				Id = "Profiler timeline content"
 			};
-			rightContentBorder = new Widget();
+			rightContentBorder = new Widget() {
+				Presenter = new WidgetFlatFillPresenter(Color4.Gray),
+				MinMaxHeight = 100,
+				Height = 100
+			};
 			horizontalScrollView = new ThemedScrollView(ScrollDirection.Horizontal) {
 				Anchors = Anchors.LeftRightTopBottom,
 				HitTestTarget = true,
@@ -81,6 +89,7 @@ namespace Tangerine.UI.Timelines
 			};
 			verticalScrollView.Content.Layout = new VBoxLayout();
 			horizontalScrollView.Content.AddNode(verticalScrollView);
+			verticalScrollView.Content.Layout = new HBoxLayout();
 			verticalScrollView.Content.AddNode(leftContentBorder);
 			verticalScrollView.Content.AddNode(contentContainer);
 			verticalScrollView.Content.AddNode(rightContentBorder);
@@ -99,12 +108,14 @@ namespace Tangerine.UI.Timelines
 			horizontalScrollView.Content.MinMaxWidth = newWidth;
 			horizontalScrollView.Content.Width = newWidth;
 			horizontalScrollView.ScrollPosition = OriginalScrollPosition;
+			verticalScrollView.Content.MinMaxWidth = newWidth;
+			verticalScrollView.Content.Width = newWidth;
 			float segmentWidth = newWidth / 3;
 			leftContentBorder.MinMaxWidth = segmentWidth;
 			contentContainer.MinMaxWidth = segmentWidth;
 			rightContentBorder.MinMaxWidth = segmentWidth;
 			ruler.MicrosecondsPerPixel = MicrosecondsPerPixel;
-			ruler.StartTime = 0;
+			ruler.StartTime = ContentDuration; // todo 0
 			OnResetScale();
 		}
 
@@ -112,19 +123,20 @@ namespace Tangerine.UI.Timelines
 
 		private IEnumerator<object> ScaleScrollTask()
 		{
+			var input = horizontalScrollView.Input;
 			while (true) {
 				if (
-					Input.IsKeyPressed(Key.Control) &&
-					(Input.WasKeyPressed(Key.MouseWheelDown) || Input.WasKeyPressed(Key.MouseWheelUp))
+					input.IsKeyPressed(Key.Control) &&
+					(input.WasKeyPressed(Key.MouseWheelDown) || input.WasKeyPressed(Key.MouseWheelUp))
 					)
 				{
 					var sv = horizontalScrollView;
-					scale += Input.WheelScrollAmount * ScaleScrollingSpeed;
+					scale += input.WheelScrollAmount * ScaleScrollingSpeed;
 					scale = Mathf.Clamp(scale, Width / OriginalContentWidth, 32f);
 					float sp = sv.ScrollPosition;
 					float mp = sv.Content.LocalMousePosition().X;
 					float oldWidth = sv.Content.Width;
-					float newWidth = OriginalContentWidth * scale;
+					float newWidth = OriginalContentWidth / scale;
 					sv.Content.MinMaxWidth = newWidth;
 					sv.Content.Width = newWidth;
 					float segmentWidth = newWidth / 3;
@@ -133,7 +145,6 @@ namespace Tangerine.UI.Timelines
 					rightContentBorder.MinMaxWidth = segmentWidth;
 					sv.ScrollPosition = (mp / oldWidth - (mp - sp) / newWidth) * newWidth;
 					ruler.MicrosecondsPerPixel = MicrosecondsPerPixel;
-					ruler.StartTime = horizontalScrollView.ScrollPosition * MicrosecondsPerPixel - ContentDuration;
 				}
 				yield return null;
 			}
@@ -141,19 +152,24 @@ namespace Tangerine.UI.Timelines
 
 		private IEnumerator<object> HorizontalScrollTask()
 		{
+			var input = horizontalScrollView.Input;
 			while (true) {
-				bool isHorizontalMode = !Input.IsKeyPressed(Key.Shift) && !Input.IsKeyPressed(Key.Control);
+				bool isHorizontalMode =
+					!input.IsKeyPressed(Key.Shift) &&
+					!input.IsKeyPressed(Key.Control);
 				horizontalScrollView.Behaviour.CanScroll = isHorizontalMode;
 				verticalScrollView.Behaviour.StopScrolling();
 				ruler.StartTime = horizontalScrollView.ScrollPosition * MicrosecondsPerPixel - ContentDuration;
+				//horizontalScrollView.ScrollPosition += 0.1f;
 				yield return null;
 			}
 		}
 
 		private IEnumerator<object> VerticalScrollTask()
 		{
+			var input = verticalScrollView.Input;
 			while (true) {
-				bool isVerticalMode = Input.IsKeyPressed(Key.Shift) && !Input.IsKeyPressed(Key.Control);
+				bool isVerticalMode = input.IsKeyPressed(Key.Shift) && !input.IsKeyPressed(Key.Control);
 				verticalScrollView.Behaviour.CanScroll = isVerticalMode;
 				horizontalScrollView.Behaviour.StopScrolling();
 				yield return null;

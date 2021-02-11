@@ -286,6 +286,10 @@ namespace Tangerine.UI.Timelines
 				ro.LabelsRenderObject = timeline.timelineLabels.GetRenderObject(
 					timeline.CalculateVisibleTimePeriod(),
 					1f / timeline.MicrosecondsPerPixel);
+
+				ro.MicrosecondsPerPixel = timeline.MicrosecondsPerPixel;
+				ro.Width = timeline.ContentDuration / timeline.MicrosecondsPerPixel;
+
 				return ro;
 			}
 
@@ -298,10 +302,17 @@ namespace Tangerine.UI.Timelines
 				public TimelineMesh.RenderObject MeshRenderObject;
 				public TimelineLabels<TLabel>.RenderObject LabelsRenderObject;
 
+				public float MicrosecondsPerPixel;
+				public float Width;
+
 				public override void Render()
 				{
 					Renderer.Flush();
 					PrepareRenderState();
+
+					Renderer.DrawRect(Vector2.Zero, 50 * Vector2.One, Color4.Red);
+					Renderer.DrawRect(new Vector2(Width, 0), new Vector2(Width + 50, 50), Color4.Red);
+
 					RectangleMaterial.Matrix =
 						Renderer.FixupWVP(
 							Matrix44.CreateScale(RelativeScale, 1f, 1f) *
