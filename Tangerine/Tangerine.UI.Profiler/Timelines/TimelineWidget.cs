@@ -43,7 +43,7 @@ namespace Tangerine.UI.Timelines
 		/// The position of the scroll in the horizontal scroll view at which all content
 		/// is visible provided that it has the original width.
 		/// </summary>
-		private float OriginalScrollPosition => Width;
+		protected float OriginalScrollPosition => Width;
 		
 		private float OriginalScale => 1f;
 		

@@ -124,16 +124,31 @@ namespace Tangerine.UI.Timelines
 					return (0, null);
 				}
 				var clipboard = frameData.Clipboard;
-				
+				if (!clipboard.IsSortedByStartTime) {
+					clipboard.SortByStartTime();
+				}
+
+
+				long prevStartTime = -100000000;
+				foreach (var u in clipboard.UpdateCpuUsages) {
+					if (u.StartTime < prevStartTime) {
+						Debug.Write("");
+					}
+					prevStartTime = u.StartTime;
+				}
+				foreach (var u in clipboard.RenderCpuUsages) {
+					if (u.StartTime < prevStartTime) {
+						Debug.Write("");
+					}
+					prevStartTime = u.StartTime;
+				}
+
 				var usages = GetUsages(clipboard.UpdateCpuUsages, clipboard.RenderCpuUsages) ;
 				var spacingParameters = timelineContent.AsyncSpacingParameters;
-				
 				long stopwatchFrequency = frameData.ProfiledFrame.StopwatchFrequency;
 				long updateThreadStartTime = frameData.ProfiledFrame.UpdateThreadStartTime;
-				
 				var periods = GetPeriods(usages, updateThreadStartTime, stopwatchFrequency);
 				var positions = new PeriodPositions(periods, spacingParameters, freeSpaceOfLinesGetter);
-				
 				float ticksPerMicrosecond = stopwatchFrequency / 1_000_000f;
 				TimePeriod UsageToTimePeriod(CpuUsage usage) => new TimePeriod(
 					startTime: (usage.StartTime - updateThreadStartTime) / ticksPerMicrosecond,
@@ -174,23 +189,24 @@ namespace Tangerine.UI.Timelines
 					CreateRectanglesFor(item, position);
 				}
 
-				long prevStartTime = -100000000;
+				prevStartTime = -100000000;
+				int count = 0;
 
 				foreach (var (usage, position) in clipboard.UpdateCpuUsages.Zip(positions, Tuple.Create)) {
 					CreateItem(usage, clipboard.UpdateOwnersPool, position);
-					//if (prevStartTime > usage.StartTime) {
-					//	Debug.Write("prevStartTime > usage.StartTime");
-					//}
-					//prevStartTime = usage.StartTime;
+					if (prevStartTime > usage.StartTime) {
+						count += 1;
+					}
+					prevStartTime = usage.StartTime;
 				}
 				foreach (var (usage, position) in clipboard.RenderCpuUsages.Zip(positions, Tuple.Create)) {
 					CreateItem(usage, clipboard.RenderOwnersPool, position);
-					//if (prevStartTime > usage.StartTime) {
-					//	Debug.Write("prevStartTime > usage.StartTime");
-					//}
-					//prevStartTime = usage.StartTime;
+					if (prevStartTime > usage.StartTime) {
+						count += 1;
+					}
+					prevStartTime = usage.StartTime;
 				}
-				Debug.Write("Finish prevStartTime > usage.StartTime");
+				Debug.Write($"Finish prevStartTime > usage.StartTime Count: {count}");
 				Debug.Write($"Content height {PeriodPositions.GetContentHeight(spacingParameters, freeSpaceOfLinesGetter())}");
 				return (
 					PeriodPositions.GetContentHeight(spacingParameters, freeSpaceOfLinesGetter()), 

@@ -142,10 +142,10 @@ namespace Tangerine.UI.Timelines
 
 		private TimePeriod CalculateVisibleTimePeriod() 
 		{
-			float scrollPosition = horizontalScrollView.ScrollPosition - OriginalContentWidth / 3;
+			float scrollPosition = horizontalScrollView.ScrollPosition - contentContainer.Width;
 			return new TimePeriod {
 				StartTime = scrollPosition * MicrosecondsPerPixel,
-				FinishTime = (scrollPosition + OriginalContentWidth / 3) * MicrosecondsPerPixel
+				FinishTime = (scrollPosition + contentContainer.Width) * MicrosecondsPerPixel
 			};
 		}
 		
